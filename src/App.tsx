@@ -45,6 +45,36 @@ export default function App() {
     }
   }, [posts]);
 
+  // Lock background scroll while any modal (detail sheet or post form) is open.
+  // Uses position:fixed on <body> so touch/swipe gestures can't scroll the list
+  // behind the overlay (the cause of the "shaking" background), and restores the
+  // exact prior scroll position on close so the user doesn't jump.
+  useEffect(() => {
+    const isModalOpen = selectedPost !== null || formOpen;
+    if (!isModalOpen) return;
+
+    const scrollY = window.scrollY;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const body = document.body;
+
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    if (scrollbarWidth > 0) body.style.paddingRight = `${scrollbarWidth}px`;
+
+    return () => {
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+      body.style.paddingRight = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, [selectedPost, formOpen]);
+
   const closeDetailModal = () => {
     setSelectedPost(null);
     setShareCopied(false);
