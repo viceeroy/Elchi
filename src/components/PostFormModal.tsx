@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Locale, Translations, PostType } from "../types";
 import { X, Briefcase, Package, Sparkles, Phone, Send } from "lucide-react";
+import { KOREA_CITIES, UZBEKISTAN_REGIONS } from "../constants";
 
 interface PostFormModalProps {
   t: Translations;
@@ -23,6 +24,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [price, setPrice] = useState("");
   const [contact, setContact] = useState("");
   const [contactMethod, setContactMethod] = useState<"telegram" | "phone">("telegram");
+  const [showContact2, setShowContact2] = useState(false);
+  const [contact2, setContact2] = useState("");
   
   // Date Selection State (Month + Day)
   const today = new Date();
@@ -42,15 +45,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
   const [submitting, setSubmitting] = useState(false);
 
-  const koreaCities = [
-    "Seoul", "Ansan", "Busan", "Incheon", "Dangjin", "Daegu", "Daejeon", "Gwangju", "Ulsan", 
-    "Cheonan", "Suwon", "Changwon", "Gimhae", "Cheongju", "Gumi", "Jeonju", "Pyeongtaek", "Hwaseong"
-  ];
-  
-  const uzbekistanRegions = [
-    "Tashkent", "Samarkand", "Bukhara", "Fergana", "Namangan", "Andijan", "Urgench", "Nukus",
-    "Jizzakh", "Navoi", "Karshi", "Termez", "Gulistan"
-  ];
+  const koreaCities = KOREA_CITIES;
+  const uzbekistanRegions = UZBEKISTAN_REGIONS;
   const itemTypes = [
     { id: "docs", label: locale === "uz" ? "Hujjatlar" : locale === "ru" ? "Документы" : "Documents" },
     { id: "clothes", label: locale === "uz" ? "Kiyim-kechak" : locale === "ru" ? "Одежда" : "Clothes" },
@@ -138,6 +134,18 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         }
       }
 
+      // Secondary contact always uses the opposite method (phone if primary is Telegram, or vice versa)
+      const contact2Method = contactMethod === "telegram" ? "phone" : "telegram";
+      let finalContact2: string | null = null;
+      if (showContact2 && contact2.trim()) {
+        finalContact2 = contact2.trim();
+        if (contact2Method === "telegram" && !finalContact2.startsWith("@")) {
+          finalContact2 = "@" + finalContact2;
+        } else if (contact2Method === "phone" && finalContact2.startsWith("@")) {
+          finalContact2 = finalContact2.substring(1);
+        }
+      }
+
       const postData = {
         type: postType,
         from_city: fromCity,
@@ -147,6 +155,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         price: price.trim() || null,
         note: note.trim() || null,
         contact: finalContact,
+        contact2: finalContact2,
         honeypot: honeypot // Passed so backend can verify as well
       };
 
@@ -277,7 +286,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     : "text-[#5A6272] hover:text-[#1B2A4A]"
                 }`}
               >
-                Koreya ➔ O'zbekiston
+                {t.koreaToUzbekistan}
               </button>
               <button 
                 type="button" 
@@ -292,7 +301,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     : "text-[#5A6272] hover:text-[#1B2A4A]"
                 }`}
               >
-                O'zbekiston ➔ Koreya
+                {t.uzbekistanToKorea}
               </button>
             </div>
 
@@ -657,6 +666,55 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Secondary Contact (opposite method of primary) */}
+          <div>
+            {showContact2 ? (
+              <>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold">
+                    {t.secondaryContactLabel || "Qo'shimcha bog'lanish"}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setShowContact2(false); setContact2(""); }}
+                    className="text-[#8A8F98] hover:text-[#C23B3B] text-[11px] font-mono font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-[#8A8F98]">
+                    {contactMethod === "telegram" ? (
+                      <Phone className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <span className="font-mono text-sm font-bold text-[#2A4B8D] mr-0.5">@</span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={contact2}
+                    onChange={(e) => setContact2(e.target.value)}
+                    placeholder={
+                      contactMethod === "telegram"
+                        ? (locale === "uz" ? "+998 90-123-4567 yoki +82 10-1234-5678" : locale === "ru" ? "+998 90-123-4567 или +82 10-1234-5678" : "+998 90-123-4567 or +82 10-1234-5678")
+                        : "username"
+                    }
+                    className="w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono border-[#D8D3C4] focus:border-[#2A4B8D] focus:ring-1 focus:ring-[#2A4B8D]"
+                    style={{ paddingLeft: "34px" }}
+                  />
+                </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowContact2(true)}
+                className="font-mono text-xs font-semibold px-4 py-3 bg-[#FCFBF6] text-[#6B7280] border border-dashed border-[#D8D3C4] rounded-lg hover:border-[#1B2A4A]"
+              >
+                {contactMethod === "telegram" ? (t.addPhoneBtn || "+ Add phone number") : (t.addTelegramBtn || "+ Add Telegram")}
+              </button>
+            )}
           </div>
 
           {/* Submit Button */}

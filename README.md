@@ -1,20 +1,55 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Elchi 🇰🇷 ↔ 🇺🇿
 
-# Run and deploy your AI Studio app
+Seoul ✈ Tashkent — free bulletin board connecting travelers and senders for parcel delivery between Korea and Uzbekistan.
 
-This contains everything you need to run your app locally.
+Travelers post available luggage space; senders post parcels needing a ride. No accounts, no payments — just a contact exchange.
 
-View your app in AI Studio: https://ai.studio/apps/7dc74a44-32d6-4189-9ac5-7618e53318b4
+## Stack
 
-## Run Locally
+- **Frontend:** React 19 + Vite 6 + Tailwind v4
+- **Backend:** Vercel Serverless Functions (`api/`)
+- **Database:** Supabase (Postgres + RLS)
+- **i18n:** Uzbek / Russian / English (`src/translations.ts`)
 
-**Prerequisites:**  Node.js
+## Project structure
 
+```
+src/            React SPA (components, i18n, types)
+api/            Vercel serverless functions (posts, reports)
+lib/supabase.ts Supabase client
+supabase-schema.sql   DB schema + RLS policies
+vercel.json     Build + routing config
+```
+
+## Local development
+
+**Prerequisites:** Node.js 18+, a Supabase project
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```
+   npm install
+   ```
+2. Create a Supabase project and run [supabase-schema.sql](supabase-schema.sql) in the SQL Editor.
+3. Copy `.env.example` to `.env` and fill in your Supabase credentials:
+   ```
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
+   ```
+4. Run the app:
+   ```
+   npm run dev
+   ```
+
+## Deploy (Vercel)
+
+1. Import this repo into Vercel.
+2. Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as environment variables (Production + Preview).
+3. Deploy — `vercel.json` handles build output and API routing.
+
+## API
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/posts` | `GET` | List active (non-expired) posts |
+| `/api/posts` | `POST` | Create a post (traveler or request) |
+| `/api/reports` | `POST` | Report a post |

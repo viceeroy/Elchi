@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS posts (
     price VARCHAR(100),
     note TEXT,
     contact VARCHAR(100) NOT NULL,
+    contact2 VARCHAR(100),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     expires_at DATE NOT NULL
 );

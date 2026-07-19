@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Post, Locale, Translations } from "../types";
 import { AlertTriangle, Briefcase, Package, Send, Phone } from "lucide-react";
+import { KOREA_CITIES } from "../constants";
 
 interface BoardingPassProps {
   post: Post;
@@ -51,6 +52,13 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   const isTraveler = post.type === "traveler";
   const tagLabel = isTraveler ? t.travelerTag : t.requestTag;
 
+  // Flights only run through Seoul and Tashkent airports — show that as the headline route,
+  // and the traveler's actual city (which may be elsewhere in Korea/Uzbekistan) as a smaller line
+  const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === post.from_city.toLowerCase());
+  const hubFrom = isFromKorea ? "Seoul" : "Tashkent";
+  const hubTo = isFromKorea ? "Tashkent" : "Seoul";
+  const showActualCities = post.from_city !== hubFrom || post.to_city !== hubTo;
+
   // Render sticker styles with distinct airmail tilt angle
   const stickerStyle = {
     position: "absolute" as const,
@@ -99,7 +107,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   return (
     <article
       onClick={onOpen}
-      className="group relative grid grid-cols-1 md:grid-cols-[1fr_135px] bg-[#FCFBF6] rounded-xl border border-[#E9E5D8] transition-all duration-300 cursor-pointer shadow-sm hover:-translate-y-1 hover:shadow-md"
+      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] bg-[#FCFBF6] rounded-xl border border-[#E9E5D8] transition-all duration-300 cursor-pointer shadow-sm hover:-translate-y-1 hover:shadow-md"
       style={{
         boxShadow: "0 1px 2px rgba(27,42,74,0.04), 0 10px 28px -18px rgba(27,42,74,0.18)",
       }}
@@ -125,18 +133,26 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
       ></div>
 
       {/* Main Boarding Pass Content */}
-      <div className="pt-8 pb-5 pl-8 pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col justify-between">
+      <div className="pt-8 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col justify-between min-w-0">
         <div>
-          {/* Destination Header */}
-          <div className="flex items-center gap-2.5 font-extrabold text-[19px] text-[#1B2A4A] tracking-tight mb-2">
-            <span>{post.from_city}</span>
-            <span className="text-[#C79A3E] flex items-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </span>
-            <span>{post.to_city}</span>
+          {/* Destination Header (flight route is always via Seoul/Tashkent airports) */}
+          <div className="mb-2">
+            <div className="flex items-center gap-2.5 font-extrabold text-[19px] text-[#1B2A4A] tracking-tight">
+              <span>{hubFrom}</span>
+              <span className="text-[#C79A3E] flex items-center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </span>
+              <span>{hubTo}</span>
+            </div>
+            {/* Actual city (where the traveler/parcel is really going, beyond the airport) */}
+            {showActualCities && (
+              <div className="font-mono text-[11px] text-[#8A8F98] tracking-wide mt-0.5">
+                {post.from_city} → {post.to_city}
+              </div>
+            )}
           </div>
 
           {/* Post Details */}
@@ -152,17 +168,32 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
 
         {/* Footer Contact Handle & Report */}
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F2EFE6]">
-          {post.contact.trim().startsWith("@") ? (
-            <div className="flex items-center gap-1.5 font-mono text-xs text-[#2A4B8D] font-bold bg-[#E8EEF8] border border-[#D5E2F4] px-2.5 py-1 rounded-md">
-              <Send className="w-3 h-3 text-[#2A4B8D]" />
-              {post.contact}
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 font-mono text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md">
-              <Phone className="w-3 h-3 text-emerald-600" />
-              {post.contact}
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {post.contact.trim().startsWith("@") ? (
+              <div className="flex items-center gap-1.5 font-mono text-xs text-[#2A4B8D] font-bold bg-[#E8EEF8] border border-[#D5E2F4] px-2.5 py-1 rounded-md">
+                <Send className="w-3 h-3 text-[#2A4B8D]" />
+                {post.contact}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 font-mono text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md">
+                <Phone className="w-3 h-3 text-emerald-600" />
+                {post.contact}
+              </div>
+            )}
+            {post.contact2 && (
+              post.contact2.trim().startsWith("@") ? (
+                <div className="flex items-center gap-1.5 font-mono text-xs text-[#2A4B8D] font-bold bg-[#E8EEF8] border border-[#D5E2F4] px-2.5 py-1 rounded-md">
+                  <Send className="w-3 h-3 text-[#2A4B8D]" />
+                  {post.contact2}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 font-mono text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md">
+                  <Phone className="w-3 h-3 text-emerald-600" />
+                  {post.contact2}
+                </div>
+              )
+            )}
+          </div>
 
           {/* Abuse Report Button */}
           <button
@@ -181,34 +212,30 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         </div>
       </div>
 
-      {/* Ticket Tear-off Divider and Punch Notches (Tablet & Desktop only) */}
-      <div className="hidden md:block absolute right-[135px] top-3 bottom-3 w-0 border-l-2 border-dashed border-[#E4E0D2] pointer-events-none"></div>
-      
+      {/* Ticket Tear-off Divider and Punch Notches (all breakpoints, scaled to stub width) */}
+      <div className="absolute right-[88px] sm:right-[110px] md:right-[135px] top-3 bottom-3 w-0 border-l-2 border-dashed border-[#E4E0D2] pointer-events-none"></div>
+
       {/* Decorative Ticket Punch Holes (Notches) */}
-      <div className="hidden md:block absolute right-[127px] -top-2.5 w-4 h-4 bg-[#F2EFE6] border border-[#E9E5D8] rounded-full pointer-events-none"></div>
-      <div className="hidden md:block absolute right-[127px] -bottom-2.5 w-4 h-4 bg-[#F2EFE6] border border-[#E9E5D8] rounded-full pointer-events-none"></div>
+      <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -top-2.5 w-4 h-4 bg-[#F2EFE6] border border-[#E9E5D8] rounded-full pointer-events-none"></div>
+      <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -bottom-2.5 w-4 h-4 bg-[#F2EFE6] border border-[#E9E5D8] rounded-full pointer-events-none"></div>
 
       {/* Right Ticket Stub (Date and Call to Action) */}
-      <div className="rounded-b-xl md:rounded-b-none md:rounded-r-xl bg-[#1B2A4A] text-[#FCFBF6] px-5 py-5 md:py-6 md:px-4 flex flex-row md:flex-col justify-between items-center md:items-stretch relative">
-        {/* Notches for mobile borders */}
-        <div className="md:hidden absolute left-[15%] -top-2 w-4 h-4 bg-[#F2EFE6] border border-[#E9E5D8] rounded-full"></div>
-        <div className="md:hidden absolute right-[15%] -top-2 w-4 h-4 bg-[#F2EFE6] border border-[#E9E5D8] rounded-full"></div>
-
-        <div className="flex flex-col gap-0.5 text-left md:text-center md:mt-2">
-          <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-gray-400">
-            {isTraveler ? t.stubLabel : t.stubLabel}
+      <div className="rounded-r-xl bg-[#1B2A4A] text-[#FCFBF6] px-2 py-4 sm:px-3 md:py-6 md:px-4 flex flex-col justify-between items-stretch relative min-w-0">
+        <div className="flex flex-col gap-0.5 text-center mt-1 md:mt-2">
+          <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] md:tracking-[1.5px] text-gray-400">
+            {t.stubLabel}
           </span>
-          <span className="font-mono text-[14px] md:text-[15px] font-bold mt-0.5 text-[#FCFBF6]">
+          <span className="font-mono text-[12px] sm:text-[13px] md:text-[15px] font-bold mt-0.5 text-[#FCFBF6] leading-tight">
             {formatDate(post.date)}
           </span>
-          <span className="font-sans text-[11px] font-semibold text-[#C79A3E] mt-1 flex items-center gap-1 md:justify-center">
-            <span className="text-[9px]">➔</span> {post.to_city}
+          <span className="font-sans text-[10px] md:text-[11px] font-semibold text-[#C79A3E] mt-1 flex items-center justify-center gap-1">
+            <span className="text-[9px]">➔</span> <span className="truncate">{post.to_city}</span>
           </span>
         </div>
 
         <button
           onClick={(e) => { e.stopPropagation(); onOpen(); }}
-          className="font-mono text-[11px] bg-[#C79A3E] text-[#1B2A4A] border-none py-2 px-4 md:px-2 rounded-md font-bold cursor-pointer tracking-wider hover:bg-[#D9AC50] transition-colors shadow-sm"
+          className="font-mono text-[9px] sm:text-[10px] md:text-[11px] bg-[#C79A3E] text-[#1B2A4A] border-none py-2 px-1 md:px-2 rounded-md font-bold cursor-pointer tracking-wider hover:bg-[#D9AC50] transition-colors shadow-sm mt-3"
           id={`stub-btn-${post.id}`}
         >
           {t.contactBtn.replace(" →", "")}

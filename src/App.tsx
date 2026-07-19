@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Post, Locale, PostType } from "./types";
 import { translations, defaultLocale } from "./translations";
+import { KOREA_CITIES } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
 import { PostFormModal } from "./components/PostFormModal";
-import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check } from "lucide-react";
+import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy } from "lucide-react";
+import elchiLogo from './assets/images/elchi_logo_1784445722506.jpg';
 
 export default function App() {
   const [locale, setLocale] = useState<Locale>(() => {
@@ -18,7 +20,6 @@ export default function App() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [contactCopied, setContactCopied] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
   const [createdToastOpen, setCreatedToastOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState<number>(8);
 
@@ -48,7 +49,6 @@ export default function App() {
     setSelectedPost(null);
     setShareCopied(false);
     setContactCopied(false);
-    setShowTooltip(false);
     // Clean up query param if present to keep URL neat
     const params = new URLSearchParams(window.location.search);
     if (params.has("postId") || params.has("post")) {
@@ -152,14 +152,9 @@ export default function App() {
   // Filter posts locally
   const filteredPosts = posts.filter((post) => {
     if (filter === "all") return true;
-    
-    const koreaCities = [
-      "Seoul", "Ansan", "Busan", "Incheon", "Dangjin", "Daegu", "Daejeon", "Gwangju", "Ulsan", 
-      "Cheonan", "Suwon", "Changwon", "Gimhae", "Cheongju", "Gumi", "Jeonju", "Pyeongtaek", "Hwaseong"
-    ];
-    
-    const isFromKorea = koreaCities.some(c => c.toLowerCase() === post.from_city.toLowerCase());
-    
+
+    const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === post.from_city.toLowerCase());
+
     if (filter === "k2u") return isFromKorea;
     if (filter === "u2k") return !isFromKorea;
     return true;
@@ -214,6 +209,13 @@ export default function App() {
     }
   };
 
+  // Flights only run through Seoul and Tashkent airports — the headline shows that hub
+  // route, while the traveler's actual city is shown separately
+  const getHubRoute = (fromCity: string) => {
+    const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === fromCity.toLowerCase());
+    return { hubFrom: isFromKorea ? "Seoul" : "Tashkent", hubTo: isFromKorea ? "Tashkent" : "Seoul" };
+  };
+
   return (
     <div className="min-h-screen pb-[120px] bg-[#F2EFE6] text-[#1B2A4A] relative">
       {/* Airmail stripes at the very top */}
@@ -224,7 +226,7 @@ export default function App() {
         <div className="max-w-[680px] mx-auto px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img 
-              src="/src/assets/images/elchi_logo_1784445722506.jpg" 
+              src={elchiLogo} 
               alt="Elchi Logo" 
               className="w-7 h-7 rounded-lg object-cover border border-[#E4E0D2] shadow-sm"
               referrerPolicy="no-referrer"
@@ -265,8 +267,8 @@ export default function App() {
             {t.tagline}
           </div>
           <h1 className="text-4xl sm:text-[46px] leading-[1.05] font-black m-0 mb-4 tracking-tight">
-            {t.title}
-            <span className="text-[#C23B3B] block sm:inline">{t.titleAccent}</span>
+            <span className="text-[#C23B3B]">{t.title}</span>
+            <span className="block sm:inline">{t.titleAccent}</span>
           </h1>
 
           {/* Route Strip Visual Panel */}
@@ -369,8 +371,8 @@ export default function App() {
           ) : (
             <div className="text-center py-16 bg-[#FCFBF6] rounded-xl border border-[#E9E5D8] px-6">
               <Package className="w-12 h-12 text-[#8A8F98] mx-auto mb-3" />
-              <p className="text-[15px] font-bold text-[#1B2A4A] m-0 mb-1">E'lonlar topilmadi</p>
-              <p className="text-sm text-[#8A8F98] m-0">Hozircha ushbu yo'nalishda faol e'lonlar mavjud emas.</p>
+              <p className="text-[15px] font-bold text-[#1B2A4A] m-0 mb-1">{t.emptyStateTitle || "E'lonlar topilmadi"}</p>
+              <p className="text-sm text-[#8A8F98] m-0">{t.emptyStateText || "Hozircha ushbu yo'nalishda faol e'lonlar mavjud emas."}</p>
             </div>
           )}
 
@@ -437,17 +439,30 @@ export default function App() {
                 {selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
               </div>
 
-              {/* Destinations */}
-              <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">
-                <span>{selectedPost.from_city}</span>
-                <span className="text-[#C79A3E] flex items-center">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                </span>
-                <span>{selectedPost.to_city}</span>
-              </div>
+              {/* Destinations (flight route is always via Seoul/Tashkent airports) */}
+              {(() => {
+                const { hubFrom, hubTo } = getHubRoute(selectedPost.from_city);
+                const showActualCities = selectedPost.from_city !== hubFrom || selectedPost.to_city !== hubTo;
+                return (
+                  <>
+                    <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">
+                      <span>{hubFrom}</span>
+                      <span className="text-[#C79A3E] flex items-center">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="22" y1="2" x2="11" y2="13" />
+                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                      </span>
+                      <span>{hubTo}</span>
+                    </div>
+                    {showActualCities && (
+                      <div className="font-mono text-xs opacity-70 mt-1 tracking-wider">
+                        {selectedPost.from_city} → {selectedPost.to_city}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               <div className="font-mono text-xs opacity-70 mt-1.5 tracking-wider">
                 {selectedPost.type === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest} · {formatDetailDate(selectedPost.date)}
               </div>
@@ -497,61 +512,53 @@ export default function App() {
               </div>
 
               {/* Action and Contact segment */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-[#F2EFE6] rounded-xl">
-                <div 
-                  onClick={() => handleCopyContact(selectedPost.contact)}
-                  className="cursor-pointer hover:bg-[#E9E5D8]/60 px-2.5 py-1.5 -mx-2.5 -my-1.5 rounded-lg transition-all group/contact relative flex flex-col"
-                  title={locale === "uz" ? "Nusxalash uchun bosing" : locale === "ru" ? "Нажмите для копирования" : "Click to copy"}
-                >
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98] mb-0.5 flex items-center justify-between w-full gap-3">
-                    <span>{t.contactLabel}</span>
-                    <span className="text-[9px] opacity-0 group-hover/contact:opacity-100 text-[#C79A3E] transition-opacity font-bold">
-                      {contactCopied ? (t.contactHelpCopied || "Nusxalandi!") : (locale === "uz" ? "nusxalash" : locale === "ru" ? "копировать" : "copy")}
-                    </span>
+              <div className={`grid gap-3 ${selectedPost.contact2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+                <div className="flex flex-col gap-2.5 p-4 bg-[#F2EFE6] rounded-xl">
+                  <div
+                    onClick={() => handleCopyContact(selectedPost.contact)}
+                    className="cursor-pointer group/contact"
+                    title={locale === "uz" ? "Nusxalash uchun bosing" : locale === "ru" ? "Нажмите для копирования" : "Click to copy"}
+                  >
+                    <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98] mb-0.5">{t.contactLabel}</div>
+                    <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-[#1B2A4A]">
+                      {selectedPost.contact.trim().startsWith("@") ? (
+                        <>
+                          <Send className="w-3.5 h-3.5 text-[#2A4B8D]" />
+                          <span className="text-[#2A4B8D] group-hover/contact:underline">{selectedPost.contact}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-700 group-hover/contact:underline">{selectedPost.contact}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-[#1B2A4A]">
-                    {selectedPost.contact.trim().startsWith("@") ? (
-                      <>
-                        <Send className="w-3.5 h-3.5 text-[#2A4B8D]" />
-                        <span className="text-[#2A4B8D] group-hover/contact:underline">{selectedPost.contact}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-emerald-700 group-hover/contact:underline">{selectedPost.contact}</span>
-                      </>
-                    )}
-                    {contactCopied && (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 animate-[bounce_0.2s_ease-in-out]" />
-                    )}
-                  </div>
-                </div>
-                
-                {(() => {
-                  const contactInfo = getContactLinkAndLabel(selectedPost.contact);
-                  const isTg = contactInfo.isTelegram;
-                  
-                  // Label translations helper
-                  let buttonLabel = "";
-                  if (isTg) {
-                    buttonLabel = locale === "uz" ? "Telegramda ochish ↗" : locale === "ru" ? "Открыть в Telegram ↗" : "Open in Telegram ↗";
-                  } else {
-                    buttonLabel = locale === "uz" ? "Qo'ng'iroq qilish ✆" : locale === "ru" ? "Позвонить ✆" : "Call ✆";
-                  }
 
-                  return (
-                    <div className="relative flex flex-col items-stretch sm:items-end group w-full sm:w-auto">
-                      {/* Visual Tooltip Container */}
-                      <div className={`absolute bottom-full mb-2.5 right-0 left-0 sm:left-auto sm:w-[260px] bg-[#1B2A4A] text-white rounded-xl shadow-xl p-3.5 text-xs font-sans leading-normal z-50 transition-all duration-200 pointer-events-auto transform origin-bottom ${showTooltip ? "scale-100 opacity-100 visible" : "scale-95 opacity-0 invisible group-hover:scale-100 group-hover:opacity-100 group-hover:visible"}`}>
-                        <div className="font-bold text-[#C79A3E] mb-1 flex items-center gap-1">
-                          <span>💡</span>
-                          <span>{t.contactHelpTitle || "Bog'lanish bo'yicha yordam"}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-200 mb-2">
-                          {t.contactHelpText || "Agar tugma ishlamasa, chap tomondagi kontaktni bosib nusxa oling yoki ushbu kontaktni nusxalash uchun bosing."}
-                        </p>
-                        
-                        {/* Copy Button in Tooltip */}
+                  {(() => {
+                    const contactInfo = getContactLinkAndLabel(selectedPost.contact);
+                    const isTg = contactInfo.isTelegram;
+                    const buttonLabel = isTg
+                      ? (locale === "uz" ? "Telegramda ochish ↗" : locale === "ru" ? "Открыть в Telegram ↗" : "Open in Telegram ↗")
+                      : (locale === "uz" ? "Qo'ng'iroq qilish ✆" : locale === "ru" ? "Позвонить ✆" : "Call ✆");
+
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        <a
+                          href={contactInfo.url}
+                          target={isTg ? "_blank" : undefined}
+                          rel="noreferrer"
+                          className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 min-w-0 ${
+                            isTg
+                              ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
+                              : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          }`}
+                          id="contact-action-btn"
+                        >
+                          {isTg ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
+                          <span className="truncate">{buttonLabel}</span>
+                        </a>
+
                         <button
                           type="button"
                           onClick={(e) => {
@@ -559,56 +566,75 @@ export default function App() {
                             e.preventDefault();
                             handleCopyContact(selectedPost.contact);
                           }}
-                          className="w-full text-center bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white font-mono text-[10px] font-bold py-1.5 px-2 rounded border border-white/15 flex items-center justify-center gap-1.5"
+                          className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
+                          title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                         >
-                          {contactCopied ? (
+                          {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Secondary Contact (optional) */}
+                {selectedPost.contact2 && (() => {
+                  const contact2Info = getContactLinkAndLabel(selectedPost.contact2!);
+                  const isTg2 = contact2Info.isTelegram;
+                  const buttonLabel2 = isTg2
+                    ? (locale === "uz" ? "Telegramda ochish ↗" : locale === "ru" ? "Открыть в Telegram ↗" : "Open in Telegram ↗")
+                    : (locale === "uz" ? "Qo'ng'iroq qilish ✆" : locale === "ru" ? "Позвонить ✆" : "Call ✆");
+
+                  return (
+                    <div className="flex flex-col gap-2.5 p-4 bg-[#F2EFE6] rounded-xl">
+                      <div
+                        onClick={() => handleCopyContact(selectedPost.contact2!)}
+                        className="cursor-pointer"
+                        title={locale === "uz" ? "Nusxalash uchun bosing" : locale === "ru" ? "Нажмите для копирования" : "Click to copy"}
+                      >
+                        <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98] mb-0.5">
+                          {t.secondaryContactLabel || "Qo'shimcha bog'lanish"}
+                        </div>
+                        <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-[#1B2A4A]">
+                          {isTg2 ? (
                             <>
-                              <Check className="w-3 h-3 text-emerald-400" />
-                              <span className="text-emerald-400 font-bold">{t.contactHelpCopied || "Nusxalandi!"}</span>
+                              <Send className="w-3.5 h-3.5 text-[#2A4B8D]" />
+                              <span className="text-[#2A4B8D]">{selectedPost.contact2}</span>
                             </>
                           ) : (
                             <>
-                              {isTg ? <Send className="w-3 h-3 text-sky-300" /> : <Phone className="w-3 h-3 text-emerald-400" />}
-                              <span>{t.contactHelpCopyText || "Kontaktni nusxalash"}</span>
+                              <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-emerald-700">{selectedPost.contact2}</span>
                             </>
                           )}
-                        </button>
-                        
-                        {/* Tiny Arrow */}
-                        <div className="absolute top-full right-1/2 translate-x-1/2 sm:right-8 sm:translate-x-0 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1B2A4A]"></div>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                      <div className="flex items-center gap-1.5">
                         <a
-                          href={contactInfo.url}
-                          target={isTg ? "_blank" : undefined}
+                          href={contact2Info.url}
+                          target={isTg2 ? "_blank" : undefined}
                           rel="noreferrer"
-                          className={`font-mono text-xs px-5 py-3 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 sm:flex-initial ${
-                            isTg 
-                              ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]" 
+                          className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 min-w-0 ${
+                            isTg2
+                              ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
                               : "bg-emerald-600 hover:bg-emerald-700 text-white"
                           }`}
-                          id="contact-action-btn"
                         >
-                          {isTg ? <Send className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-                          {buttonLabel}
+                          {isTg2 ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
+                          <span className="truncate">{buttonLabel2}</span>
                         </a>
-                        
+
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
-                            setShowTooltip(!showTooltip);
+                            handleCopyContact(selectedPost.contact2!);
                           }}
-                          className={`h-10 w-10 flex items-center justify-center rounded-lg border transition-all ${
-                            showTooltip 
-                              ? "bg-[#1B2A4A] border-[#1B2A4A] text-white" 
-                              : "bg-white border-[#D8D3C4] text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A]"
-                          }`}
-                          title={t.contactHelpTitle || "Yordam"}
+                          className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
+                          title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                         >
-                          <span className="font-bold text-xs">?</span>
+                          {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>

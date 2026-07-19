@@ -12,6 +12,7 @@ export interface Post {
   price: string | null;
   note: string | null;
   contact: string;
+  contact2: string | null;
   created_at: string;
   expires_at: string;
 }
@@ -60,6 +61,9 @@ export interface Translations {
   pricePlaceholder: string;
   contactLabel: string;
   contactPlaceholder: string;
+  addTelegramBtn?: string;
+  addPhoneBtn?: string;
+  secondaryContactLabel?: string;
   submitBtn: string;
   submittingBtn: string;
   successTitle: string;
@@ -76,4 +80,7 @@ export interface Translations {
   toastPostCreated: string;
   loadMoreBtn?: string;
   allLoaded?: string;
+  emptyStateTitle?: string;
+  emptyStateText?: string;
+  stubLabel?: string;
 }
