@@ -20,7 +20,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [fromCity, setFromCity] = useState<string>("");
   const [toCity, setToCity] = useState<string>("");
   const [note, setNote] = useState("");
-  const [price, setPrice] = useState("");
   const [contact, setContact] = useState("");
   const [contactMethod, setContactMethod] = useState<"telegram" | "phone">("telegram");
   const [showContact2, setShowContact2] = useState(false);
@@ -177,16 +176,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         }
       }
 
-      // Price is optional: leave it null when blank. The "negotiable" fallback text
-      // is rendered at view time (App.tsx) from the viewer's current locale, not
-      // baked in here — otherwise it would freeze to the author's locale forever.
       const postData = {
         type: postType,
         from_city: fromCity.trim(),
         to_city: toCity.trim(),
         date: dateString,
         weight: finalWeight,
-        price: price.trim() || null,
         note: note.trim(),
         contact: finalContact,
         contact2: finalContact2,
@@ -535,21 +530,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             ></textarea>
           </div>
 
-          {/* Cost and Contact */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold mb-1.5">
-                {t.priceLabel}
-              </label>
-              <input
-                type="text"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder={t.pricePlaceholder}
-                className="w-full box-sizing-border-box p-3 border border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A]"
-              />
-            </div>
-            <div>
+          {/* Contact */}
+          <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold">
                   {t.contactLabel} <span className="text-red-500">*</span>
@@ -677,7 +659,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 </div>
               )}
             </div>
-          </div>
 
           {/* Secondary Contact (opposite method of primary) */}
           <div>

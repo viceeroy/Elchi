@@ -154,9 +154,9 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
                 {physicalWeight}
               </span>
             )}
-            {(post.price || post.note) && (
+            {post.note && (
               <span className="line-clamp-2 [overflow-wrap:anywhere]">
-                {post.price ? `· ${post.price}` : ""} {post.note ? `· ${post.note}` : ""}
+                · {post.note}
               </span>
             )}
           </div>

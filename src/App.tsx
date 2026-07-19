@@ -504,15 +504,9 @@ export default function App() {
 
             {/* Body of details */}
             <div className="px-6 pt-6">
-              <div className="grid grid-cols-2 gap-3.5 mb-5">
-                <div className="bg-[#F2EFE6] rounded-xl p-3.5">
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
-                  <div className="font-bold text-base text-[#1B2A4A]">{localizeWeight(selectedPost.weight, locale)}</div>
-                </div>
-                <div className="bg-[#F2EFE6] rounded-xl p-3.5">
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{t.priceLabel.replace(" (ixtiyoriy)", "")}</div>
-                  <div className="font-bold text-base text-[#1B2A4A]">{selectedPost.price || t.priceNegotiable}</div>
-                </div>
+              <div className="bg-[#F2EFE6] rounded-xl p-3.5 mb-5">
+                <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
+                <div className="font-bold text-base text-[#1B2A4A]">{localizeWeight(selectedPost.weight, locale)}</div>
               </div>
 
               {selectedPost.note && (

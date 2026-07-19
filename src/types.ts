@@ -57,9 +57,6 @@ export interface Translations {
   itemTypeOtherPlaceholder: string;
   noteLabel: string;
   notePlaceholder: string;
-  priceLabel: string;
-  pricePlaceholder: string;
-  priceNegotiable: string;
   contactLabel: string;
   contactPlaceholder: string;
   addTelegramBtn?: string;
