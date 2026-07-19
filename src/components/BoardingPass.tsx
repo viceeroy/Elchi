@@ -168,7 +168,8 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
 
         {/* Footer Contact Handle & Report */}
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F2EFE6]">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Contact chips hidden on phone to save space — tap "Bog'lanish" to reveal in the detail sheet */}
+          <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
             {post.contact.trim().startsWith("@") ? (
               <div className="flex items-center gap-1.5 font-mono text-xs text-[#2A4B8D] font-bold bg-[#E8EEF8] border border-[#D5E2F4] px-2.5 py-1 rounded-md">
                 <Send className="w-3 h-3 text-[#2A4B8D]" />
@@ -199,7 +200,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
           <button
             onClick={handleReport}
             disabled={reported || reporting}
-            className={`p-1.5 rounded-full transition-colors flex items-center justify-center ${
+            className={`ml-auto p-1.5 rounded-full transition-colors flex items-center justify-center ${
               reported 
                 ? "text-green-600 bg-green-50" 
                 : "text-[#8A8F98] hover:text-[#C23B3B] hover:bg-red-50"
