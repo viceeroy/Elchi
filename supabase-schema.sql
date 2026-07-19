@@ -38,7 +38,6 @@ ALTER TABLE posts ALTER COLUMN weight TYPE TEXT;
 -- TODO: Add images column for v2 (e.g. image_url TEXT)
 -- ALTER TABLE posts ADD COLUMN image_url TEXT;
 
-
 -- Simple RLS (Row Level Security) rules for Supabase
 -- Enable RLS
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
@@ -58,4 +57,3 @@ WITH CHECK (true);
 CREATE POLICY "Allow public inserts to reports"
 ON reports FOR INSERT
 WITH CHECK (true);
-

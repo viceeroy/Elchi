@@ -59,6 +59,7 @@ export interface Translations {
   notePlaceholder: string;
   priceLabel: string;
   pricePlaceholder: string;
+  priceNegotiable: string;
   contactLabel: string;
   contactPlaceholder: string;
   addTelegramBtn?: string;

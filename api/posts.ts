@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (isNaN(postDate.getTime())) {
       return res.status(400).json({ error: 'Noto\'g\'ri sana formati' });
     }
-    
+
     postDate.setDate(postDate.getDate() + 1);
     const expires_at = postDate.toISOString().split('T')[0];
 

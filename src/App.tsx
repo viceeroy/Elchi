@@ -6,6 +6,20 @@ import { BoardingPass } from "./components/BoardingPass";
 import { PostFormModal } from "./components/PostFormModal";
 import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy } from "lucide-react";
 
+// Traveler posts store the luggage count as a neutral "chamadon" token
+// regardless of the author's locale (see PostFormModal). Re-localize it here
+// from the count so it matches the viewer's current locale rather than
+// freezing to whichever language the post was created in.
+function localizeWeight(weight: string, locale: Locale): string {
+  return weight.replace(/(\d+)\s*chamadon\b/gi, (_match, numStr: string) => {
+    const n = parseInt(numStr, 10);
+    const word = n === 1
+      ? (locale === "uz" ? "chamadon" : locale === "ru" ? "чемодан" : "bag")
+      : (locale === "uz" ? "ta chamadon" : locale === "ru" ? "чемодана" : "bags");
+    return `${n} ${word}`;
+  });
+}
+
 export default function App() {
   const [locale, setLocale] = useState<Locale>(() => {
     const saved = localStorage.getItem("elchi_locale");
@@ -93,9 +107,10 @@ export default function App() {
     if (!selectedPost) return;
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?postId=${selectedPost.id}`;
+    const shareWeight = localizeWeight(selectedPost.weight, locale);
     const shareText = selectedPost.type === "traveler"
-      ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${selectedPost.weight}) uchyapman. Bog'lanish: ${selectedPost.contact}`
-      : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${selectedPost.weight}) pochta yuborish kerak. Bog'lanish: ${selectedPost.contact}`;
+      ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman. Bog'lanish: ${selectedPost.contact}`
+      : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak. Bog'lanish: ${selectedPost.contact}`;
 
     const shareTitle = t.shareTitle || "Elchi e'lon taxtasi";
 
@@ -340,8 +355,24 @@ export default function App() {
 
           {/* Posts Feed */}
           {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1B2A4A]"></div>
+            <div className="flex flex-col gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] bg-[#FCFBF6] rounded-xl border border-[#E9E5D8] overflow-hidden animate-pulse"
+                  style={{ boxShadow: "0 1px 2px rgba(27,42,74,0.04), 0 10px 28px -18px rgba(27,42,74,0.18)" }}
+                >
+                  <div className="pt-8 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col gap-3">
+                    <div className="h-5 w-2/3 bg-[#E9E5D8] rounded" />
+                    <div className="h-3.5 w-1/3 bg-[#E9E5D8] rounded" />
+                    <div className="h-3.5 w-4/5 bg-[#E9E5D8] rounded mt-2" />
+                  </div>
+                  <div className="bg-[#EDEAE0] flex flex-col items-center justify-center gap-2 p-3">
+                    <div className="h-3 w-10 bg-[#DDD8C9] rounded" />
+                    <div className="h-4 w-14 bg-[#DDD8C9] rounded" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredPosts.length > 0 ? (
             <div className="flex flex-col gap-4">
@@ -476,11 +507,11 @@ export default function App() {
               <div className="grid grid-cols-2 gap-3.5 mb-5">
                 <div className="bg-[#F2EFE6] rounded-xl p-3.5">
                   <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
-                  <div className="font-bold text-base text-[#1B2A4A]">{selectedPost.weight}</div>
+                  <div className="font-bold text-base text-[#1B2A4A]">{localizeWeight(selectedPost.weight, locale)}</div>
                 </div>
                 <div className="bg-[#F2EFE6] rounded-xl p-3.5">
                   <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{t.priceLabel.replace(" (ixtiyoriy)", "")}</div>
-                  <div className="font-bold text-base text-[#1B2A4A]">{selectedPost.price || "Kelishiladi / Negotiable"}</div>
+                  <div className="font-bold text-base text-[#1B2A4A]">{selectedPost.price || t.priceNegotiable}</div>
                 </div>
               </div>
 

@@ -132,6 +132,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
       // Build Weight representation. 0 kg is valid: for a traveler it means
       // luggage-only (no per-kg space), for a request it drops the weight suffix.
+      // The luggage word is stored as a neutral "chamadon" token regardless of the
+      // author's locale — BoardingPass/App re-localize it at render time based on
+      // the viewer's current locale, so it doesn't freeze to whatever language the
+      // post was created in.
       let finalWeight: string;
       if (postType === "traveler") {
         const parts: string[] = [];
@@ -173,16 +177,16 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         }
       }
 
-      // Price is optional: if left blank, mark it negotiable so it always shows.
-      const negotiableLabel = locale === "uz" ? "Kelishiladi" : locale === "ru" ? "Договорная" : "Negotiable";
-
+      // Price is optional: leave it null when blank. The "negotiable" fallback text
+      // is rendered at view time (App.tsx) from the viewer's current locale, not
+      // baked in here — otherwise it would freeze to the author's locale forever.
       const postData = {
         type: postType,
         from_city: fromCity.trim(),
         to_city: toCity.trim(),
         date: dateString,
         weight: finalWeight,
-        price: price.trim() || negotiableLabel,
+        price: price.trim() || null,
         note: note.trim(),
         contact: finalContact,
         contact2: finalContact2,

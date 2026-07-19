@@ -51,13 +51,24 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
 
   // The card shows only the physical weight (kg + luggage), stripping any
   // category labels baked into the weight string — categories are shown only in
-  // the detail modal. A 0-kg value is treated as "nothing" and hidden.
+  // the detail modal. A 0-kg value is treated as "nothing" and hidden. The
+  // luggage word is stored as a neutral "chamadon" token and re-localized here
+  // from the count, so it matches the viewer's current locale, not the
+  // author's, regardless of which locale the post was created in.
   const physicalWeight = (() => {
     const parts: string[] = [];
     const kg = post.weight.match(/(\d+)\s*kg/i);
     const lug = post.weight.match(/(\d+)\s*chamadon/i);
     if (kg && parseInt(kg[1], 10) > 0) parts.push(`${kg[1]} kg`);
-    if (lug && parseInt(lug[1], 10) > 0) parts.push(`${lug[1]} chamadon`);
+    if (lug) {
+      const n = parseInt(lug[1], 10);
+      if (n > 0) {
+        const word = n === 1
+          ? (locale === "uz" ? "chamadon" : locale === "ru" ? "чемодан" : "bag")
+          : (locale === "uz" ? "ta chamadon" : locale === "ru" ? "чемодана" : "bags");
+        parts.push(`${n} ${word}`);
+      }
+    }
     return parts.join(" + ");
   })();
 
