@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  margin: 0;
+  background-color: #F2EFE6;
+  font-family: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  color: #1B2A4A;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom micro-animations & scrollbar styles */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 5px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #E4E0D2;
+  border-radius: 10px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #C79A3E;
+}
+
+/* Toast entrance animation */
+@keyframes popin {
+  0% {
+    transform: translate(-50%, -20px) scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-popin {
+  animation: popin 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.15) forwards;
+}
