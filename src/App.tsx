@@ -511,136 +511,103 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Action and Contact segment */}
-              <div className={`grid gap-3 ${selectedPost.contact2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-                <div className="flex flex-col gap-2.5 p-4 bg-[#F2EFE6] rounded-xl">
-                  <div
-                    onClick={() => handleCopyContact(selectedPost.contact)}
-                    className="cursor-pointer group/contact"
-                    title={locale === "uz" ? "Nusxalash uchun bosing" : locale === "ru" ? "Нажмите для копирования" : "Click to copy"}
-                  >
-                    <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98] mb-0.5">{t.contactLabel}</div>
-                    <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-[#1B2A4A]">
-                      {selectedPost.contact.trim().startsWith("@") ? (
-                        <>
-                          <Send className="w-3.5 h-3.5 text-[#2A4B8D]" />
-                          <span className="text-[#2A4B8D] group-hover/contact:underline">{selectedPost.contact}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700 group-hover/contact:underline">{selectedPost.contact}</span>
-                        </>
+              {/* Action and Contact segment — single unified section */}
+              {(() => {
+                const contactInfo = getContactLinkAndLabel(selectedPost.contact);
+                const contact2Info = selectedPost.contact2 ? getContactLinkAndLabel(selectedPost.contact2) : null;
+                const actionLabel = (isTg: boolean) => isTg
+                  ? (locale === "uz" ? "Telegramda ochish ↗" : locale === "ru" ? "Открыть в Telegram ↗" : "Open in Telegram ↗")
+                  : (locale === "uz" ? "Qo'ng'iroq qilish ✆" : locale === "ru" ? "Позвонить ✆" : "Call ✆");
+
+                return (
+                  <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
+                    <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98]">
+                      {t.contactLabel}
+                    </div>
+
+                    {/* Values side by side, each with its own copy button */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 font-mono text-sm font-bold min-w-0">
+                          {contactInfo.isTelegram ? (
+                            <Send className="w-3.5 h-3.5 text-[#2A4B8D] flex-shrink-0" />
+                          ) : (
+                            <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                          )}
+                          <span className={`truncate ${contactInfo.isTelegram ? "text-[#2A4B8D]" : "text-emerald-700"}`}>
+                            {selectedPost.contact}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyContact(selectedPost.contact)}
+                          className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
+                          title={t.contactHelpCopyText || "Kontaktni nusxalash"}
+                        >
+                          {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+
+                      {selectedPost.contact2 && contact2Info && (
+                        <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0 border-l border-[#D8D3C4] pl-2">
+                          <div className="flex items-center gap-1.5 font-mono text-sm font-bold min-w-0">
+                            {contact2Info.isTelegram ? (
+                              <Send className="w-3.5 h-3.5 text-[#2A4B8D] flex-shrink-0" />
+                            ) : (
+                              <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            )}
+                            <span className={`truncate ${contact2Info.isTelegram ? "text-[#2A4B8D]" : "text-emerald-700"}`}>
+                              {selectedPost.contact2}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyContact(selectedPost.contact2!)}
+                            className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
+                            title={t.contactHelpCopyText || "Kontaktni nusxalash"}
+                          >
+                            {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons stacked underneath */}
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={contactInfo.url}
+                        target={contactInfo.isTelegram ? "_blank" : undefined}
+                        rel="noreferrer"
+                        className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full ${
+                          contactInfo.isTelegram
+                            ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
+                            : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        }`}
+                        id="contact-action-btn"
+                      >
+                        {contactInfo.isTelegram ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
+                        <span className="truncate">{actionLabel(contactInfo.isTelegram)}</span>
+                      </a>
+
+                      {selectedPost.contact2 && contact2Info && (
+                        <a
+                          href={contact2Info.url}
+                          target={contact2Info.isTelegram ? "_blank" : undefined}
+                          rel="noreferrer"
+                          className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full ${
+                            contact2Info.isTelegram
+                              ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
+                              : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          }`}
+                        >
+                          {contact2Info.isTelegram ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
+                          <span className="truncate">{actionLabel(contact2Info.isTelegram)}</span>
+                        </a>
                       )}
                     </div>
                   </div>
-
-                  {(() => {
-                    const contactInfo = getContactLinkAndLabel(selectedPost.contact);
-                    const isTg = contactInfo.isTelegram;
-                    const buttonLabel = isTg
-                      ? (locale === "uz" ? "Telegramda ochish ↗" : locale === "ru" ? "Открыть в Telegram ↗" : "Open in Telegram ↗")
-                      : (locale === "uz" ? "Qo'ng'iroq qilish ✆" : locale === "ru" ? "Позвонить ✆" : "Call ✆");
-
-                    return (
-                      <div className="flex items-center gap-1.5">
-                        <a
-                          href={contactInfo.url}
-                          target={isTg ? "_blank" : undefined}
-                          rel="noreferrer"
-                          className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 min-w-0 ${
-                            isTg
-                              ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
-                              : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                          }`}
-                          id="contact-action-btn"
-                        >
-                          {isTg ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
-                          <span className="truncate">{buttonLabel}</span>
-                        </a>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            handleCopyContact(selectedPost.contact);
-                          }}
-                          className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
-                          title={t.contactHelpCopyText || "Kontaktni nusxalash"}
-                        >
-                          {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Secondary Contact (optional) */}
-                {selectedPost.contact2 && (() => {
-                  const contact2Info = getContactLinkAndLabel(selectedPost.contact2!);
-                  const isTg2 = contact2Info.isTelegram;
-                  const buttonLabel2 = isTg2
-                    ? (locale === "uz" ? "Telegramda ochish ↗" : locale === "ru" ? "Открыть в Telegram ↗" : "Open in Telegram ↗")
-                    : (locale === "uz" ? "Qo'ng'iroq qilish ✆" : locale === "ru" ? "Позвонить ✆" : "Call ✆");
-
-                  return (
-                    <div className="flex flex-col gap-2.5 p-4 bg-[#F2EFE6] rounded-xl">
-                      <div
-                        onClick={() => handleCopyContact(selectedPost.contact2!)}
-                        className="cursor-pointer"
-                        title={locale === "uz" ? "Nusxalash uchun bosing" : locale === "ru" ? "Нажмите для копирования" : "Click to copy"}
-                      >
-                        <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98] mb-0.5">
-                          {t.secondaryContactLabel || "Qo'shimcha bog'lanish"}
-                        </div>
-                        <div className="flex items-center gap-1.5 font-mono text-sm font-bold text-[#1B2A4A]">
-                          {isTg2 ? (
-                            <>
-                              <Send className="w-3.5 h-3.5 text-[#2A4B8D]" />
-                              <span className="text-[#2A4B8D]">{selectedPost.contact2}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                              <span className="text-emerald-700">{selectedPost.contact2}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <a
-                          href={contact2Info.url}
-                          target={isTg2 ? "_blank" : undefined}
-                          rel="noreferrer"
-                          className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 min-w-0 ${
-                            isTg2
-                              ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
-                              : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                          }`}
-                        >
-                          {isTg2 ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
-                          <span className="truncate">{buttonLabel2}</span>
-                        </a>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            handleCopyContact(selectedPost.contact2!);
-                          }}
-                          className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
-                          title={t.contactHelpCopyText || "Kontaktni nusxalash"}
-                        >
-                          {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
+                );
+              })()}
             </div>
           </div>
         </div>
