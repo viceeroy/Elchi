@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Locale, Translations, PostType } from "../types";
 import { X, Briefcase, Package, Sparkles, Phone, Send } from "lucide-react";
-import { KOREA_CITIES, UZBEKISTAN_REGIONS } from "../constants";
 
 interface PostFormModalProps {
   t: Translations;
@@ -27,13 +26,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [showContact2, setShowContact2] = useState(false);
   const [contact2, setContact2] = useState("");
   
-  // Date Selection State (Month + Day)
+  // Date Selection State (Month + Day) — no day preselected; user must pick one
   const today = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth());
-  const [selectedDay, setSelectedDay] = useState<number>(today.getDate());
-  
-  // Weight & Luggage State
-  const [weightKg, setWeightKg] = useState<number>(8);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
+  // Weight & Luggage State — starts at 0 (no preselected weight); 0 kg is allowed
+  const [weightKg, setWeightKg] = useState<number>(0);
   const [weightLuggage, setWeightLuggage] = useState<number>(0);
   
   // Request Parcel Category
@@ -45,8 +44,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
   const [submitting, setSubmitting] = useState(false);
 
-  const koreaCities = KOREA_CITIES;
-  const uzbekistanRegions = UZBEKISTAN_REGIONS;
   const itemTypes = [
     { id: "docs", label: locale === "uz" ? "Hujjatlar" : locale === "ru" ? "Документы" : "Documents" },
     { id: "clothes", label: locale === "uz" ? "Kiyim-kechak" : locale === "ru" ? "Одежда" : "Clothes" },
@@ -104,23 +101,30 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       return;
     }
 
+    if (selectedDay === null) {
+      alert(t.errorRequiredFields + " (Sana / Date)");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       // Build ISO Date string (YYYY-MM-DD)
       const dateString = `${currentYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
 
-      // Build Weight representation
-      let finalWeight = `${weightKg} kg`;
+      // Build Weight representation. 0 kg is valid: for a traveler it means
+      // luggage-only (no per-kg space), for a request it drops the weight suffix.
+      let finalWeight: string;
       if (postType === "traveler") {
-        if (weightLuggage > 0) {
-          finalWeight += ` + ${weightLuggage} chamadon`;
-        }
+        const parts: string[] = [];
+        if (weightKg > 0) parts.push(`${weightKg} kg`);
+        if (weightLuggage > 0) parts.push(`${weightLuggage} chamadon`);
+        finalWeight = parts.join(" + ") || "0 kg";
       } else {
-        const itemTypeLabel = itemType === "other" && customItemType 
-          ? customItemType 
+        const itemTypeLabel = itemType === "other" && customItemType
+          ? customItemType
           : itemTypes.find(it => it.id === itemType)?.label || "Pochta";
-        finalWeight = `${itemTypeLabel} (${weightKg} kg)`;
+        finalWeight = weightKg > 0 ? `${itemTypeLabel} (${weightKg} kg)` : itemTypeLabel;
       }
 
       let finalContact = contact.trim();
@@ -305,44 +309,18 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               </button>
             </div>
 
-            {/* City Selection Dropdowns */}
-            <div className="flex flex-col sm:flex-row gap-4 bg-[#FCFBF6] border border-[#E9E5D8] rounded-2xl p-4 shadow-sm">
-              {/* From Selector */}
-              <div className="flex-1">
-                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
-                  {locale === "uz" ? "Qayerdan (From)" : locale === "ru" ? "Откуда (From)" : "From City"}
-                </label>
-                <select
-                  value={fromCity}
-                  onChange={(e) => setFromCity(e.target.value)}
-                  className="w-full font-sans text-[13.5px] bg-[#FCFBF6] text-[#1B2A4A] border border-[#D8D3C4] rounded-xl p-3 outline-none focus:border-[#2A4B8D] cursor-pointer shadow-sm"
-                >
-                  {(direction === "k2u" ? koreaCities : uzbekistanRegions).map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Decorative Arrow */}
-              <div className="hidden sm:flex items-end justify-center pb-3">
-                <span className="text-[#C79A3E] font-bold text-lg">➔</span>
-              </div>
-
-              {/* To Selector */}
-              <div className="flex-1">
-                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
-                  {locale === "uz" ? "Qayerga (To)" : locale === "ru" ? "Куда (To)" : "To City"}
-                </label>
-                <select
-                  value={toCity}
-                  onChange={(e) => setToCity(e.target.value)}
-                  className="w-full font-sans text-[13.5px] bg-[#FCFBF6] text-[#1B2A4A] border border-[#D8D3C4] rounded-xl p-3 outline-none focus:border-[#2A4B8D] cursor-pointer shadow-sm"
-                >
-                  {(direction === "k2u" ? uzbekistanRegions : koreaCities).map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Route hint — specific city/region goes in the description below */}
+            <div className="flex items-center gap-2 bg-[#FCFBF6] border border-dashed border-[#D8D3C4] rounded-xl px-4 py-3">
+              <span className="font-mono text-sm font-bold text-[#1B2A4A]">{fromCity}</span>
+              <span className="text-[#C79A3E] font-bold">➔</span>
+              <span className="font-mono text-sm font-bold text-[#1B2A4A]">{toCity}</span>
+              <span className="ml-auto text-[11px] text-[#8A8F98] text-right leading-tight">
+                {locale === "uz"
+                  ? "Aniq shahar/viloyatni izohda yozing"
+                  : locale === "ru"
+                  ? "Укажите город/регион в описании"
+                  : "Add exact city/region in the description"}
+              </span>
             </div>
           </div>
 
@@ -358,7 +336,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   <button
                     key={m.value}
                     type="button"
-                    onClick={() => { setSelectedMonth(m.value); setSelectedDay(m.value === today.getMonth() ? today.getDate() : 1); }}
+                    onClick={() => { setSelectedMonth(m.value); setSelectedDay(null); }}
                     className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
                       selectedMonth === m.value 
                         ? "bg-[#1B2A4A] text-[#FCFBF6]" 
@@ -406,7 +384,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 <div className="flex items-center gap-3.5 bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-2.5">
                   <button 
                     type="button"
-                    onClick={() => setWeightKg(w => Math.max(1, w - 1))}
+                    onClick={() => setWeightKg(w => Math.max(0, w - 1))}
                     className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
                   >
                     −
@@ -490,7 +468,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 <div className="flex items-center gap-3.5 bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-2.5 w-fit">
                   <button 
                     type="button"
-                    onClick={() => setWeightKg(w => Math.max(1, w - 1))}
+                    onClick={() => setWeightKg(w => Math.max(0, w - 1))}
                     className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
                   >
                     −
