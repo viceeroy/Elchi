@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { Post, Locale, Translations } from "../types";
-import { AlertTriangle, Briefcase, Package, Send, Phone } from "lucide-react";
+import { Briefcase, Package } from "lucide-react";
 import { KOREA_CITIES } from "../constants";
 
 interface BoardingPassProps {
@@ -8,7 +8,6 @@ interface BoardingPassProps {
   t: Translations;
   locale: Locale;
   onOpen: () => void;
-  onReport: (postId: string) => void;
 }
 
 export const BoardingPass: React.FC<BoardingPassProps> = ({
@@ -16,39 +15,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   t,
   locale,
   onOpen,
-  onReport,
 }) => {
-  const [reported, setReported] = useState(false);
-  const [reporting, setReporting] = useState(false);
-
-  const handleReport = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Avoid triggering open card modal
-    if (reported || reporting) return;
-
-    if (!confirm(t.reportBtn + "?")) return;
-
-    setReporting(true);
-    try {
-      const response = await fetch("/api/reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ post_id: post.id }),
-      });
-      if (response.ok) {
-        setReported(true);
-        alert(t.reportedToast);
-        onReport(post.id);
-      } else {
-        alert(t.errorGeneral);
-      }
-    } catch (err) {
-      console.error(err);
-      alert(t.errorGeneral);
-    } finally {
-      setReporting(false);
-    }
-  };
-
   const isTraveler = post.type === "traveler";
   const tagLabel = isTraveler ? t.travelerTag : t.requestTag;
 
@@ -81,6 +48,18 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     background: isTraveler ? "#2A4B8D" : "#C23B3B",
     color: "#FCFBF6",
   };
+
+  // The card shows only the physical weight (kg + luggage), stripping any
+  // category labels baked into the weight string — categories are shown only in
+  // the detail modal. A 0-kg value is treated as "nothing" and hidden.
+  const physicalWeight = (() => {
+    const parts: string[] = [];
+    const kg = post.weight.match(/(\d+)\s*kg/i);
+    const lug = post.weight.match(/(\d+)\s*chamadon/i);
+    if (kg && parseInt(kg[1], 10) > 0) parts.push(`${kg[1]} kg`);
+    if (lug && parseInt(lug[1], 10) > 0) parts.push(`${lug[1]} chamadon`);
+    return parts.join(" + ");
+  })();
 
   // Human friendly date helper
   const formatDate = (dateStr: string) => {
@@ -155,61 +134,21 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
             )}
           </div>
 
-          {/* Post Details */}
-          <div className="text-[13.5px] text-[#5A6272] leading-relaxed mb-3">
-            <span className="text-[#1B2A4A] font-bold block md:inline mr-1">
-              {post.weight}
-            </span>
-            <span>
-              {post.price ? `· ${post.price}` : ""} {post.note ? `· ${post.note}` : ""}
-            </span>
-          </div>
-        </div>
-
-        {/* Footer Contact Handle & Report */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F2EFE6]">
-          {/* Contact chips hidden on phone to save space — tap "Bog'lanish" to reveal in the detail sheet */}
-          <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
-            {post.contact.trim().startsWith("@") ? (
-              <div className="flex items-center gap-1.5 font-mono text-xs text-[#2A4B8D] font-bold bg-[#E8EEF8] border border-[#D5E2F4] px-2.5 py-1 rounded-md">
-                <Send className="w-3 h-3 text-[#2A4B8D]" />
-                {post.contact}
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 font-mono text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md">
-                <Phone className="w-3 h-3 text-emerald-600" />
-                {post.contact}
-              </div>
+          {/* Post Details — description is clamped so the card height stays fixed
+              regardless of note length; long URLs/words wrap instead of overflowing.
+              Full text is shown in the detail modal on click. */}
+          <div className="text-[13.5px] text-[#5A6272] leading-relaxed mb-3 min-w-0">
+            {physicalWeight && (
+              <span className="text-[#1B2A4A] font-bold block mr-1">
+                {physicalWeight}
+              </span>
             )}
-            {post.contact2 && (
-              post.contact2.trim().startsWith("@") ? (
-                <div className="flex items-center gap-1.5 font-mono text-xs text-[#2A4B8D] font-bold bg-[#E8EEF8] border border-[#D5E2F4] px-2.5 py-1 rounded-md">
-                  <Send className="w-3 h-3 text-[#2A4B8D]" />
-                  {post.contact2}
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 font-mono text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md">
-                  <Phone className="w-3 h-3 text-emerald-600" />
-                  {post.contact2}
-                </div>
-              )
+            {(post.price || post.note) && (
+              <span className="line-clamp-2 [overflow-wrap:anywhere]">
+                {post.price ? `· ${post.price}` : ""} {post.note ? `· ${post.note}` : ""}
+              </span>
             )}
           </div>
-
-          {/* Abuse Report Button */}
-          <button
-            onClick={handleReport}
-            disabled={reported || reporting}
-            className={`ml-auto p-1.5 rounded-full transition-colors flex items-center justify-center ${
-              reported 
-                ? "text-green-600 bg-green-50" 
-                : "text-[#8A8F98] hover:text-[#C23B3B] hover:bg-red-50"
-            }`}
-            title={t.reportBtn}
-            id={`report-btn-${post.id}`}
-          >
-            <AlertTriangle className="w-4 h-4" />
-          </button>
         </div>
       </div>
 

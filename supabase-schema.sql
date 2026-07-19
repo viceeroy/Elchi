@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS posts (
     from_city VARCHAR(100) NOT NULL,
     to_city VARCHAR(100) NOT NULL,
     date DATE NOT NULL,
-    weight VARCHAR(50) NOT NULL,
+    weight TEXT NOT NULL,
     price VARCHAR(100),
     note TEXT,
     contact VARCHAR(100) NOT NULL,
@@ -30,8 +30,14 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Migration for existing databases: widen `weight` so multi-category requests
+-- (e.g. "3 kg · Hujjatlar, Dori-darmon, Telefon/Texnika") don't overflow the old
+-- VARCHAR(50) limit, which caused inserts to fail with SQLSTATE 22001.
+ALTER TABLE posts ALTER COLUMN weight TYPE TEXT;
+
 -- TODO: Add images column for v2 (e.g. image_url TEXT)
 -- ALTER TABLE posts ADD COLUMN image_url TEXT;
+
 
 -- Simple RLS (Row Level Security) rules for Supabase
 -- Enable RLS
@@ -49,6 +55,7 @@ ON posts FOR INSERT
 WITH CHECK (true);
 
 -- Allow public inserts to reports
-CREATE POLICY "Allow public inserts to reports" 
-ON reports FOR INSERT 
+CREATE POLICY "Allow public inserts to reports"
+ON reports FOR INSERT
 WITH CHECK (true);
+

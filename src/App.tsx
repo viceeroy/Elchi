@@ -5,7 +5,6 @@ import { KOREA_CITIES } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
 import { PostFormModal } from "./components/PostFormModal";
 import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy } from "lucide-react";
-import elchiLogo from './assets/images/elchi_logo_1784445722506.jpg';
 
 export default function App() {
   const [locale, setLocale] = useState<Locale>(() => {
@@ -255,12 +254,6 @@ export default function App() {
       <header className="bg-[#FCFBF6]/90 backdrop-blur-md border-b border-[#E4E0D2] sticky top-0 z-40 shadow-sm">
         <div className="max-w-[680px] mx-auto px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img 
-              src={elchiLogo} 
-              alt="Elchi Logo" 
-              className="w-7 h-7 rounded-lg object-cover border border-[#E4E0D2] shadow-sm"
-              referrerPolicy="no-referrer"
-            />
             <span className="font-extrabold text-[19px] tracking-tight text-[#1B2A4A]">Elchi</span>
           </div>
           
@@ -300,25 +293,6 @@ export default function App() {
             <span className="text-[#C23B3B]">{t.title}</span>
             <span className="block sm:inline">{t.titleAccent}</span>
           </h1>
-
-          {/* Route Strip Visual Panel */}
-          <div className="mt-8 bg-[#FCFBF6] border border-[#E4E0D2] rounded-2xl p-5 sm:px-6 sm:py-5 flex items-center gap-5 shadow-sm">
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-xl font-bold tracking-wider">SEL</span>
-              <span className="text-[11px] text-[#8A8F98] font-semibold">Seoul</span>
-            </div>
-            
-            <div className="flex-1 relative h-0.5 bg-[linear-gradient(90deg,#C8C2AF_0_6px,transparent_6px_12px)] bg-[length:12px_2px]">
-              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#FCFBF6] px-2 text-[#C79A3E] flex">
-                <Send className="w-4 h-4 transform rotate-45" />
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-0.5 items-end">
-              <span className="font-mono text-xl font-bold tracking-wider">TAS</span>
-              <span className="text-[11px] text-[#8A8F98] font-semibold">Tashkent</span>
-            </div>
-          </div>
         </section>
 
         {/* Posts Filter and Feed */}
@@ -378,7 +352,6 @@ export default function App() {
                   t={t}
                   locale={locale}
                   onOpen={() => setSelectedPost(post)}
-                  onReport={() => fetchPosts()}
                 />
               ))}
 
@@ -514,7 +487,7 @@ export default function App() {
               {selectedPost.note && (
                 <div className="mb-5">
                   <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-2">{t.noteLabel.replace(" (ixtiyoriy)", "")}</div>
-                  <div className="text-[14px] text-[#3A4256] leading-relaxed bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] p-4 rounded-r-lg italic">
+                  <div className="text-[14px] text-[#3A4256] leading-relaxed bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] p-4 rounded-r-lg italic [overflow-wrap:anywhere] whitespace-pre-wrap max-h-[40vh] overflow-y-auto">
                     "{selectedPost.note}"
                   </div>
                 </div>

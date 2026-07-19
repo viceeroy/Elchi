@@ -17,8 +17,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 }) => {
   const [postType, setPostType] = useState<PostType>("traveler");
   const [direction, setDirection] = useState<"k2u" | "u2k">("k2u");
-  const [fromCity, setFromCity] = useState<string>("Seoul");
-  const [toCity, setToCity] = useState<string>("Tashkent");
+  const [fromCity, setFromCity] = useState<string>("");
+  const [toCity, setToCity] = useState<string>("");
   const [note, setNote] = useState("");
   const [price, setPrice] = useState("");
   const [contact, setContact] = useState("");
@@ -35,9 +35,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [weightKg, setWeightKg] = useState<number>(0);
   const [weightLuggage, setWeightLuggage] = useState<number>(0);
   
-  // Request Parcel Category
-  const [itemType, setItemType] = useState<string>("docs");
+  // Request Parcel Categories — multi-select (user can pick several or all)
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [customItemType, setCustomItemType] = useState("");
+
+  const toggleItem = (id: string) =>
+    setSelectedItems(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   // Honeypot spam trap
   const [honeypot, setHoneypot] = useState("");
@@ -91,18 +94,33 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     }
 
     // 2. Client-side Validation
-    if (!fromCity || !toCity) {
-      alert(t.errorRequiredFields + " (Qayerdan / Qayerga)");
-      return;
-    }
-
-    if (!contact.trim()) {
-      alert(t.errorRequiredFields + " (Bog'lanish)");
+    if (!fromCity.trim() || !toCity.trim()) {
+      alert(t.errorRequiredFields + " (Qaysi shahar / City)");
       return;
     }
 
     if (selectedDay === null) {
       alert(t.errorRequiredFields + " (Sana / Date)");
+      return;
+    }
+
+    if (postType === "traveler" && weightKg === 0 && weightLuggage === 0) {
+      alert(t.errorRequiredFields + " (Kg yoki chamadon / Weight or luggage)");
+      return;
+    }
+
+    if (postType === "request" && selectedItems.length === 0) {
+      alert(t.errorRequiredFields + " (Nima yubormoqchisiz? / Category)");
+      return;
+    }
+
+    if (!note.trim()) {
+      alert(t.errorRequiredFields + " (Izoh / Note)");
+      return;
+    }
+
+    if (!contact.trim()) {
+      alert(t.errorRequiredFields + " (Bog'lanish / Contact)");
       return;
     }
 
@@ -121,10 +139,15 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         if (weightLuggage > 0) parts.push(`${weightLuggage} chamadon`);
         finalWeight = parts.join(" + ") || "0 kg";
       } else {
-        const itemTypeLabel = itemType === "other" && customItemType
-          ? customItemType
-          : itemTypes.find(it => it.id === itemType)?.label || "Pochta";
-        finalWeight = weightKg > 0 ? `${itemTypeLabel} (${weightKg} kg)` : itemTypeLabel;
+        // Categories: comma-joined labels ("other" uses the custom text if given).
+        // Weight string = "<kg> · <categories>"; the card shows only the kg part
+        // (0 kg hidden), the detail modal shows the full string incl. categories.
+        const labels = selectedItems
+          .map(id => id === "other" ? (customItemType.trim() || "Boshqa") : itemTypes.find(it => it.id === id)?.label)
+          .filter((l): l is string => Boolean(l));
+        const catStr = labels.join(", ");
+        const kgStr = weightKg > 0 ? `${weightKg} kg` : "";
+        finalWeight = [kgStr, catStr].filter(Boolean).join(" · ") || catStr || "Pochta";
       }
 
       let finalContact = contact.trim();
@@ -150,14 +173,17 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         }
       }
 
+      // Price is optional: if left blank, mark it negotiable so it always shows.
+      const negotiableLabel = locale === "uz" ? "Kelishiladi" : locale === "ru" ? "Договорная" : "Negotiable";
+
       const postData = {
         type: postType,
-        from_city: fromCity,
-        to_city: toCity,
+        from_city: fromCity.trim(),
+        to_city: toCity.trim(),
         date: dateString,
         weight: finalWeight,
-        price: price.trim() || null,
-        note: note.trim() || null,
+        price: price.trim() || negotiableLabel,
+        note: note.trim(),
         contact: finalContact,
         contact2: finalContact2,
         honeypot: honeypot // Passed so backend can verify as well
@@ -185,17 +211,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   };
 
   const itemChipBase = { fontFamily: "'Space Mono', monospace", fontSize: 12, padding: '8px 15px', border: '1px solid #D8D3C4', borderRadius: 100, background: '#FCFBF6', cursor: 'pointer', color: '#1B2A4A', transition: 'all .15s ease' };
+  const itemChipActive = { ...itemChipBase, background: '#1B2A4A', color: '#FCFBF6', border: '1px solid #1B2A4A' };
 
   const itemTypeChips = itemTypes.map(it => ({
     ...it,
-    isPhone: it.id === 'phone',
-    isDocs: it.id === 'docs',
-    isClothes: it.id === 'clothes',
-    isMeds: it.id === 'meds',
-    isFood: it.id === 'food',
-    isGift: it.id === 'gift',
-    isOther: it.id === 'other',
-    style: it.id === itemType ? { ...itemChipBase, background: '#1B2A4A', color: '#FCFBF6', borderColor: '#1B2A4A' } : itemChipBase,
+    style: selectedItems.includes(it.id) ? itemChipActive : itemChipBase,
   }));
 
   const luggageWordLabel = weightLuggage === 1 
@@ -279,11 +299,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-1 mb-4 gap-1">
               <button 
                 type="button" 
-                onClick={() => {
-                  setDirection("k2u");
-                  setFromCity("Seoul");
-                  setToCity("Tashkent");
-                }}
+                onClick={() => setDirection("k2u")}
                 className={`flex-1 py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
                   direction === "k2u" 
                     ? "bg-[#2A4B8D] text-white shadow" 
@@ -294,11 +310,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               </button>
               <button 
                 type="button" 
-                onClick={() => {
-                  setDirection("u2k");
-                  setFromCity("Tashkent");
-                  setToCity("Seoul");
-                }}
+                onClick={() => setDirection("u2k")}
                 className={`flex-1 py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
                   direction === "u2k" 
                     ? "bg-[#C23B3B] text-white shadow" 
@@ -309,18 +321,35 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               </button>
             </div>
 
-            {/* Route hint — specific city/region goes in the description below */}
-            <div className="flex items-center gap-2 bg-[#FCFBF6] border border-dashed border-[#D8D3C4] rounded-xl px-4 py-3">
-              <span className="font-mono text-sm font-bold text-[#1B2A4A]">{fromCity}</span>
-              <span className="text-[#C79A3E] font-bold">➔</span>
-              <span className="font-mono text-sm font-bold text-[#1B2A4A]">{toCity}</span>
-              <span className="ml-auto text-[11px] text-[#8A8F98] text-right leading-tight">
-                {locale === "uz"
-                  ? "Aniq shahar/viloyatni izohda yozing"
-                  : locale === "ru"
-                  ? "Укажите город/регион в описании"
-                  : "Add exact city/region in the description"}
-              </span>
+            {/* Free-text From / To cities */}
+            <div className="flex flex-row items-end gap-2 sm:gap-3">
+              <div className="flex-1 min-w-0">
+                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+                  {locale === "uz" ? "Qaysi shahardan" : locale === "ru" ? "Из какого города" : "From which city"}
+                </label>
+                <input
+                  type="text"
+                  value={fromCity}
+                  onChange={(e) => setFromCity(e.target.value)}
+                  placeholder={locale === "uz" ? "Qayerdan (masalan: Seoul)" : locale === "ru" ? "Откуда (напр.: Сеул)" : "From (e.g. Seoul)"}
+                  className="w-full box-sizing-border-box p-3 border border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] focus:border-[#2A4B8D] outline-none"
+                />
+              </div>
+
+              <span className="flex items-center justify-center text-[#C79A3E] font-bold text-lg pb-2.5 flex-shrink-0">➔</span>
+
+              <div className="flex-1 min-w-0">
+                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+                  {locale === "uz" ? "Qaysi shaharga" : locale === "ru" ? "В какой город" : "To which city"}
+                </label>
+                <input
+                  type="text"
+                  value={toCity}
+                  onChange={(e) => setToCity(e.target.value)}
+                  placeholder={locale === "uz" ? "Qayerga (masalan: Toshkent)" : locale === "ru" ? "Куда (напр.: Ташкент)" : "To (e.g. Tashkent)"}
+                  className="w-full box-sizing-border-box p-3 border border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] focus:border-[#2A4B8D] outline-none"
+                />
+              </div>
             </div>
           </div>
 
@@ -445,7 +474,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button
                       key={it.id}
                       type="button"
-                      onClick={() => setItemType(it.id)}
+                      onClick={() => toggleItem(it.id)}
                       className="font-sans text-xs px-3.5 py-2.5 rounded-full border font-semibold flex items-center transition-all"
                       style={it.style as React.CSSProperties}
                     >
@@ -454,7 +483,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   ))}
                 </div>
 
-                {itemType === "other" && (
+                {selectedItems.includes("other") && (
                   <input
                     type="text"
                     value={customItemType}
@@ -489,10 +518,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             )}
           </div>
 
-          {/* Optional Note/Izoh */}
+          {/* Note/Izoh — required */}
           <div>
             <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold mb-1.5">
-              {t.noteLabel}
+              {t.noteLabel.replace(" (ixtiyoriy)", "").replace(" (опционально)", "").replace(" (optional)", "")} <span className="text-red-500">*</span>
             </label>
             <textarea
               value={note}

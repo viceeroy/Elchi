@@ -2,7 +2,7 @@ import { Locale, Translations } from "./types";
 
 export const translations: Record<Locale, Translations> = {
   uz: {
-    tagline: "Seul ✈ Toshkent — bepul e'lon taxtasi",
+    tagline: "Bepul e'lon taxtasi",
     title: "Chamadoningizda ",
     titleAccent: "joy bormi?",
     activeCount: "faol",
@@ -67,7 +67,7 @@ export const translations: Record<Locale, Translations> = {
     stubLabel: "Sana",
   },
   ru: {
-    tagline: "Сеул ✈ Ташкент — бесплатная доска объявлений",
+    tagline: "Бесплатная доска объявлений",
     title: "Есть ли место",
     titleAccent: " в чемодане?",
     activeCount: "активных",
@@ -132,7 +132,7 @@ export const translations: Record<Locale, Translations> = {
     stubLabel: "Дата",
   },
   en: {
-    tagline: "Seoul ✈ Tashkent — Free Bulletin Board",
+    tagline: "Free Bulletin Board",
     title: "Is there room",
     titleAccent: " in your suitcase?",
     activeCount: "active",
