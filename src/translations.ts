@@ -3,8 +3,8 @@ import { Locale, Translations } from "./types";
 export const translations: Record<Locale, Translations> = {
   uz: {
     tagline: "Seul ✈ Toshkent — bepul e'lon taxtasi",
-    title: "Ozgina olib boring, ",
-    titleAccent: "ko'p yordam bering.",
+    title: "Chamadoningizda bo'sh joy bormi?",
+    titleAccent: "",
     activeCount: "faol",
     allPosts: "Barchasi",
     koreaToUzbekistan: "Koreya → O'zbekiston",
@@ -59,6 +59,9 @@ export const translations: Record<Locale, Translations> = {
     toastPostCreated: "E'lon muvaffaqiyatli yaratildi!",
     loadMoreBtn: "Yana yuklash ↓",
     allLoaded: "Barcha e'lonlar yuklandi",
+    stubLabel: "Sana",
+    directionK2U: "Koreya ➔ O'zbekiston",
+    directionU2K: "O'zbekiston ➔ Koreya",
   },
   ru: {
     tagline: "Сеул ✈ Ташкент — бесплатная доска объявлений",
@@ -118,6 +121,9 @@ export const translations: Record<Locale, Translations> = {
     toastPostCreated: "Объявление успешно создано!",
     loadMoreBtn: "Загрузить еще ↓",
     allLoaded: "Все объявления загружены",
+    stubLabel: "Дата",
+    directionK2U: "Корея ➔ Узбекистан",
+    directionU2K: "Узбекистан ➔ Корея",
   },
   en: {
     tagline: "Seoul ✈ Tashkent — Free Bulletin Board",
@@ -177,6 +183,9 @@ export const translations: Record<Locale, Translations> = {
     toastPostCreated: "Post successfully created!",
     loadMoreBtn: "Load more ↓",
     allLoaded: "All posts loaded",
+    stubLabel: "Date",
+    directionK2U: "Korea ➔ Uzbekistan",
+    directionU2K: "Uzbekistan ➔ Korea",
   }
 };
 export const defaultLocale: Locale = "uz";

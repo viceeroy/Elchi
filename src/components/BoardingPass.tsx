@@ -196,7 +196,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
 
         <div className="flex flex-col gap-0.5 text-left md:text-center md:mt-2">
           <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-gray-400">
-            {isTraveler ? t.stubLabel : t.stubLabel}
+            {t.stubLabel}
           </span>
           <span className="font-mono text-[14px] md:text-[15px] font-bold mt-0.5 text-[#FCFBF6]">
             {formatDate(post.date)}

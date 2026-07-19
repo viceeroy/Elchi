@@ -223,12 +223,6 @@ export default function App() {
       <header className="bg-[#FCFBF6]/90 backdrop-blur-md border-b border-[#E4E0D2] sticky top-0 z-40 shadow-sm">
         <div className="max-w-[680px] mx-auto px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img 
-              src="/src/assets/images/elchi_logo_1784445722506.jpg" 
-              alt="Elchi Logo" 
-              className="w-7 h-7 rounded-lg object-cover border border-[#E4E0D2] shadow-sm"
-              referrerPolicy="no-referrer"
-            />
             <span className="font-extrabold text-[19px] tracking-tight text-[#1B2A4A]">Elchi</span>
           </div>
           
@@ -268,25 +262,6 @@ export default function App() {
             {t.title}
             <span className="text-[#C23B3B] block sm:inline">{t.titleAccent}</span>
           </h1>
-
-          {/* Route Strip Visual Panel */}
-          <div className="mt-8 bg-[#FCFBF6] border border-[#E4E0D2] rounded-2xl p-5 sm:px-6 sm:py-5 flex items-center gap-5 shadow-sm">
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-xl font-bold tracking-wider">SEL</span>
-              <span className="text-[11px] text-[#8A8F98] font-semibold">Seoul</span>
-            </div>
-            
-            <div className="flex-1 relative h-0.5 bg-[linear-gradient(90deg,#C8C2AF_0_6px,transparent_6px_12px)] bg-[length:12px_2px]">
-              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#FCFBF6] px-2 text-[#C79A3E] flex">
-                <Send className="w-4 h-4 transform rotate-45" />
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-0.5 items-end">
-              <span className="font-mono text-xl font-bold tracking-wider">TAS</span>
-              <span className="text-[11px] text-[#8A8F98] font-semibold">Tashkent</span>
-            </div>
-          </div>
         </section>
 
         {/* Posts Filter and Feed */}

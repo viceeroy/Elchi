@@ -277,7 +277,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     : "text-[#5A6272] hover:text-[#1B2A4A]"
                 }`}
               >
-                Koreya ➔ O'zbekiston
+                {t.directionK2U}
               </button>
               <button 
                 type="button" 
@@ -292,7 +292,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     : "text-[#5A6272] hover:text-[#1B2A4A]"
                 }`}
               >
-                O'zbekiston ➔ Koreya
+                {t.directionU2K}
               </button>
             </div>
 

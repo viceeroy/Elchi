@@ -76,4 +76,7 @@ export interface Translations {
   toastPostCreated: string;
   loadMoreBtn?: string;
   allLoaded?: string;
+  stubLabel: string;
+  directionK2U: string;
+  directionU2K: string;
 }
