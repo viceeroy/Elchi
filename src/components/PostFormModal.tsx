@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import { Locale, Translations, PostType } from "../types";
 import { X, Briefcase, Package, Sparkles, Phone, Send } from "lucide-react";
 
+// Phone fields keep digits and the punctuation used by the +998/+82 formats
+// in the placeholder; letters and everything else are dropped as the user types.
+const sanitizePhone = (value: string) => value.replace(/[^\d+\-\s()]/g, "");
+
 interface PostFormModalProps {
   t: Translations;
   locale: Locale;
@@ -591,6 +595,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
                 <input
                   type="text"
+                  inputMode={contactMethod === "phone" ? "tel" : "text"}
                   value={contactMethod === "telegram" && contact.startsWith("@") ? contact.substring(1) : contact}
                   onChange={(e) => {
                     const typed = e.target.value;
@@ -598,7 +603,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                       // Always store with `@` in state
                       setContact(typed.startsWith("@") ? typed : "@" + typed);
                     } else {
-                      setContact(typed);
+                      setContact(sanitizePhone(typed));
                     }
                   }}
                   placeholder={
@@ -686,8 +691,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   </div>
                   <input
                     type="text"
+                    inputMode={contactMethod === "telegram" ? "tel" : "text"}
                     value={contact2}
-                    onChange={(e) => setContact2(e.target.value)}
+                    onChange={(e) => {
+                      const typed = e.target.value;
+                      // Secondary is always the opposite method of the primary
+                      setContact2(contactMethod === "telegram" ? sanitizePhone(typed) : typed);
+                    }}
                     placeholder={
                       contactMethod === "telegram"
                         ? (locale === "uz" ? "+998 90-123-4567 yoki +82 10-1234-5678" : locale === "ru" ? "+998 90-123-4567 или +82 10-1234-5678" : "+998 90-123-4567 or +82 10-1234-5678")
