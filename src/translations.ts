@@ -2,7 +2,7 @@ import { Locale, Translations } from "./types";
 
 export const translations: Record<Locale, Translations> = {
   uz: {
-    tagline: "Bepul e'lon taxtasi",
+    tagline: "Bepul e'lon taxtasi — sayohatda yordam berish",
     title: "Chamadoningizda ",
     titleAccent: "joy bormi?",
     activeCount: "faol",
@@ -92,7 +92,7 @@ export const translations: Record<Locale, Translations> = {
     profileMenuLabel: "Profil",
   },
   ru: {
-    tagline: "Бесплатная доска объявлений",
+    tagline: "Бесплатная доска объявлений — помощь в путешествии",
     title: "Есть ли место",
     titleAccent: " в чемодане?",
     activeCount: "активных",
@@ -182,7 +182,7 @@ export const translations: Record<Locale, Translations> = {
     profileMenuLabel: "Профиль",
   },
   en: {
-    tagline: "Free Bulletin Board",
+    tagline: "Free Bulletin Board — help while traveling",
     title: "Is there room",
     titleAccent: " in your suitcase?",
     activeCount: "active",
