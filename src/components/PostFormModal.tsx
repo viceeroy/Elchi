@@ -246,27 +246,29 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Tab Toggle between Traveler and Request */}
+        {/* Tab Toggle between Traveler and Request — the active tab borrows the
+            stamp styling from the post cards (see BoardingPass), so the blue/red
+            colour coding means the same thing while composing as when browsing. */}
         <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-1 mb-6 gap-1">
-          <button 
+          <button
             type="button"
             onClick={() => setPostType("traveler")}
             className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              postType === "traveler" 
-                ? "bg-[#1B2A4A] text-[#FCFBF6] shadow" 
-                : "text-[#5A6272] hover:text-[#1B2A4A]"
+              postType === "traveler"
+                ? "bg-[#2A4B8D] text-[#FCFBF6] border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] -rotate-[1.5deg]"
+                : "border border-transparent text-[#5A6272] hover:text-[#2A4B8D]"
             }`}
           >
             <Briefcase className="w-4 h-4" />
             {t.tabTraveler}
           </button>
-          <button 
+          <button
             type="button"
             onClick={() => setPostType("request")}
             className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              postType === "request" 
-                ? "bg-[#1B2A4A] text-[#FCFBF6] shadow" 
-                : "text-[#5A6272] hover:text-[#1B2A4A]"
+              postType === "request"
+                ? "bg-[#C23B3B] text-[#FCFBF6] border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] rotate-[1.5deg]"
+                : "border border-transparent text-[#5A6272] hover:text-[#C23B3B]"
             }`}
           >
             <Package className="w-4 h-4" />
@@ -719,11 +721,15 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             )}
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Button — tracks the selected post type's stamp colour */}
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3.5 bg-[#1B2A4A] text-[#FCFBF6] border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors hover:bg-[#26385E]"
+            className={`w-full py-3.5 text-[#FCFBF6] border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors ${
+              postType === "traveler"
+                ? "bg-[#2A4B8D] hover:bg-[#355CA8]"
+                : "bg-[#C23B3B] hover:bg-[#D04A4A]"
+            }`}
           >
             {submitting ? t.submittingBtn : t.submitBtn}
           </button>
