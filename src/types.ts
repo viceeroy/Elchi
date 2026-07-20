@@ -67,6 +67,14 @@ export interface Translations {
   successTitle: string;
   errorRequiredFields: string;
   errorGeneral: string;
+  // Per-field validation messages, shown inline beneath the offending field
+  errorFieldFromCity?: string;
+  errorFieldToCity?: string;
+  errorFieldDate?: string;
+  errorFieldWeight?: string;
+  errorFieldCategory?: string;
+  errorFieldNote?: string;
+  errorFieldContact?: string;
   autoDeleteLabel: string;
   shareBtn?: string;
   shareTitle?: string;
