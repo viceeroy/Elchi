@@ -57,3 +57,50 @@ WITH CHECK (true);
 CREATE POLICY "Allow public inserts to reports"
 ON reports FOR INSERT
 WITH CHECK (true);
+
+-- Migration: profiles table + auto-provisioning trigger for Supabase Auth
+-- (email OTP, Google OAuth, and a Telegram bridge via admin.createUser all
+-- land here — see api/auth-telegram.ts for the Telegram flow).
+CREATE TABLE IF NOT EXISTS profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    display_name TEXT,
+    avatar_url TEXT,
+    auth_provider TEXT NOT NULL CHECK (auth_provider IN ('email', 'google', 'telegram')),
+    telegram_id BIGINT UNIQUE,
+    telegram_username TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Populates profiles from auth.users metadata on signup, regardless of
+-- provider (email/google set raw_app_meta_data.provider; the Telegram
+-- bridge passes the same fields via user_metadata on admin.createUser).
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, display_name, avatar_url, auth_provider, telegram_id, telegram_username)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
+        COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
+        COALESCE(NEW.raw_user_meta_data->>'provider', NEW.raw_app_meta_data->>'provider'),
+        (NEW.raw_user_meta_data->>'telegram_id')::BIGINT,
+        NEW.raw_user_meta_data->>'telegram_username'
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own profile"
+ON profiles FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile"
+ON profiles FOR UPDATE
+USING (auth.uid() = id);

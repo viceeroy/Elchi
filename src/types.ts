@@ -81,4 +81,24 @@ export interface Translations {
   emptyStateTitle?: string;
   emptyStateText?: string;
   stubLabel?: string;
+
+  // Login modal
+  loginTitle?: string;
+  loginSubtitle?: string;
+  continueWithTelegram?: string;
+  continueWithGoogle?: string;
+  continueWithEmail?: string;
+  emailPlaceholder?: string;
+  orDivider?: string;
+  checkYourEmailTitle?: string;
+  checkYourEmailText?: string;
+  codePlaceholder?: string;
+  verifyBtn?: string;
+  verifyingBtn?: string;
+  useAnotherEmail?: string;
+  loginErrorGeneral?: string;
+  loginErrorInvalidCode?: string;
+  signedInAs?: string;
+  signOut?: string;
+  profileMenuLabel?: string;
 }
