@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { Post, Locale, PostType } from "./types";
 import { translations, defaultLocale } from "./translations";
 import { KOREA_CITIES } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
 import { PostFormModal } from "./components/PostFormModal";
-import { LoginModal } from "./components/LoginModal";
-import { supabaseBrowser } from "./supabaseClient";
-import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User, LogOut } from "lucide-react";
+import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User } from "lucide-react";
 
 const LOCALE_LABELS: Record<Locale, string> = {
   uz: "O'zbekcha",
@@ -46,10 +43,6 @@ export default function App() {
   const [visibleCount, setVisibleCount] = useState<number>(8);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const langMenuRef = React.useRef<HTMLDivElement>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const profileMenuRef = React.useRef<HTMLDivElement>(null);
 
   // Close language dropdown on outside click
   useEffect(() => {
@@ -62,27 +55,6 @@ export default function App() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [langMenuOpen]);
-
-  // Close profile dropdown on outside click
-  useEffect(() => {
-    if (!profileMenuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
-        setProfileMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [profileMenuOpen]);
-
-  // Hydrate session on mount and keep it in sync with Supabase Auth
-  useEffect(() => {
-    supabaseBrowser.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: subscription } = supabaseBrowser.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-    return () => subscription.subscription.unsubscribe();
-  }, []);
 
   // Reset visible posts count when filter changes to avoid confusion
   useEffect(() => {
@@ -111,7 +83,7 @@ export default function App() {
   // behind the overlay (the cause of the "shaking" background), and restores the
   // exact prior scroll position on close so the user doesn't jump.
   useEffect(() => {
-    const isModalOpen = selectedPost !== null || formOpen || loginModalOpen;
+    const isModalOpen = selectedPost !== null || formOpen;
     if (!isModalOpen) return;
 
     const scrollY = window.scrollY;
@@ -134,7 +106,7 @@ export default function App() {
       body.style.paddingRight = "";
       window.scrollTo(0, scrollY);
     };
-  }, [selectedPost, formOpen, loginModalOpen]);
+  }, [selectedPost, formOpen]);
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -352,40 +324,15 @@ export default function App() {
               )}
             </div>
 
-            {/* Profile / Auth entry point */}
-            <div className="relative" ref={profileMenuRef}>
-              <button
-                aria-label={t.profileMenuLabel || "Profile"}
-                onClick={() => (session ? setProfileMenuOpen((v) => !v) : setLoginModalOpen(true))}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E4E0D2] bg-[#F2EFE6] text-[#1B2A4A] hover:border-[#1B2A4A] transition-all overflow-hidden"
-              >
-                {session?.user.user_metadata?.avatar_url ? (
-                  <img src={session.user.user_metadata.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <User size={16} />
-                )}
-              </button>
-              {profileMenuOpen && session && (
-                <div className="absolute right-0 top-[calc(100%+6px)] bg-[#FCFBF6] border border-[#E4E0D2] rounded-lg shadow-lg py-1 min-w-[180px] z-50">
-                  <div className="px-3 py-2 border-b border-[#E4E0D2]">
-                    <div className="font-mono text-[10px] uppercase tracking-wider text-[#8A8F98]">{t.signedInAs}</div>
-                    <div className="text-[13px] font-bold text-[#1B2A4A] truncate">
-                      {session.user.user_metadata?.display_name || session.user.email}
-                    </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      await supabaseBrowser.auth.signOut();
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 text-left text-[13px] px-3 py-2 text-[#C23B3B] hover:bg-[#F2EFE6] transition-all"
-                  >
-                    <LogOut size={14} />
-                    {t.signOut}
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Profile / Auth entry point — auth is built but not connected yet.
+                To re-enable: render <LoginModal> and wire this button to it
+                (see src/components/LoginModal.tsx and api/auth-telegram.ts). */}
+            <button
+              aria-label={t.profileMenuLabel || "Profile"}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E4E0D2] bg-[#F2EFE6] text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
+            >
+              <User size={16} />
+            </button>
           </div>
         </div>
       </header>
@@ -530,16 +477,6 @@ export default function App() {
           locale={locale}
           onClose={() => setFormOpen(false)}
           onSubmitSuccess={handlePostSubmitSuccess}
-        />
-      )}
-
-      {/* Login Bottom Sheet Modal */}
-      {loginModalOpen && (
-        <LoginModal
-          t={t}
-          locale={locale}
-          onClose={() => setLoginModalOpen(false)}
-          onLoginSuccess={() => setLoginModalOpen(false)}
         />
       )}
 
