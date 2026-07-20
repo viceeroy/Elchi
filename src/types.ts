@@ -2,17 +2,30 @@
 
 export type PostType = "traveler" | "request";
 
+export type Direction = "k2u" | "u2k";
+
+export type ContactMethod = "telegram" | "phone";
+
 export interface Post {
   id: string;
   type: PostType;
+  direction: Direction | null;
   from_city: string;
   to_city: string;
   date: string; // YYYY-MM-DD
+  // Structured cargo data — the source of truth for filtering and display logic.
+  weight_kg: number;
+  luggage_count: number;
+  categories: string[];
+  category_other: string | null;
+  // Pre-rendered display string built from the fields above, e.g.
+  // "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon".
   weight: string;
-  price: string | null;
   note: string | null;
   contact: string;
+  contact_type: ContactMethod | null;
   contact2: string | null;
+  contact2_type: ContactMethod | null;
   created_at: string;
   expires_at: string;
 }

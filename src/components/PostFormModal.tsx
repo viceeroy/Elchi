@@ -70,6 +70,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
   const [errors, setErrors] = useState<FieldErrors>({});
   const fieldRefs = useRef<Partial<Record<FieldName, HTMLElement | null>>>({});
+  // Failures that belong to the submit itself (rejected by the API, network
+  // down) rather than to any one field, shown above the submit button.
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitErrorRef = useRef<HTMLDivElement>(null);
 
   // Clear a field's error as soon as the user acts on it, so the message goes
   // away while they type instead of lingering until the next submit.
@@ -121,6 +125,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       console.warn("Spam detected: Bot submitted honeypot field.");
       return;
     }
+
+    // A previous failure no longer describes this attempt.
+    setSubmitError(null);
 
     // 2. Client-side Validation. Every problem is reported inline on the field
     // itself rather than in a dialog, so collect them all in one pass and then
@@ -208,13 +215,23 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
       const postData = {
         type: postType,
+        direction,
         from_city: fromCity.trim(),
         to_city: toCity.trim(),
         date: dateString,
+        // Structured cargo data. Travelers offer kg and/or luggage slots and
+        // carry no categories; requesters pick categories and an optional kg.
+        weight_kg: weightKg,
+        luggage_count: postType === "traveler" ? weightLuggage : 0,
+        categories: postType === "request" ? selectedItems : [],
+        category_other: selectedItems.includes("other") ? customItemType.trim() || null : null,
+        // Display string kept alongside the fields it was built from.
         weight: finalWeight,
         note: note.trim(),
         contact: finalContact,
+        contact_type: contactMethod,
         contact2: finalContact2,
+        contact2_type: finalContact2 ? contact2Method : null,
         honeypot: honeypot // Passed so backend can verify as well
       };
 
@@ -229,11 +246,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       if (res.ok) {
         onSubmitSuccess();
       } else {
-        alert(result.error || t.errorGeneral);
+        setSubmitError(result.error || t.errorGeneral);
       }
     } catch (err) {
       console.error(err);
-      alert(t.errorGeneral);
+      setSubmitError(t.errorGeneral);
     } finally {
       setSubmitting(false);
     }

@@ -17,7 +17,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json(data);
   } else if (req.method === 'POST') {
-    const { type, from_city, to_city, date, weight, price, note, contact, contact2, honeypot } = req.body || {};
+    const {
+      type,
+      direction,
+      from_city,
+      to_city,
+      date,
+      weight_kg,
+      luggage_count,
+      categories,
+      category_other,
+      weight,
+      note,
+      contact,
+      contact_type,
+      contact2,
+      contact2_type,
+      honeypot
+    } = req.body || {};
 
     if (honeypot) {
       return res.status(400).json({ error: 'Spam aniqlandi' });
@@ -29,6 +46,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (type !== 'traveler' && type !== 'request') {
       return res.status(400).json({ error: 'Noto\'g\'ri e\'lon turi' });
+    }
+
+    if (direction && direction !== 'k2u' && direction !== 'u2k') {
+      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+    }
+
+    const isContactType = (v: unknown) => v === 'telegram' || v === 'phone';
+    if (!isContactType(contact_type) || (contact2 && !isContactType(contact2_type))) {
+      return res.status(400).json({ error: 'Noto\'g\'ri aloqa turi' });
     }
 
     const postDate = new Date(date);
@@ -44,14 +70,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .insert([
         {
           type,
+          direction: direction || null,
           from_city,
           to_city,
           date,
+          weight_kg: Number(weight_kg) || 0,
+          luggage_count: Number(luggage_count) || 0,
+          categories: Array.isArray(categories) ? categories : [],
+          category_other: category_other || null,
           weight,
-          price: price || null,
           note: note || null,
           contact,
+          contact_type,
           contact2: contact2 || null,
+          contact2_type: contact2 ? contact2_type : null,
           expires_at
         }
       ])
