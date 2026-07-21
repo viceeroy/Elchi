@@ -2,17 +2,30 @@
 
 export type PostType = "traveler" | "request";
 
+export type Direction = "k2u" | "u2k";
+
+export type ContactMethod = "telegram" | "phone";
+
 export interface Post {
   id: string;
   type: PostType;
+  direction: Direction | null;
   from_city: string;
   to_city: string;
   date: string; // YYYY-MM-DD
+  // Structured cargo data — the source of truth for filtering and display logic.
+  weight_kg: number;
+  luggage_count: number;
+  categories: string[];
+  category_other: string | null;
+  // Pre-rendered display string built from the fields above, e.g.
+  // "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon".
   weight: string;
-  price: string | null;
   note: string | null;
   contact: string;
+  contact_type: ContactMethod | null;
   contact2: string | null;
+  contact2_type: ContactMethod | null;
   created_at: string;
   expires_at: string;
 }
@@ -34,8 +47,6 @@ export interface Translations {
   postAdBtn: string;
   disclaimerTitle: string;
   disclaimerText: string;
-  reportBtn: string;
-  reportedToast: string;
   
   // Form Sheet
   addPostTitle: string;
@@ -67,6 +78,14 @@ export interface Translations {
   successTitle: string;
   errorRequiredFields: string;
   errorGeneral: string;
+  // Per-field validation messages, shown inline beneath the offending field
+  errorFieldFromCity?: string;
+  errorFieldToCity?: string;
+  errorFieldDate?: string;
+  errorFieldWeight?: string;
+  errorFieldCategory?: string;
+  errorFieldNote?: string;
+  errorFieldContact?: string;
   autoDeleteLabel: string;
   shareBtn?: string;
   shareTitle?: string;
@@ -81,4 +100,24 @@ export interface Translations {
   emptyStateTitle?: string;
   emptyStateText?: string;
   stubLabel?: string;
+
+  // Login modal
+  loginTitle?: string;
+  loginSubtitle?: string;
+  continueWithTelegram?: string;
+  continueWithGoogle?: string;
+  continueWithEmail?: string;
+  emailPlaceholder?: string;
+  orDivider?: string;
+  checkYourEmailTitle?: string;
+  checkYourEmailText?: string;
+  codePlaceholder?: string;
+  verifyBtn?: string;
+  verifyingBtn?: string;
+  useAnotherEmail?: string;
+  loginErrorGeneral?: string;
+  loginErrorInvalidCode?: string;
+  signedInAs?: string;
+  signOut?: string;
+  profileMenuLabel?: string;
 }

@@ -1,6 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Locale, Translations, PostType } from "../types";
-import { X, Briefcase, Package, Sparkles, Phone, Send } from "lucide-react";
+import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle } from "lucide-react";
+
+// Phone fields keep digits and the punctuation used by the +998/+82 formats
+// in the placeholder; letters and everything else are dropped as the user types.
+const sanitizePhone = (value: string) => value.replace(/[^\d+\-\s()]/g, "");
+
+type FieldName = "fromCity" | "toCity" | "date" | "weight" | "category" | "note" | "contact";
+type FieldErrors = Partial<Record<FieldName, string | undefined>>;
+
+// Top-to-bottom order of the fields in the form, used to scroll to the first
+// problem rather than whichever one happened to be checked first.
+const FIELD_ORDER: FieldName[] = ["fromCity", "toCity", "date", "weight", "category", "note", "contact"];
+
+const FieldError: React.FC<{ message?: string }> = ({ message }) =>
+  message ? (
+    <p className="mt-1.5 flex items-center gap-1.5 text-[#C23B3B] text-[12px] font-semibold">
+      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+      {message}
+    </p>
+  ) : null;
+
+// Applied to inputs that failed validation, replacing their usual border.
+const ERROR_INPUT_CLASS = "border-[#C23B3B] focus:border-[#C23B3B] ring-1 ring-[#C23B3B]/30";
 
 interface PostFormModalProps {
   t: Translations;
@@ -45,6 +67,24 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [honeypot, setHoneypot] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
+
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const fieldRefs = useRef<Partial<Record<FieldName, HTMLElement | null>>>({});
+  // Failures that belong to the submit itself (rejected by the API, network
+  // down) rather than to any one field, shown above the submit button.
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitErrorRef = useRef<HTMLDivElement>(null);
+
+  // Clear a field's error as soon as the user acts on it, so the message goes
+  // away while they type instead of lingering until the next submit.
+  const clearError = (field: FieldName) =>
+    setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+
+  // Bring a submit-level failure into view — it renders below the fold, next
+  // to the button the user just pressed.
+  useEffect(() => {
+    if (submitError) submitErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [submitError]);
 
   const itemTypes = [
     { id: "docs", label: locale === "uz" ? "Hujjatlar" : locale === "ru" ? "Документы" : "Documents" },
@@ -92,34 +132,37 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       return;
     }
 
-    // 2. Client-side Validation
-    if (!fromCity.trim() || !toCity.trim()) {
-      alert(t.errorRequiredFields + " (Qaysi shahar / City)");
-      return;
-    }
+    // A previous failure no longer describes this attempt.
+    setSubmitError(null);
 
-    if (selectedDay === null) {
-      alert(t.errorRequiredFields + " (Sana / Date)");
-      return;
-    }
+    // 2. Client-side Validation. Every problem is reported inline on the field
+    // itself rather than in a dialog, so collect them all in one pass and then
+    // bring the first one into view.
+    const nextErrors: FieldErrors = {};
 
+    if (!fromCity.trim()) nextErrors.fromCity = t.errorFieldFromCity;
+    if (!toCity.trim()) nextErrors.toCity = t.errorFieldToCity;
+    if (selectedDay === null) nextErrors.date = t.errorFieldDate;
     if (postType === "traveler" && weightKg === 0 && weightLuggage === 0) {
-      alert(t.errorRequiredFields + " (Kg yoki chamadon / Weight or luggage)");
-      return;
+      nextErrors.weight = t.errorFieldWeight;
     }
-
     if (postType === "request" && selectedItems.length === 0) {
-      alert(t.errorRequiredFields + " (Nima yubormoqchisiz? / Category)");
-      return;
+      nextErrors.category = t.errorFieldCategory;
     }
+    if (!note.trim()) nextErrors.note = t.errorFieldNote;
+    if (!contact.trim()) nextErrors.contact = t.errorFieldContact;
 
-    if (!note.trim()) {
-      alert(t.errorRequiredFields + " (Izoh / Note)");
-      return;
-    }
+    setErrors(nextErrors);
 
-    if (!contact.trim()) {
-      alert(t.errorRequiredFields + " (Bog'lanish / Contact)");
+    const firstInvalid = FIELD_ORDER.find((field) => nextErrors[field]);
+    if (firstInvalid) {
+      const el = fieldRefs.current[firstInvalid];
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Focus text inputs so the user can start typing straight away; the
+      // custom widgets (date, weight, categories) are not focusable.
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        el.focus({ preventScroll: true });
+      }
       return;
     }
 
@@ -178,13 +221,23 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
       const postData = {
         type: postType,
+        direction,
         from_city: fromCity.trim(),
         to_city: toCity.trim(),
         date: dateString,
+        // Structured cargo data. Travelers offer kg and/or luggage slots and
+        // carry no categories; requesters pick categories and an optional kg.
+        weight_kg: weightKg,
+        luggage_count: postType === "traveler" ? weightLuggage : 0,
+        categories: postType === "request" ? selectedItems : [],
+        category_other: selectedItems.includes("other") ? customItemType.trim() || null : null,
+        // Display string kept alongside the fields it was built from.
         weight: finalWeight,
         note: note.trim(),
         contact: finalContact,
+        contact_type: contactMethod,
         contact2: finalContact2,
+        contact2_type: finalContact2 ? contact2Method : null,
         honeypot: honeypot // Passed so backend can verify as well
       };
 
@@ -199,11 +252,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       if (res.ok) {
         onSubmitSuccess();
       } else {
-        alert(result.error || t.errorGeneral);
+        setSubmitError(result.error || t.errorGeneral);
       }
     } catch (err) {
       console.error(err);
-      alert(t.errorGeneral);
+      setSubmitError(t.errorGeneral);
     } finally {
       setSubmitting(false);
     }
@@ -242,27 +295,29 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Tab Toggle between Traveler and Request */}
+        {/* Tab Toggle between Traveler and Request — the active tab borrows the
+            stamp styling from the post cards (see BoardingPass), so the blue/red
+            colour coding means the same thing while composing as when browsing. */}
         <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-1 mb-6 gap-1">
-          <button 
+          <button
             type="button"
             onClick={() => setPostType("traveler")}
             className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              postType === "traveler" 
-                ? "bg-[#1B2A4A] text-[#FCFBF6] shadow" 
-                : "text-[#5A6272] hover:text-[#1B2A4A]"
+              postType === "traveler"
+                ? "bg-[#2A4B8D] text-[#FCFBF6] border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] -rotate-[1.5deg]"
+                : "border border-transparent text-[#5A6272] hover:text-[#2A4B8D]"
             }`}
           >
             <Briefcase className="w-4 h-4" />
             {t.tabTraveler}
           </button>
-          <button 
+          <button
             type="button"
             onClick={() => setPostType("request")}
             className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              postType === "request" 
-                ? "bg-[#1B2A4A] text-[#FCFBF6] shadow" 
-                : "text-[#5A6272] hover:text-[#1B2A4A]"
+              postType === "request"
+                ? "bg-[#C23B3B] text-[#FCFBF6] border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] rotate-[1.5deg]"
+                : "border border-transparent text-[#5A6272] hover:text-[#C23B3B]"
             }`}
           >
             <Package className="w-4 h-4" />
@@ -328,10 +383,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 </label>
                 <input
                   type="text"
+                  ref={(el) => { fieldRefs.current.fromCity = el; }}
                   value={fromCity}
-                  onChange={(e) => setFromCity(e.target.value)}
+                  onChange={(e) => { setFromCity(e.target.value); clearError("fromCity"); }}
                   placeholder={locale === "uz" ? "Qayerdan (masalan: Seoul)" : locale === "ru" ? "Откуда (напр.: Сеул)" : "From (e.g. Seoul)"}
-                  className="w-full box-sizing-border-box p-3 border border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] focus:border-[#2A4B8D] outline-none"
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
+                    errors.fromCity ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
+                  }`}
                 />
               </div>
 
@@ -343,17 +401,21 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 </label>
                 <input
                   type="text"
+                  ref={(el) => { fieldRefs.current.toCity = el; }}
                   value={toCity}
-                  onChange={(e) => setToCity(e.target.value)}
+                  onChange={(e) => { setToCity(e.target.value); clearError("toCity"); }}
                   placeholder={locale === "uz" ? "Qayerga (masalan: Toshkent)" : locale === "ru" ? "Куда (напр.: Ташкент)" : "To (e.g. Tashkent)"}
-                  className="w-full box-sizing-border-box p-3 border border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] focus:border-[#2A4B8D] outline-none"
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
+                    errors.toCity ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
+                  }`}
                 />
               </div>
             </div>
+            <FieldError message={errors.fromCity || errors.toCity} />
           </div>
 
           {/* Date Selection Section */}
-          <div>
+          <div ref={(el) => { fieldRefs.current.date = el; }}>
             <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold mb-2">
               {postType === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest}
             </label>
@@ -384,11 +446,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button
                       key={d.getDate()}
                       type="button"
-                      onClick={() => setSelectedDay(d.getDate())}
+                      onClick={() => { setSelectedDay(d.getDate()); clearError("date"); }}
                       className={`font-mono flex flex-col items-center gap-0.5 min-w-[42px] p-2.5 rounded-lg border cursor-pointer transition-all ${
-                        isSelected 
-                          ? "bg-[#1B2A4A] text-[#FCFBF6] border-[#1B2A4A] scale-105 shadow-sm" 
-                          : "bg-[#FCFBF6] text-[#1B2A4A] border-[#E4E0D2] hover:border-[#1B2A4A]"
+                        isSelected
+                          ? "bg-[#1B2A4A] text-[#FCFBF6] border-[#1B2A4A] scale-105 shadow-sm"
+                          : errors.date
+                            ? "bg-[#FCFBF6] text-[#1B2A4A] border-[#C23B3B]"
+                            : "bg-[#FCFBF6] text-[#1B2A4A] border-[#E4E0D2] hover:border-[#1B2A4A]"
                       }`}
                     >
                       <span className="text-[9px] opacity-65">{weekdays[d.getDay()]}</span>
@@ -398,6 +462,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 })}
               </div>
             </div>
+            <FieldError message={errors.date} />
           </div>
 
           {/* Weight & Category Section */}
@@ -408,11 +473,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
             {postType === "traveler" ? (
               // Traveler: Weight Stepper + Suitcase Option
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-3.5 bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-2.5">
-                  <button 
+              <div className="flex flex-wrap items-center gap-4" ref={(el) => { fieldRefs.current.weight = el; }}>
+                <div className={`flex items-center gap-3.5 bg-[#F2EFE6] border rounded-xl p-2.5 ${errors.weight ? "border-[#C23B3B]" : "border-[#E9E5D8]"}`}>
+                  <button
                     type="button"
-                    onClick={() => setWeightKg(w => Math.max(0, w - 1))}
+                    onClick={() => { setWeightKg(w => Math.max(0, w - 1)); clearError("weight"); }}
                     className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
                   >
                     −
@@ -421,9 +486,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <span className="text-xl font-extrabold text-[#1B2A4A]">{weightKg}</span>
                     <span className="font-mono text-[9px] text-[#8A8F98] tracking-widest font-bold">KG</span>
                   </div>
-                  <button 
+                  <button
                     type="button"
-                    onClick={() => setWeightKg(w => Math.min(40, w + 1))}
+                    onClick={() => { setWeightKg(w => Math.min(40, w + 1)); clearError("weight"); }}
                     className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
                   >
                     +
@@ -448,8 +513,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setWeightLuggage(1)}
-                      className="font-mono text-xs font-semibold px-4 py-3 bg-[#FCFBF6] text-[#6B7280] border border-dashed border-[#D8D3C4] rounded-lg hover:border-[#1B2A4A]"
+                      onClick={() => { setWeightLuggage(1); clearError("weight"); }}
+                      className={`font-mono text-xs font-semibold px-4 py-3 bg-[#FCFBF6] text-[#6B7280] border border-dashed rounded-lg hover:border-[#1B2A4A] ${
+                        errors.weight ? "border-[#C23B3B]" : "border-[#D8D3C4]"
+                      }`}
                     >
                       + {t.addLuggageBtn}
                     </button>
@@ -468,12 +535,15 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             ) : (
               // Request: Category Selection + Weight Stepper
               <div className="flex flex-col gap-4">
-                <div className="flex flex-wrap gap-2">
+                <div
+                  className={`flex flex-wrap gap-2 ${errors.category ? "border border-[#C23B3B] rounded-xl p-2" : ""}`}
+                  ref={(el) => { fieldRefs.current.category = el; }}
+                >
                   {itemTypeChips.map(it => (
                     <button
                       key={it.id}
                       type="button"
-                      onClick={() => toggleItem(it.id)}
+                      onClick={() => { toggleItem(it.id); clearError("category"); }}
                       className="font-sans text-xs px-3.5 py-2.5 rounded-full border font-semibold flex items-center transition-all"
                       style={it.style as React.CSSProperties}
                     >
@@ -481,6 +551,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     </button>
                   ))}
                 </div>
+                <FieldError message={errors.category} />
 
                 {selectedItems.includes("other") && (
                   <input
@@ -505,7 +576,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <span className="text-xl font-extrabold text-[#1B2A4A]">{weightKg}</span>
                     <span className="font-mono text-[9px] text-[#8A8F98] tracking-widest font-bold">KG</span>
                   </div>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setWeightKg(w => Math.min(30, w + 1))}
                     className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
@@ -515,6 +586,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 </div>
               </div>
             )}
+            {postType === "traveler" && <FieldError message={errors.weight} />}
           </div>
 
           {/* Note/Izoh — required */}
@@ -523,11 +595,15 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               {t.noteLabel.replace(" (ixtiyoriy)", "").replace(" (опционально)", "").replace(" (optional)", "")} <span className="text-red-500">*</span>
             </label>
             <textarea
+              ref={(el) => { fieldRefs.current.note = el; }}
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => { setNote(e.target.value); clearError("note"); }}
               placeholder={t.notePlaceholder}
-              className="w-full box-sizing-border-box p-3 border border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] resize-y min-h-[72px]"
+              className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] resize-y min-h-[72px] outline-none ${
+                errors.note ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
+              }`}
             ></textarea>
+            <FieldError message={errors.note} />
           </div>
 
           {/* Contact */}
@@ -591,6 +667,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
                 <input
                   type="text"
+                  ref={(el) => { fieldRefs.current.contact = el; }}
+                  inputMode={contactMethod === "phone" ? "tel" : "text"}
                   value={contactMethod === "telegram" && contact.startsWith("@") ? contact.substring(1) : contact}
                   onChange={(e) => {
                     const typed = e.target.value;
@@ -598,23 +676,27 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                       // Always store with `@` in state
                       setContact(typed.startsWith("@") ? typed : "@" + typed);
                     } else {
-                      setContact(typed);
+                      setContact(sanitizePhone(typed));
                     }
+                    clearError("contact");
                   }}
                   placeholder={
-                    contactMethod === "telegram" 
-                      ? "username" 
+                    contactMethod === "telegram"
+                      ? "username"
                       : locale === "uz" ? "+998 90-123-4567 yoki +82 10-1234-5678" : locale === "ru" ? "+998 90-123-4567 или +82 10-1234-5678" : "+998 90-123-4567 or +82 10-1234-5678"
                   }
-                  required
                   className={`w-full box-sizing-border-box p-3 pl-8.5 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono transition-all ${
-                    contactMethod === "telegram" 
-                      ? "border-[#D8D3C4] focus:border-[#2A4B8D] focus:ring-1 focus:ring-[#2A4B8D]" 
-                      : "border-[#D8D3C4] focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                    errors.contact
+                      ? ERROR_INPUT_CLASS
+                      : contactMethod === "telegram"
+                        ? "border-[#D8D3C4] focus:border-[#2A4B8D] focus:ring-1 focus:ring-[#2A4B8D]"
+                        : "border-[#D8D3C4] focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
                   }`}
                   style={{ paddingLeft: "34px" }}
                 />
               </div>
+
+              <FieldError message={errors.contact} />
 
               {/* Dynamic Helper Link or Country Code Suggestions */}
               {contactMethod === "telegram" ? (
@@ -686,8 +768,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   </div>
                   <input
                     type="text"
+                    inputMode={contactMethod === "telegram" ? "tel" : "text"}
                     value={contact2}
-                    onChange={(e) => setContact2(e.target.value)}
+                    onChange={(e) => {
+                      const typed = e.target.value;
+                      // Secondary is always the opposite method of the primary
+                      setContact2(contactMethod === "telegram" ? sanitizePhone(typed) : typed);
+                    }}
                     placeholder={
                       contactMethod === "telegram"
                         ? (locale === "uz" ? "+998 90-123-4567 yoki +82 10-1234-5678" : locale === "ru" ? "+998 90-123-4567 или +82 10-1234-5678" : "+998 90-123-4567 or +82 10-1234-5678")
@@ -709,11 +796,27 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             )}
           </div>
 
-          {/* Submit Button */}
+          {/* Submit-level error (API rejection, network failure) — not tied to
+              any single field, so it sits with the control that failed. */}
+          {submitError && (
+            <div
+              ref={submitErrorRef}
+              className="flex items-start gap-2 bg-[#FBEAEA] border border-[#C23B3B]/30 rounded-lg px-3.5 py-3 text-[#C23B3B] text-sm font-semibold"
+            >
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              {submitError}
+            </div>
+          )}
+
+          {/* Submit Button — tracks the selected post type's stamp colour */}
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3.5 bg-[#1B2A4A] text-[#FCFBF6] border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors hover:bg-[#26385E]"
+            className={`w-full py-3.5 text-[#FCFBF6] border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors ${
+              postType === "traveler"
+                ? "bg-[#2A4B8D] hover:bg-[#355CA8]"
+                : "bg-[#C23B3B] hover:bg-[#D04A4A]"
+            }`}
           >
             {submitting ? t.submittingBtn : t.submitBtn}
           </button>
