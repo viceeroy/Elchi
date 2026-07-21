@@ -92,8 +92,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
     telegramContainerRef.current.innerHTML = "";
     telegramContainerRef.current.appendChild(script);
 
+    // Telegram renders its own fixed-size iframe with a look we can't
+    // restyle directly. Stretch it invisibly over our custom button below
+    // so clicks land on the real widget while users see our styled button.
+    const observer = new MutationObserver(() => {
+      const iframe = telegramContainerRef.current?.querySelector("iframe");
+      if (iframe) {
+        iframe.style.width = "100%";
+        iframe.style.height = "100%";
+        observer.disconnect();
+      }
+    });
+    observer.observe(telegramContainerRef.current, { childList: true });
+
     return () => {
       window.onTelegramAuth = undefined;
+      observer.disconnect();
     };
   }, []);
 
@@ -117,17 +131,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
         <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight mb-1">{t.loginTitle}</h2>
         <p className="text-sm text-[#5A6272] mb-6">{t.loginSubtitle}</p>
 
-        {/* Telegram widget mounts here */}
-        <div className="mb-3 flex justify-center min-h-[40px]" ref={telegramContainerRef}>
-          {!TELEGRAM_BOT_USERNAME && (
-            <button
-              disabled
-              className="w-full flex items-center justify-center gap-2 border border-[#D8D3C4] rounded-lg py-3 text-sm font-bold text-[#8A8F98] cursor-not-allowed"
-            >
-              <Send className="w-4 h-4" />
-              {t.continueWithTelegram}
-            </button>
-          )}
+        {/* Custom-styled Telegram button (matches Google button's shape).
+            The real Telegram widget iframe is stretched invisibly on top so
+            clicks trigger the real login popup. */}
+        <div className="relative mb-3 h-[46px]">
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            disabled={!TELEGRAM_BOT_USERNAME}
+            className="absolute inset-0 w-full flex items-center justify-center gap-2 border border-[#3B82F6] rounded-lg text-sm font-bold text-white bg-[#3B82F6] disabled:opacity-60 disabled:cursor-not-allowed pointer-events-none"
+          >
+            <Send className="w-4 h-4" />
+            {t.continueWithTelegram}
+          </button>
+          <div
+            className="absolute inset-0 opacity-0 overflow-hidden rounded-lg"
+            ref={telegramContainerRef}
+          />
         </div>
 
         {/* Google OAuth */}

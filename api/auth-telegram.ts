@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import { supabaseAdmin } from '../lib/supabase-admin.js';
+import { checkRateLimit, clientIp } from '../lib/rate-limit.js';
 
 interface TelegramAuthPayload {
   id: number;
@@ -40,6 +41,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Throttle auth attempts per IP to slow brute-forcing / abuse of the bridge.
+  const allowed = await checkRateLimit('auth', clientIp(req), 10, 600);
+  if (!allowed) {
+    return res.status(429).json({ error: 'Juda ko\'p urinish. Birozdan keyin urinib ko\'ring' });
+  }
+
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
     console.error('TELEGRAM_BOT_TOKEN is not configured');
@@ -75,10 +82,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   });
 
   // Idempotent: repeat logins from the same Telegram account hit the same
-  // synthetic email and legitimately fail with "already registered".
-  if (createError && !createError.message?.toLowerCase().includes('already')) {
-    console.error('Error creating Telegram user:', createError);
-    return res.status(500).json({ error: 'Xatolik yuz berdi' });
+  // synthetic email and legitimately fail as "already registered". Detect that
+  // via Supabase's status/code first (422 / email_exists) and only fall back to
+  // the message text, so a reworded message doesn't 500 every returning user.
+  if (createError) {
+    const err = createError as { status?: number; code?: string; message?: string };
+    const isAlreadyExists =
+      err.status === 422 ||
+      err.code === 'email_exists' ||
+      Boolean(err.message?.toLowerCase().includes('already'));
+    if (!isAlreadyExists) {
+      console.error('Error creating Telegram user:', createError);
+      return res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
   }
 
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({

@@ -115,9 +115,10 @@ DROP TABLE IF EXISTS reports;
 -- ---------------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------------
--- The board is intentionally anonymous: anyone may read active posts and anyone
--- may create one. RLS stays ON with no UPDATE and no DELETE policy, so the
--- public anon key cannot tamper with or wipe existing rows.
+-- Reading is public: anyone may read active posts. Creating a post requires a
+-- logged-in author (user_id must equal auth.uid()), so the shipped anon key
+-- cannot insert or attribute a post to someone else. RLS stays ON with no
+-- UPDATE and no DELETE policy, so no one can tamper with or wipe existing rows.
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read access to active posts" ON posts;
@@ -126,9 +127,10 @@ ON posts FOR SELECT
 USING (expires_at >= CURRENT_DATE);
 
 DROP POLICY IF EXISTS "Allow public inserts to posts" ON posts;
-CREATE POLICY "Allow public inserts to posts"
+DROP POLICY IF EXISTS "Authenticated users insert own posts" ON posts;
+CREATE POLICY "Authenticated users insert own posts"
 ON posts FOR INSERT
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL AND user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
 -- profiles (Supabase Auth)
@@ -139,6 +141,7 @@ WITH CHECK (true);
 -- intentionally disabled.
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT,
     display_name TEXT,
     avatar_url TEXT,
     auth_provider TEXT NOT NULL CHECK (auth_provider IN ('google', 'telegram')),
@@ -147,15 +150,18 @@ CREATE TABLE IF NOT EXISTS profiles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Populates profiles from auth.users metadata on signup, regardless of
--- provider (email/google set raw_app_meta_data.provider; the Telegram
--- bridge passes the same fields via user_metadata on admin.createUser).
+-- Populates profiles from auth.users on signup, regardless of provider.
+-- email comes from auth.users.email (the real gmail for Google; the synthetic
+-- telegram_<id>@elchi.local for the Telegram bridge), so Google rows are no
+-- longer missing their address. display_name/avatar come from user metadata
+-- (google: full_name/name + picture; telegram: display_name + avatar_url).
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, display_name, avatar_url, auth_provider, telegram_id, telegram_username)
+    INSERT INTO public.profiles (id, email, display_name, avatar_url, auth_provider, telegram_id, telegram_username)
     VALUES (
         NEW.id,
+        COALESCE(NEW.email, NEW.raw_user_meta_data->>'email'),
         COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
         COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
         COALESCE(NEW.raw_user_meta_data->>'provider', NEW.raw_app_meta_data->>'provider'),
@@ -181,4 +187,62 @@ USING (auth.uid() = id);
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile"
 ON profiles FOR UPDATE
-USING (auth.uid() = id);
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
+
+-- ---------------------------------------------------------------------------
+-- rate_limits (API throttle)
+-- ---------------------------------------------------------------------------
+-- Postgres-backed fixed-window limiter for the serverless API (see
+-- lib/rate-limit.ts). One row per allowed request, keyed by (bucket,
+-- identifier). Only the service-role client touches it: RLS is ON with no
+-- policies, so the anon key can neither read nor write it.
+CREATE TABLE IF NOT EXISTS rate_limits (
+    id         BIGSERIAL PRIMARY KEY,
+    bucket     TEXT        NOT NULL,
+    identifier TEXT        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_rate_limits_lookup
+    ON rate_limits (bucket, identifier, created_at);
+
+ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
+
+-- Fixed-window check as a SECURITY DEFINER function so the API enforces limits
+-- with the public anon key (no service-role key needed). Prunes aged rows,
+-- counts live hits, records the current one, and returns true when under the
+-- limit. Runs as owner, bypassing RLS, so anon never touches the table directly.
+CREATE OR REPLACE FUNCTION check_rate_limit(
+    p_bucket     TEXT,
+    p_identifier TEXT,
+    p_max        INTEGER,
+    p_window_sec INTEGER
+) RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_window_start TIMESTAMPTZ := NOW() - make_interval(secs => p_window_sec);
+    v_count        INTEGER;
+BEGIN
+    DELETE FROM rate_limits
+    WHERE bucket = p_bucket AND identifier = p_identifier AND created_at < v_window_start;
+
+    SELECT COUNT(*) INTO v_count
+    FROM rate_limits
+    WHERE bucket = p_bucket AND identifier = p_identifier AND created_at >= v_window_start;
+
+    IF v_count >= p_max THEN
+        RETURN FALSE;
+    END IF;
+
+    INSERT INTO rate_limits (bucket, identifier) VALUES (p_bucket, p_identifier);
+    RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION check_rate_limit(TEXT, TEXT, INTEGER, INTEGER) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION check_rate_limit(TEXT, TEXT, INTEGER, INTEGER)
+    TO anon, authenticated, service_role;
