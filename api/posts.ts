@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json(data);
   } else if (req.method === 'POST') {
-    const { type, from_city, to_city, date, weight, price, note, contact, contact2, honeypot } = req.body || {};
+    const { type, from_city, to_city, date, weight, note, contact, contact2, honeypot } = req.body || {};
 
     if (honeypot) {
       return res.status(400).json({ error: 'Spam aniqlandi' });
@@ -48,7 +48,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           to_city,
           date,
           weight,
-          price: price || null,
           note: note || null,
           contact,
           contact2: contact2 || null,
