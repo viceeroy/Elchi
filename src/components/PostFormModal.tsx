@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Locale, Translations, PostType } from "../types";
 import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle } from "lucide-react";
 
@@ -79,6 +79,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   // away while they type instead of lingering until the next submit.
   const clearError = (field: FieldName) =>
     setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+
+  // Bring a submit-level failure into view — it renders below the fold, next
+  // to the button the user just pressed.
+  useEffect(() => {
+    if (submitError) submitErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [submitError]);
 
   const itemTypes = [
     { id: "docs", label: locale === "uz" ? "Hujjatlar" : locale === "ru" ? "Документы" : "Documents" },
@@ -789,6 +795,18 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               </button>
             )}
           </div>
+
+          {/* Submit-level error (API rejection, network failure) — not tied to
+              any single field, so it sits with the control that failed. */}
+          {submitError && (
+            <div
+              ref={submitErrorRef}
+              className="flex items-start gap-2 bg-[#FBEAEA] border border-[#C23B3B]/30 rounded-lg px-3.5 py-3 text-[#C23B3B] text-sm font-semibold"
+            >
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              {submitError}
+            </div>
+          )}
 
           {/* Submit Button — tracks the selected post type's stamp colour */}
           <button
