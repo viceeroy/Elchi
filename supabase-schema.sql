@@ -46,8 +46,6 @@ CREATE TABLE IF NOT EXISTS posts (
 
 CREATE INDEX IF NOT EXISTS idx_posts_expires_at ON posts(expires_at);
 CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(type);
-CREATE INDEX IF NOT EXISTS idx_posts_direction ON posts(direction);
-CREATE INDEX IF NOT EXISTS idx_posts_categories ON posts USING GIN (categories);
 
 -- ---------------------------------------------------------------------------
 -- Migrations for existing databases
@@ -65,6 +63,13 @@ ALTER TABLE posts ADD COLUMN IF NOT EXISTS categories TEXT[] NOT NULL DEFAULT '{
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS category_other TEXT;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS contact_type VARCHAR(10);
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS contact2_type VARCHAR(10);
+
+-- These two depend on columns that only exist after the ADD COLUMN block
+-- above, so they must run after it (on a fresh install the columns already
+-- exist from CREATE TABLE, but CREATE TABLE IF NOT EXISTS is a no-op when
+-- the table is already present, so the ordering here has to hold either way).
+CREATE INDEX IF NOT EXISTS idx_posts_direction ON posts(direction);
+CREATE INDEX IF NOT EXISTS idx_posts_categories ON posts USING GIN (categories);
 
 DO $$
 BEGIN

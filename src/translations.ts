@@ -2,7 +2,7 @@ import { Locale, Translations } from "./types";
 
 export const translations: Record<Locale, Translations> = {
   uz: {
-    tagline: "Bepul e'lon taxtasi — sayohatda yordam berish",
+    tagline: "SAYOHATDA YORDAM BERISH",
     title: "Chamadoningizda ",
     titleAccent: "joy bormi?",
     activeCount: "faol",
@@ -16,9 +16,6 @@ export const translations: Record<Locale, Translations> = {
     postAdBtn: "E'lon berish",
     disclaimerTitle: "Elchi shunchaki e'lon taxtasi.",
     disclaimerText: "Biz to'lov, buyum yoki yetkazib berish jarayoniga aralashmaymiz — foydalanuvchilar o'zaro bevosita kelishadi. Taqiqlangan yoki noqonuniy narsalarni joylashtirmang.",
-    reportBtn: "Shikoyat qilish",
-    reportedToast: "Shikoyatingiz qabul qilindi. Ushbu e'lon tekshiriladi.",
-    
     // Form Sheet
     addPostTitle: "Yangi e'lon qo'shish",
     addPostSubTraveler: "Uchayotganingizni va bo'sh joyingiz borligini bildiring.",
@@ -92,7 +89,7 @@ export const translations: Record<Locale, Translations> = {
     profileMenuLabel: "Profil",
   },
   ru: {
-    tagline: "Бесплатная доска объявлений — помощь в путешествии",
+    tagline: "ПОМОЩЬ В ПУТЕШЕСТВИИ",
     title: "Есть ли место",
     titleAccent: " в чемодане?",
     activeCount: "активных",
@@ -106,9 +103,6 @@ export const translations: Record<Locale, Translations> = {
     postAdBtn: "Подать объявление",
     disclaimerTitle: "Elchi — это просто доска объявлений.",
     disclaimerText: "Мы не участвуем в оплате, передаче или доставке вещей — пользователи договариваются напрямую. Не размещайте запрещенные или незаконные предметы.",
-    reportBtn: "Пожаловаться",
-    reportedToast: "Жалоба принята. Данное объявление будет проверено.",
-    
     // Form Sheet
     addPostTitle: "Добавить объявление",
     addPostSubTraveler: "Сообщите, когда вы летите и сколько у вас свободного места.",
@@ -182,7 +176,7 @@ export const translations: Record<Locale, Translations> = {
     profileMenuLabel: "Профиль",
   },
   en: {
-    tagline: "Free Bulletin Board — help while traveling",
+    tagline: "HELP WHILE TRAVELING",
     title: "Is there room",
     titleAccent: " in your suitcase?",
     activeCount: "active",
@@ -196,9 +190,6 @@ export const translations: Record<Locale, Translations> = {
     postAdBtn: "Post an ad",
     disclaimerTitle: "Elchi is just a board.",
     disclaimerText: "We do not intermediate payments, items, or the delivery process — users deal directly. Do not post prohibited or illegal items.",
-    reportBtn: "Report",
-    reportedToast: "Report received. This post will be reviewed.",
-    
     // Form Sheet
     addPostTitle: "Add New Post",
     addPostSubTraveler: "Let people know when you fly and how much space you have.",

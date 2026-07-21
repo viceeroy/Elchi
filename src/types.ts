@@ -47,8 +47,6 @@ export interface Translations {
   postAdBtn: string;
   disclaimerTitle: string;
   disclaimerText: string;
-  reportBtn: string;
-  reportedToast: string;
   
   // Form Sheet
   addPostTitle: string;

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Locale, Translations } from "../types";
-import { X, Send, Loader2 } from "lucide-react";
+import { X, Send } from "lucide-react";
 import { supabaseBrowser } from "../supabaseClient";
 
 interface LoginModalProps {
@@ -29,7 +29,7 @@ declare global {
 const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "";
 
 export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSuccess }) => {
-  const [loading, setLoading] = useState<"telegram" | "google" | null>(null);
+  const [loading, setLoading] = useState<"telegram" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const telegramContainerRef = useRef<HTMLDivElement>(null);
@@ -80,20 +80,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
     };
   }, []);
 
-  const handleGoogleLogin = async () => {
-    setLoading("google");
-    setError(null);
-    const { error: oauthError } = await supabaseBrowser.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    if (oauthError) {
-      setError(oauthError.message || t.loginErrorGeneral || "Error");
-      setLoading(null);
-    }
-    // On success the page redirects away — no further UI needed here.
-  };
-
   return (
     <div
       className="fixed inset-0 bg-[#1b2a4a]/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
@@ -127,27 +113,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          disabled={loading !== null}
-          className="w-full flex items-center justify-center gap-2 border border-[#D8D3C4] rounded-lg py-3 text-sm font-bold text-[#1B2A4A] bg-[#FCFBF6] hover:border-[#1B2A4A] transition-all disabled:opacity-60"
-        >
-          {loading === "google" ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}
-          {t.continueWithGoogle}
-        </button>
-
+        {loading === "telegram" && <p className="text-[#5A6272] text-sm mt-2">...</p>}
         {error && <p className="text-[#C23B3B] text-sm mt-4">{error}</p>}
       </div>
     </div>
   );
 };
-
-const GoogleIcon: React.FC = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24">
-    <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47a5.6 5.6 0 0 1-2.4 3.65v3h3.86c2.26-2.09 3.56-5.17 3.56-8.89z" />
-    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.93-2.9l-3.86-3c-1.08.72-2.45 1.14-4.07 1.14-3.13 0-5.78-2.11-6.73-4.96H1.29v3.1A12 12 0 0 0 12 24z" />
-    <path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28v-3.1H1.29A12 12 0 0 0 0 12c0 1.94.46 3.77 1.29 5.38z" />
-    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.29 6.62l3.98 3.1C6.22 6.86 8.87 4.75 12 4.75z" />
-  </svg>
-);

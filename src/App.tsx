@@ -4,6 +4,9 @@ import { translations, defaultLocale } from "./translations";
 import { KOREA_CITIES } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
 import { PostFormModal } from "./components/PostFormModal";
+import { LoginModal } from "./components/LoginModal";
+import { supabaseBrowser } from "./supabaseClient";
+import type { Session } from "@supabase/supabase-js";
 import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User } from "lucide-react";
 
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -43,6 +46,27 @@ export default function App() {
   const [visibleCount, setVisibleCount] = useState<number>(8);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const langMenuRef = React.useRef<HTMLDivElement>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const pendingAddPostRef = React.useRef(false);
+
+  // Track auth session so add-post can be gated behind Telegram login
+  useEffect(() => {
+    supabaseBrowser.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabaseBrowser.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const handleAddPostClick = () => {
+    if (session) {
+      setFormOpen(true);
+    } else {
+      pendingAddPostRef.current = true;
+      setLoginOpen(true);
+    }
+  };
 
   // Close language dropdown on outside click
   useEffect(() => {
@@ -324,10 +348,13 @@ export default function App() {
               )}
             </div>
 
-            {/* Profile / Auth entry point — auth is built but not connected yet.
-                To re-enable: render <LoginModal> and wire this button to it
-                (see src/components/LoginModal.tsx and api/auth-telegram.ts). */}
             <button
+              onClick={() => {
+                if (!session) {
+                  pendingAddPostRef.current = false;
+                  setLoginOpen(true);
+                }
+              }}
               aria-label={t.profileMenuLabel || "Profile"}
               className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E4E0D2] bg-[#F2EFE6] text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
             >
@@ -462,7 +489,7 @@ export default function App() {
       {/* Floating Action Button */}
       <div className="fixed bottom-6 left-0 right-0 flex justify-center z-30 pointer-events-none">
         <button
-          onClick={() => setFormOpen(true)}
+          onClick={handleAddPostClick}
           className="pointer-events-auto bg-[#1B2A4A] text-[#FCFBF6] border-none py-3.5 pl-4 pr-6 rounded-full font-bold text-[15px] flex items-center gap-3 cursor-pointer shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-all"
         >
           <span className="w-6 h-6 bg-[#C79A3E] text-[#1B2A4A] rounded-full flex items-center justify-center text-lg font-black">+</span>
@@ -477,6 +504,22 @@ export default function App() {
           locale={locale}
           onClose={() => setFormOpen(false)}
           onSubmitSuccess={handlePostSubmitSuccess}
+        />
+      )}
+
+      {/* Login Modal — Telegram only, required to add a post */}
+      {loginOpen && (
+        <LoginModal
+          t={t}
+          locale={locale}
+          onClose={() => setLoginOpen(false)}
+          onLoginSuccess={() => {
+            setLoginOpen(false);
+            if (pendingAddPostRef.current) {
+              pendingAddPostRef.current = false;
+              setFormOpen(true);
+            }
+          }}
         />
       )}
 
