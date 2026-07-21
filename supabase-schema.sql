@@ -115,9 +115,10 @@ DROP TABLE IF EXISTS reports;
 -- ---------------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------------
--- The board is intentionally anonymous: anyone may read active posts and anyone
--- may create one. RLS stays ON with no UPDATE and no DELETE policy, so the
--- public anon key cannot tamper with or wipe existing rows.
+-- Reading is public: anyone may read active posts. Creating a post requires a
+-- logged-in author (user_id must equal auth.uid()), so the shipped anon key
+-- cannot insert or attribute a post to someone else. RLS stays ON with no
+-- UPDATE and no DELETE policy, so no one can tamper with or wipe existing rows.
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read access to active posts" ON posts;
@@ -126,9 +127,10 @@ ON posts FOR SELECT
 USING (expires_at >= CURRENT_DATE);
 
 DROP POLICY IF EXISTS "Allow public inserts to posts" ON posts;
-CREATE POLICY "Allow public inserts to posts"
+DROP POLICY IF EXISTS "Authenticated users insert own posts" ON posts;
+CREATE POLICY "Authenticated users insert own posts"
 ON posts FOR INSERT
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL AND user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
 -- profiles (Supabase Auth)
@@ -181,4 +183,24 @@ USING (auth.uid() = id);
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile"
 ON profiles FOR UPDATE
-USING (auth.uid() = id);
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
+
+-- ---------------------------------------------------------------------------
+-- rate_limits (API throttle)
+-- ---------------------------------------------------------------------------
+-- Postgres-backed fixed-window limiter for the serverless API (see
+-- lib/rate-limit.ts). One row per allowed request, keyed by (bucket,
+-- identifier). Only the service-role client touches it: RLS is ON with no
+-- policies, so the anon key can neither read nor write it.
+CREATE TABLE IF NOT EXISTS rate_limits (
+    id         BIGSERIAL PRIMARY KEY,
+    bucket     TEXT        NOT NULL,
+    identifier TEXT        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_rate_limits_lookup
+    ON rate_limits (bucket, identifier, created_at);
+
+ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
