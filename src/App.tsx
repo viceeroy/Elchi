@@ -8,7 +8,7 @@ import { LoginModal } from "./components/LoginModal";
 import { ProfileSheet } from "./components/ProfileSheet";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
-import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User } from "lucide-react";
+import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User, Trash2 } from "lucide-react";
 
 const LOCALE_LABELS: Record<Locale, string> = {
   uz: "O'zbekcha",
@@ -261,6 +261,30 @@ export default function App() {
     setTimeout(() => {
       setCreatedToastOpen(false);
     }, 4000);
+  };
+
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeletePost = async () => {
+    if (!selectedPost || !session) return;
+    if (!window.confirm(t.deleteConfirm)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/posts?id=${encodeURIComponent(selectedPost.id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        closeDetailModal();
+        fetchPosts();
+      } else {
+        console.error("Failed to delete post", await res.text());
+      }
+    } catch (err) {
+      console.error("Error deleting post:", err);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Helper to construct Telegram or Contact link
@@ -640,6 +664,21 @@ export default function App() {
                   )}
                 </button>
               </div>
+
+              {/* Delete — only shown to the post's author */}
+              {session?.user?.id && selectedPost.user_id === session.user.id && (
+                <div className="mb-5">
+                  <button
+                    onClick={handleDeletePost}
+                    disabled={deleting}
+                    className="w-full font-mono text-xs py-3 px-4 bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#C23B3B] hover:bg-[#F7ECEC] rounded-xl text-[#C23B3B] font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                    id="delete-post-btn"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>{t.deleteBtn}</span>
+                  </button>
+                </div>
+              )}
 
               {/* Action and Contact segment — single unified section */}
               {(() => {

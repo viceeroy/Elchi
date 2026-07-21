@@ -176,8 +176,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(201).json(data);
+  } else if (req.method === 'DELETE') {
+    // Delete requires a logged-in user; the author is taken from the verified
+    // bearer token, never a body field, so it can't be spoofed.
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) {
+      return res.status(401).json({ error: 'Avval tizimga kiring' });
+    }
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const user_id = userData.user?.id ?? null;
+    if (userError || !user_id) {
+      return res.status(401).json({ error: 'Avval tizimga kiring' });
+    }
+
+    const id = typeof req.query.id === 'string' ? req.query.id : null;
+    if (!id) {
+      return res.status(400).json({ error: 'E\'lon topilmadi' });
+    }
+
+    // Delete AS the authenticated user so the RLS delete policy
+    // (user_id = auth.uid()) is enforced; the explicit user_id filter is a
+    // second guard so a post that isn't theirs is never touched.
+    const db = userScopedClient(token);
+    const { error } = await db
+      .from('posts')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user_id);
+
+    if (error) {
+      console.error('Error deleting post:', error);
+      return res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+
+    return res.status(200).json({ ok: true });
   } else {
-    res.setHeader('Allow', 'GET, POST');
+    res.setHeader('Allow', 'GET, POST, DELETE');
     res.status(405).json({ error: 'Method not allowed' });
   }
 }

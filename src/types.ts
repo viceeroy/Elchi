@@ -88,6 +88,8 @@ export interface Translations {
   errorFieldNote?: string;
   errorFieldContact?: string;
   autoDeleteLabel: string;
+  deleteBtn?: string;
+  deleteConfirm?: string;
   shareBtn?: string;
   shareTitle?: string;
   shareSuccess?: string;

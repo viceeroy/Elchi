@@ -117,8 +117,8 @@ DROP TABLE IF EXISTS reports;
 -- ---------------------------------------------------------------------------
 -- Reading is public: anyone may read active posts. Creating a post requires a
 -- logged-in author (user_id must equal auth.uid()), so the shipped anon key
--- cannot insert or attribute a post to someone else. RLS stays ON with no
--- UPDATE and no DELETE policy, so no one can tamper with or wipe existing rows.
+-- cannot insert or attribute a post to someone else. There is no UPDATE policy,
+-- so posts can't be tampered with; DELETE is scoped to the author only.
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read access to active posts" ON posts;
@@ -131,6 +131,11 @@ DROP POLICY IF EXISTS "Authenticated users insert own posts" ON posts;
 CREATE POLICY "Authenticated users insert own posts"
 ON posts FOR INSERT
 WITH CHECK (auth.uid() IS NOT NULL AND user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can delete own posts" ON posts;
+CREATE POLICY "Users can delete own posts"
+ON posts FOR DELETE
+USING (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
 -- profiles (Supabase Auth)
