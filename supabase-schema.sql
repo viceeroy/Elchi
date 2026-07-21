@@ -134,13 +134,14 @@ WITH CHECK (true);
 -- profiles (Supabase Auth)
 -- ---------------------------------------------------------------------------
 -- Auth is not wired into posts: posts stay anonymous and carry no user_id.
--- These tables exist for the login flow only (email OTP, Google OAuth, and a
--- Telegram bridge via admin.createUser — see api/auth-telegram.ts).
+-- These tables exist for the login flow only (Google OAuth and a Telegram
+-- bridge via admin.createUser — see api/auth-telegram.ts). Email login is
+-- intentionally disabled.
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     display_name TEXT,
     avatar_url TEXT,
-    auth_provider TEXT NOT NULL CHECK (auth_provider IN ('email', 'google', 'telegram')),
+    auth_provider TEXT NOT NULL CHECK (auth_provider IN ('google', 'telegram')),
     telegram_id BIGINT UNIQUE,
     telegram_username TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
