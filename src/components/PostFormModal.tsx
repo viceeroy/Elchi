@@ -7,12 +7,12 @@ import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle } from "lucid
 // in the placeholder; letters and everything else are dropped as the user types.
 const sanitizePhone = (value: string) => value.replace(/[^\d+\-\s()]/g, "");
 
-type FieldName = "fromCity" | "toCity" | "date" | "weight" | "category" | "note" | "contact";
+type FieldName = "fromCity" | "toCity" | "date" | "weight" | "note" | "contact";
 type FieldErrors = Partial<Record<FieldName, string | undefined>>;
 
 // Top-to-bottom order of the fields in the form, used to scroll to the first
 // problem rather than whichever one happened to be checked first.
-const FIELD_ORDER: FieldName[] = ["fromCity", "toCity", "date", "weight", "category", "note", "contact"];
+const FIELD_ORDER: FieldName[] = ["fromCity", "toCity", "date", "weight", "note", "contact"];
 
 const FieldError: React.FC<{ message?: string }> = ({ message }) =>
   message ? (
@@ -94,7 +94,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     { id: "food", label: locale === "uz" ? "Oziq-ovqat" : locale === "ru" ? "Продукты" : "Food" },
     { id: "phone", label: locale === "uz" ? "Telefon/Texnika" : locale === "ru" ? "Телефон/Техника" : "Phone/Gadget" },
     { id: "gift", label: locale === "uz" ? "Sovg'a" : locale === "ru" ? "Подарок" : "Gift" },
-    { id: "other", label: locale === "uz" ? "Boshqa" : locale === "ru" ? "Другое" : "Other" },
   ];
 
   // Helper: Get list of days in selected month
@@ -147,9 +146,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     if (postType === "traveler" && weightKg === 0 && weightLuggage === 0) {
       nextErrors.weight = t.errorFieldWeight;
     }
-    if (postType === "request" && selectedItems.length === 0) {
-      nextErrors.category = t.errorFieldCategory;
-    }
     if (!note.trim()) nextErrors.note = t.errorFieldNote;
     if (!contact.trim()) nextErrors.contact = t.errorFieldContact;
 
@@ -186,12 +182,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         if (weightLuggage > 0) parts.push(`${weightLuggage} chamadon`);
         finalWeight = parts.join(" + ") || "0 kg";
       } else {
-        // Categories: comma-joined labels ("other" uses the custom text if given).
+        // Categories: comma-joined chip labels plus the free-text detail if given.
         // Weight string = "<kg> · <categories>"; the card shows only the kg part
         // (0 kg hidden), the detail modal shows the full string incl. categories.
         const labels = selectedItems
-          .map(id => id === "other" ? (customItemType.trim() || "Boshqa") : itemTypes.find(it => it.id === id)?.label)
+          .map(id => itemTypes.find(it => it.id === id)?.label)
           .filter((l): l is string => Boolean(l));
+        if (customItemType.trim()) labels.push(customItemType.trim());
         const catStr = labels.join(", ");
         const kgStr = weightKg > 0 ? `${weightKg} kg` : "";
         finalWeight = [kgStr, catStr].filter(Boolean).join(" · ") || catStr || "Pochta";
@@ -231,7 +228,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         weight_kg: weightKg,
         luggage_count: postType === "traveler" ? weightLuggage : 0,
         categories: postType === "request" ? selectedItems : [],
-        category_other: selectedItems.includes("other") ? customItemType.trim() || null : null,
+        category_other: postType === "request" ? customItemType.trim() || null : null,
         // Display string kept alongside the fields it was built from.
         weight: finalWeight,
         note: note.trim(),
@@ -540,15 +537,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             ) : (
               // Request: Category Selection + Weight Stepper
               <div className="flex flex-col gap-4">
-                <div
-                  className={`flex flex-wrap gap-2 ${errors.category ? "border border-[#C23B3B] rounded-xl p-2" : ""}`}
-                  ref={(el) => { fieldRefs.current.category = el; }}
-                >
+                <div className="flex flex-wrap gap-2">
                   {itemTypeChips.map(it => (
                     <button
                       key={it.id}
                       type="button"
-                      onClick={() => { toggleItem(it.id); clearError("category"); }}
+                      onClick={() => toggleItem(it.id)}
                       className="font-sans text-xs px-3.5 py-2.5 rounded-full border font-semibold flex items-center transition-all"
                       style={it.style as React.CSSProperties}
                     >
@@ -556,18 +550,15 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     </button>
                   ))}
                 </div>
-                <FieldError message={errors.category} />
 
-                {selectedItems.includes("other") && (
-                  <input
-                    type="text"
-                    value={customItemType}
-                    onChange={(e) => setCustomItemType(e.target.value)}
-                    placeholder={t.itemTypeOtherPlaceholder}
-                    className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A]"
-                    style={{ padding: "10px 14px", border: "1.5px solid #D8D3C4", borderRadius: "8px" }}
-                  />
-                )}
+                <input
+                  type="text"
+                  value={customItemType}
+                  onChange={(e) => setCustomItemType(e.target.value)}
+                  placeholder={t.itemTypeOtherPlaceholder}
+                  className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A]"
+                  style={{ padding: "10px 14px", border: "1.5px solid #D8D3C4", borderRadius: "8px" }}
+                />
 
                 <div className="flex items-center gap-3.5 bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-2.5 w-fit">
                   <button 
