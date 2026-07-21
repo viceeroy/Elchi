@@ -5,6 +5,7 @@ import { KOREA_CITIES } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
 import { PostFormModal } from "./components/PostFormModal";
 import { LoginModal } from "./components/LoginModal";
+import { ProfileSheet } from "./components/ProfileSheet";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
 import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User } from "lucide-react";
@@ -48,6 +49,7 @@ export default function App() {
   const langMenuRef = React.useRef<HTMLDivElement>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const pendingAddPostRef = React.useRef(false);
 
   // Track auth session so add-post can be gated behind Telegram login
@@ -350,7 +352,9 @@ export default function App() {
 
             <button
               onClick={() => {
-                if (!session) {
+                if (session) {
+                  setProfileOpen(true);
+                } else {
                   pendingAddPostRef.current = false;
                   setLoginOpen(true);
                 }
@@ -520,6 +524,16 @@ export default function App() {
               setFormOpen(true);
             }
           }}
+        />
+      )}
+
+      {/* Profile Bottom Sheet — shown when the logged-in user taps the profile icon */}
+      {profileOpen && session && (
+        <ProfileSheet
+          t={t}
+          session={session}
+          onClose={() => setProfileOpen(false)}
+          onSignOut={() => setProfileOpen(false)}
         />
       )}
 

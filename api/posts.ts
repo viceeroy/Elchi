@@ -65,6 +65,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     postDate.setDate(postDate.getDate() + 1);
     const expires_at = postDate.toISOString().split('T')[0];
 
+    // Resolve the author from the bearer token (not a spoofable body field).
+    // Anonymous posts are still allowed — user_id just stays null.
+    let user_id: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const { data: userData } = await supabase.auth.getUser(authHeader.slice(7));
+      user_id = userData.user?.id ?? null;
+    }
+
     const { data, error } = await supabase
       .from('posts')
       .insert([
@@ -84,6 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           contact_type,
           contact2: contact2 || null,
           contact2_type: contact2 ? contact2_type : null,
+          user_id,
           expires_at
         }
       ])

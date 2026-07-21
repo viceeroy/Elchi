@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Locale, Translations, PostType } from "../types";
+import { supabaseBrowser } from "../supabaseClient";
 import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle } from "lucide-react";
 
 // Phone fields keep digits and the punctuation used by the +998/+82 formats
@@ -241,9 +242,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         honeypot: honeypot // Passed so backend can verify as well
       };
 
+      const { data: { session } } = await supabaseBrowser.auth.getSession();
       const res = await fetch("/api/posts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify(postData),
       });
 

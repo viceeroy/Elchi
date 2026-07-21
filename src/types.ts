@@ -28,6 +28,7 @@ export interface Post {
   contact2_type: ContactMethod | null;
   created_at: string;
   expires_at: string;
+  user_id?: string | null;
 }
 
 export type Locale = "uz" | "ru" | "en";
@@ -120,4 +121,9 @@ export interface Translations {
   signedInAs?: string;
   signOut?: string;
   profileMenuLabel?: string;
+  profileTitle?: string;
+  profilePostsCount?: string;
+  profileLoginMethod?: string;
+  methodTelegram?: string;
+  methodGoogle?: string;
 }

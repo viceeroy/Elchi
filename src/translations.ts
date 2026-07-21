@@ -87,6 +87,11 @@ export const translations: Record<Locale, Translations> = {
     signedInAs: "Kirgan:",
     signOut: "Chiqish",
     profileMenuLabel: "Profil",
+    profileTitle: "Profil",
+    profilePostsCount: "E'lonlar",
+    profileLoginMethod: "Kirish usuli",
+    methodTelegram: "Telegram",
+    methodGoogle: "Google",
   },
   ru: {
     tagline: "ПОМОЩЬ В ПУТЕШЕСТВИИ",
@@ -174,6 +179,11 @@ export const translations: Record<Locale, Translations> = {
     signedInAs: "Вы вошли как:",
     signOut: "Выйти",
     profileMenuLabel: "Профиль",
+    profileTitle: "Профиль",
+    profilePostsCount: "Объявления",
+    profileLoginMethod: "Способ входа",
+    methodTelegram: "Telegram",
+    methodGoogle: "Google",
   },
   en: {
     tagline: "HELP WHILE TRAVELING",
@@ -261,6 +271,11 @@ export const translations: Record<Locale, Translations> = {
     signedInAs: "Signed in as:",
     signOut: "Sign out",
     profileMenuLabel: "Profile",
+    profileTitle: "Profile",
+    profilePostsCount: "Posts",
+    profileLoginMethod: "Login method",
+    methodTelegram: "Telegram",
+    methodGoogle: "Google",
   }
 };
 export const defaultLocale: Locale = "uz";
