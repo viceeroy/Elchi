@@ -57,6 +57,10 @@ export default function App() {
     supabaseBrowser.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      // Strip leftover OAuth hash (#access_token / bare #) from URL bar
+      if (window.location.hash) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
     });
     return () => listener.subscription.unsubscribe();
   }, []);
