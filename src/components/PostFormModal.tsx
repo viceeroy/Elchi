@@ -277,6 +277,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     : (locale === "uz" ? "ta chamadon" : locale === "ru" ? "чемодана" : "bags");
 
   const weekdays = ["Ya","Du","Se","Ch","Pa","Ju","Sh"];
+  const monthShortNames =
+    locale === "uz"
+      ? ["Yan","Fev","Mar","Apr","May","Iyun","Iyul","Avg","Sen","Okt","Noy","Dek"]
+      : locale === "ru"
+        ? ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"]
+        : ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   return (
     <div 
@@ -459,6 +465,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     >
                       <span className="text-[9px] opacity-65">{weekdays[d.getDay()]}</span>
                       <span className="text-15px font-bold">{d.getDate()}</span>
+                      <span className="text-[8px] opacity-65">{monthShortNames[d.getMonth()]}</span>
                     </button>
                   );
                 })}
