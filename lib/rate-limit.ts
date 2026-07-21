@@ -1,10 +1,12 @@
 import type { VercelRequest } from '@vercel/node';
-import { supabaseAdmin } from './supabase-admin.js';
+import { supabase } from './supabase.js';
 
 // Postgres-backed fixed-window rate limiter. Serverless functions don't share
-// memory between invocations, so the counter lives in the `rate_limits` table
-// and is read/written with the service-role client (the table has no anon RLS
-// policy — only this server code can touch it).
+// memory between invocations, so the counter lives in the `rate_limits` table.
+//
+// The window logic runs inside a SECURITY DEFINER SQL function (check_rate_limit),
+// so it works with the public anon key — no service-role key required — while the
+// table itself stays locked (RLS on, no anon policies; only the function writes it).
 //
 // Returns true when the request is allowed, false when the limit is exceeded.
 // Fails open: if the store errors we let the request through rather than lock
@@ -15,42 +17,21 @@ export async function checkRateLimit(
   max: number,
   windowSec: number,
 ): Promise<boolean> {
-  const windowStart = new Date(Date.now() - windowSec * 1000).toISOString();
-
   try {
-    // Drop rows that have aged out of the window for this key so the table
-    // doesn't grow unbounded and the count below only sees live hits.
-    await supabaseAdmin
-      .from('rate_limits')
-      .delete()
-      .eq('bucket', bucket)
-      .eq('identifier', identifier)
-      .lt('created_at', windowStart);
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      p_bucket: bucket,
+      p_identifier: identifier,
+      p_max: max,
+      p_window_sec: windowSec,
+    });
 
-    const { count, error: countError } = await supabaseAdmin
-      .from('rate_limits')
-      .select('id', { count: 'exact', head: true })
-      .eq('bucket', bucket)
-      .eq('identifier', identifier)
-      .gte('created_at', windowStart);
-
-    if (countError) {
-      console.error('Rate limit count failed, allowing request:', countError);
+    if (error) {
+      console.error('Rate limit check failed, allowing request:', error);
       return true;
     }
 
-    if ((count ?? 0) >= max) return false;
-
-    const { error: insertError } = await supabaseAdmin
-      .from('rate_limits')
-      .insert([{ bucket, identifier }]);
-
-    if (insertError) {
-      console.error('Rate limit insert failed, allowing request:', insertError);
-      return true;
-    }
-
-    return true;
+    // The function returns a boolean: true = allowed, false = limited.
+    return data !== false;
   } catch (err) {
     console.error('Rate limit check threw, allowing request:', err);
     return true;

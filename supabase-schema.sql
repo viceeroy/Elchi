@@ -208,3 +208,41 @@ CREATE INDEX IF NOT EXISTS idx_rate_limits_lookup
     ON rate_limits (bucket, identifier, created_at);
 
 ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
+
+-- Fixed-window check as a SECURITY DEFINER function so the API enforces limits
+-- with the public anon key (no service-role key needed). Prunes aged rows,
+-- counts live hits, records the current one, and returns true when under the
+-- limit. Runs as owner, bypassing RLS, so anon never touches the table directly.
+CREATE OR REPLACE FUNCTION check_rate_limit(
+    p_bucket     TEXT,
+    p_identifier TEXT,
+    p_max        INTEGER,
+    p_window_sec INTEGER
+) RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_window_start TIMESTAMPTZ := NOW() - make_interval(secs => p_window_sec);
+    v_count        INTEGER;
+BEGIN
+    DELETE FROM rate_limits
+    WHERE bucket = p_bucket AND identifier = p_identifier AND created_at < v_window_start;
+
+    SELECT COUNT(*) INTO v_count
+    FROM rate_limits
+    WHERE bucket = p_bucket AND identifier = p_identifier AND created_at >= v_window_start;
+
+    IF v_count >= p_max THEN
+        RETURN FALSE;
+    END IF;
+
+    INSERT INTO rate_limits (bucket, identifier) VALUES (p_bucket, p_identifier);
+    RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION check_rate_limit(TEXT, TEXT, INTEGER, INTEGER) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION check_rate_limit(TEXT, TEXT, INTEGER, INTEGER)
+    TO anon, authenticated, service_role;
