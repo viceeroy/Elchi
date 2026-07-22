@@ -22,8 +22,8 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   // Flights only run through Seoul and Tashkent airports — show that as the headline route,
   // and the traveler's actual city (which may be elsewhere in Korea/Uzbekistan) as a smaller line
   const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === post.from_city.toLowerCase());
-  const hubFrom = isFromKorea ? "Seoul" : "Tashkent";
-  const hubTo = isFromKorea ? "Tashkent" : "Seoul";
+  const hubFrom = isFromKorea ? t.korea : t.uzbekistan;
+  const hubTo = isFromKorea ? t.uzbekistan : t.korea;
   const showActualCities = post.from_city !== hubFrom || post.to_city !== hubTo;
 
   // Render sticker styles with distinct airmail tilt angle

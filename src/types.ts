@@ -41,6 +41,8 @@ export interface Translations {
   allPosts: string;
   koreaToUzbekistan: string;
   uzbekistanToKorea: string;
+  korea: string;
+  uzbekistan: string;
   travelerTag: string;
   requestTag: string;
   contactBtn: string;

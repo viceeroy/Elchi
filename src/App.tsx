@@ -331,7 +331,7 @@ export default function App() {
   // route, while the traveler's actual city is shown separately
   const getHubRoute = (fromCity: string) => {
     const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === fromCity.toLowerCase());
-    return { hubFrom: isFromKorea ? "Seoul" : "Tashkent", hubTo: isFromKorea ? "Tashkent" : "Seoul" };
+    return { hubFrom: isFromKorea ? t.korea : t.uzbekistan, hubTo: isFromKorea ? t.uzbekistan : t.korea };
   };
 
   return (
