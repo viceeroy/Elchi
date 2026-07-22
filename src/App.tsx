@@ -644,41 +644,35 @@ export default function App() {
                 </div>
               )}
 
-              {/* Share Button Section */}
-              <div className="mb-5">
+              {/* Share / Delete — icon-only, right-aligned */}
+              <div className="mb-5 flex items-center justify-end gap-2">
                 <button
                   onClick={handleShare}
-                  className="w-full font-mono text-xs py-3 px-4 bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#2A4B8D] rounded-xl text-[#1B2A4A] font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]"
+                  title={shareCopied ? (t.shareSuccess || "Havola nusxalandi!") : (t.shareBtn || "Ulashish")}
+                  aria-label={shareCopied ? (t.shareSuccess || "Havola nusxalandi!") : (t.shareBtn || "Ulashish")}
+                  className="w-10 h-10 flex items-center justify-center bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#2A4B8D] rounded-xl transition-all shadow-sm active:scale-[0.98]"
                   id="share-post-btn"
                 >
                   {shareCopied ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-600 animate-[bounce_0.2s_ease-in-out]" />
-                      <span className="text-emerald-700 font-bold">{t.shareSuccess || "Havola nusxalandi!"}</span>
-                    </>
+                    <Check className="w-4 h-4 text-emerald-600 animate-[bounce_0.2s_ease-in-out]" />
                   ) : (
-                    <>
-                      <Share2 className="w-4 h-4 text-[#C79A3E]" />
-                      <span>{t.shareBtn || "Ulashish"}</span>
-                    </>
+                    <Share2 className="w-4 h-4 text-[#C79A3E]" />
                   )}
                 </button>
-              </div>
 
-              {/* Delete — only shown to the post's author */}
-              {session?.user?.id && selectedPost.user_id === session.user.id && (
-                <div className="mb-5">
+                {session?.user?.id && selectedPost.user_id === session.user.id && (
                   <button
                     onClick={handleDeletePost}
                     disabled={deleting}
-                    className="w-full font-mono text-xs py-3 px-4 bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#C23B3B] hover:bg-[#F7ECEC] rounded-xl text-[#C23B3B] font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                    title={t.deleteBtn}
+                    aria-label={t.deleteBtn}
+                    className="w-10 h-10 flex items-center justify-center bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#C23B3B] hover:bg-[#F7ECEC] rounded-xl text-[#C23B3B] transition-all shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                     id="delete-post-btn"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span>{t.deleteBtn}</span>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Action and Contact segment — single unified section */}
               {(() => {
