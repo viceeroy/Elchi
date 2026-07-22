@@ -19,8 +19,8 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   const isTraveler = post.type === "traveler";
   const tagLabel = isTraveler ? t.travelerTag : t.requestTag;
 
-  // Flights only run through Seoul and Tashkent airports — show that as the headline route,
-  // and the traveler's actual city (which may be elsewhere in Korea/Uzbekistan) as a smaller line
+  // Flights only run between Korea and Uzbekistan — show that as the headline route,
+  // and the traveler's actual city as a smaller line
   const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === post.from_city.toLowerCase());
   const hubFrom = isFromKorea ? t.korea : t.uzbekistan;
   const hubTo = isFromKorea ? t.uzbekistan : t.korea;
@@ -125,7 +125,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
       {/* Main Boarding Pass Content */}
       <div className="pt-8 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col justify-between min-w-0">
         <div>
-          {/* Destination Header (flight route is always via Seoul/Tashkent airports) */}
+          {/* Destination Header (flight route is always Korea/Uzbekistan) */}
           <div className="mb-2">
             <div className="flex items-center gap-2.5 font-extrabold text-[19px] text-[#1B2A4A] tracking-tight">
               <span>{hubFrom}</span>

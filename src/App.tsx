@@ -327,7 +327,7 @@ export default function App() {
     }
   };
 
-  // Flights only run through Seoul and Tashkent airports — the headline shows that hub
+  // Flights only run between Korea and Uzbekistan — the headline shows that country
   // route, while the traveler's actual city is shown separately
   const getHubRoute = (fromCity: string) => {
     const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === fromCity.toLowerCase());
@@ -599,7 +599,7 @@ export default function App() {
                 {selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
               </div>
 
-              {/* Destinations (flight route is always via Seoul/Tashkent airports) */}
+              {/* Destinations (flight route is always Korea/Uzbekistan) */}
               {(() => {
                 const { hubFrom, hubTo } = getHubRoute(selectedPost.from_city);
                 const showActualCities = selectedPost.from_city !== hubFrom || selectedPost.to_city !== hubTo;
