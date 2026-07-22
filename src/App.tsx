@@ -9,6 +9,7 @@ import { ProfileSheet } from "./components/ProfileSheet";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
 import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User, Trash2 } from "lucide-react";
+import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 const LOCALE_LABELS: Record<Locale, string> = {
   uz: "O'zbekcha",
@@ -342,7 +343,8 @@ export default function App() {
       {/* Header / Navbar */}
       <header className="bg-[#FCFBF6]/90 backdrop-blur-md border-b border-[#E4E0D2] sticky top-0 z-40 shadow-sm">
         <div className="max-w-[680px] mx-auto px-5 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <img src={elchiLogo} alt="" className="h-7 w-auto" />
             <span className="font-extrabold text-[19px] tracking-tight text-[#1B2A4A]">Elchi</span>
           </div>
           
