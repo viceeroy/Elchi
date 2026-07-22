@@ -395,6 +395,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   value={fromCity}
                   onChange={(e) => { setFromCity(e.target.value); clearError("fromCity"); }}
                   placeholder={locale === "uz" ? "Qayerdan (masalan: Seoul)" : locale === "ru" ? "Откуда (напр.: Сеул)" : "From (e.g. Seoul)"}
+                  maxLength={100}
                   className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
                     errors.fromCity ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
                   }`}
@@ -413,6 +414,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   value={toCity}
                   onChange={(e) => { setToCity(e.target.value); clearError("toCity"); }}
                   placeholder={locale === "uz" ? "Qayerga (masalan: Toshkent)" : locale === "ru" ? "Куда (напр.: Ташкент)" : "To (e.g. Tashkent)"}
+                  maxLength={100}
                   className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
                     errors.toCity ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
                   }`}
@@ -563,6 +565,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   value={customItemType}
                   onChange={(e) => setCustomItemType(e.target.value)}
                   placeholder={t.itemTypeOtherPlaceholder}
+                  maxLength={100}
                   className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A]"
                   style={{ padding: "10px 14px", border: "1.5px solid #D8D3C4", borderRadius: "8px" }}
                 />
@@ -692,6 +695,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                       ? "username"
                       : locale === "uz" ? "+998 90-123-4567 yoki +82 10-1234-5678" : locale === "ru" ? "+998 90-123-4567 или +82 10-1234-5678" : "+998 90-123-4567 or +82 10-1234-5678"
                   }
+                  maxLength={contactMethod === "telegram" ? 99 : 100}
                   className={`w-full box-sizing-border-box p-3 pl-8.5 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono transition-all ${
                     errors.contact
                       ? ERROR_INPUT_CLASS
@@ -787,6 +791,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                         ? (locale === "uz" ? "+998 90-123-4567 yoki +82 10-1234-5678" : locale === "ru" ? "+998 90-123-4567 или +82 10-1234-5678" : "+998 90-123-4567 or +82 10-1234-5678")
                         : "username"
                     }
+                    maxLength={contactMethod === "telegram" ? 100 : 99}
                     className="w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono border-[#D8D3C4] focus:border-[#2A4B8D] focus:ring-1 focus:ring-[#2A4B8D]"
                     style={{ paddingLeft: "34px" }}
                   />
