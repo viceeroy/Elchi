@@ -32,11 +32,11 @@ body {
 /* Toast entrance animation */
 @keyframes popin {
   0% {
-    transform: translate(-50%, -20px) scale(0.92);
+    transform: translateY(-20px) scale(0.92);
     opacity: 0;
   }
   100% {
-    transform: translate(-50%, 0) scale(1);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 }
