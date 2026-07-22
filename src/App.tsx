@@ -252,8 +252,13 @@ export default function App() {
 
     if (filter === "k2u") return isFromKorea;
     if (filter === "u2k") return !isFromKorea;
+    if (filter === "traveler") return post.type === "traveler";
+    if (filter === "request") return post.type === "request";
     return true;
   });
+
+  const travelerCount = posts.filter((p) => p.type === "traveler").length;
+  const requestCount = posts.filter((p) => p.type === "request").length;
 
   const handlePostSubmitSuccess = () => {
     setFormOpen(false);
@@ -449,6 +454,28 @@ export default function App() {
               }`}
             >
               {t.uzbekistanToKorea}
+            </button>
+            <button
+              onClick={() => setFilter("traveler")}
+              className={`font-mono text-xs px-3.5 py-1.5 border rounded-full transition-all flex-shrink-0 flex items-center gap-1.5 ${
+                filter === "traveler"
+                  ? "bg-[#2A4B8D] text-[#FCFBF6] border-[#2A4B8D] font-bold"
+                  : "bg-[#FCFBF6] text-[#1B2A4A] border-[#D8D3C4] hover:border-[#2A4B8D]"
+              }`}
+            >
+              <Briefcase className="w-3 h-3" />
+              {t.travelerTag} · {travelerCount}
+            </button>
+            <button
+              onClick={() => setFilter("request")}
+              className={`font-mono text-xs px-3.5 py-1.5 border rounded-full transition-all flex-shrink-0 flex items-center gap-1.5 ${
+                filter === "request"
+                  ? "bg-[#C23B3B] text-[#FCFBF6] border-[#C23B3B] font-bold"
+                  : "bg-[#FCFBF6] text-[#1B2A4A] border-[#D8D3C4] hover:border-[#C23B3B]"
+              }`}
+            >
+              <Package className="w-3 h-3" />
+              {t.requestTag} · {requestCount}
             </button>
           </div>
 
