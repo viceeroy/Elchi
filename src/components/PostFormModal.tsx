@@ -602,10 +602,14 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               value={note}
               onChange={(e) => { setNote(e.target.value); clearError("note"); }}
               placeholder={t.notePlaceholder}
+              maxLength={1000}
               className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] resize-y min-h-[72px] outline-none ${
                 errors.note ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
               }`}
             ></textarea>
+            <div className={`font-mono text-[10.5px] text-right mt-1 ${note.length >= 1000 ? "text-[#C23B3B]" : "text-[#8A8F98]"}`}>
+              {note.length}/1000
+            </div>
             <FieldError message={errors.note} />
           </div>
 
