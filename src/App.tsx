@@ -400,18 +400,15 @@ export default function App() {
       <main className="max-w-[680px] mx-auto px-5">
         
         {/* Hero Section */}
-        <section className="pt-10 pb-6">
-          <div className="font-mono text-[10.5px] tracking-[2px] uppercase text-[#2A4B8D] font-bold mb-3.5">
-            {t.tagline}
-          </div>
-          <h1 className="text-4xl sm:text-[46px] leading-[1.05] font-black m-0 mb-4 tracking-tight">
+        <section className="pt-6 pb-2">
+          <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 mb-2 tracking-tight">
             <span className="text-[#C23B3B]">{t.title}</span>
             <span className="block sm:inline">{t.titleAccent}</span>
           </h1>
         </section>
 
         {/* Posts Filter and Feed */}
-        <section className="pt-8">
+        <section className="pt-6">
           <div className="flex items-baseline justify-between mb-4">
             <h2 className="text-xl font-extrabold tracking-tight text-[#1B2A4A]">{t.activeAds}</h2>
             <span className="font-mono text-[11px] text-[#8A8F98] tracking-wider">
