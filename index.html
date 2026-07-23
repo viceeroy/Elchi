@@ -1,17 +1,172 @@
 <!doctype html>
-<html lang="en">
+<html lang="uz">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Help While Traveling" />
-    <meta property="og:title" content="Elchi — Help While Traveling!" />
-    <meta property="og:description" content="Help While Traveling" />
+
+    <title>Elchi — Chamadoningizda joy bormi? | Bepul e'lon taxtasi</title>
+    <meta
+      name="description"
+      content="Elchi — sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi. Chamadoningizda bo'sh joy bo'lsa e'lon bering, yoki hujjat, dori, sovg'a yuborish uchun yo'lda ketayotgan odamni toping. Ro'yxatdan o'tish oson, to'lovsiz."
+    />
+    <meta
+      name="keywords"
+      content="pochta yuborish, chamadonda joy, sayohatda yordam, yuk tashish e'lonlari, hujjat yuborish, dori yuborish, sovg'a yuborish, elchi, посылка, передать посылку, попутчик, место в чемодане, courier, luggage space, send parcel with traveler"
+    />
     <meta name="theme-color" content="#1B2A4A" />
+    <link rel="canonical" href="https://elchi.vercel.app/" />
+
+    <!-- Same board serves all three languages from one URL -->
+    <link rel="alternate" hreflang="uz" href="https://elchi.vercel.app/" />
+    <link rel="alternate" hreflang="ru" href="https://elchi.vercel.app/" />
+    <link rel="alternate" hreflang="en" href="https://elchi.vercel.app/" />
+    <link rel="alternate" hreflang="x-default" href="https://elchi.vercel.app/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Elchi" />
+    <meta property="og:url" content="https://elchi.vercel.app/" />
+    <meta property="og:title" content="Elchi — Chamadoningizda joy bormi?" />
+    <meta
+      property="og:description"
+      content="Sayohatchilar va pochta yubormoqchi bo'lganlar uchun bepul e'lon taxtasi. Chamadondagi bo'sh joyni e'lon qiling yoki yo'lovchi orqali pochta yuboring."
+    />
+    <meta property="og:image" content="https://elchi.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Elchi — chamadoningizda joy bormi?" />
+    <meta property="og:locale" content="uz_UZ" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Elchi — Chamadoningizda joy bormi?" />
+    <meta
+      name="twitter:description"
+      content="Sayohatchilar va pochta yubormoqchi bo'lganlar uchun bepul e'lon taxtasi."
+    />
+    <meta name="twitter:image" content="https://elchi.vercel.app/og-image.png" />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Elchi — Help While Traveling!</title>
+
+    <!-- Structured data: what the site is, and the three languages it serves -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Elchi",
+        "url": "https://elchi.vercel.app/",
+        "inLanguage": ["uz", "ru", "en"],
+        "description": "Sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Elchi",
+          "url": "https://elchi.vercel.app/",
+          "logo": "https://elchi.vercel.app/favicon.svg"
+        }
+      }
+    </script>
+
+    <!-- FAQ in all three languages: real indexable text that also answers the
+         questions people actually type into search. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Elchi nima?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Elchi — bepul e'lon taxtasi. Chamadonida bo'sh joyi bor sayohatchilar va pochta yubormoqchi bo'lgan odamlar bir-birini shu yerda topadi. Biz to'lov yoki yetkazib berish jarayoniga aralashmaymiz — foydalanuvchilar o'zaro bevosita kelishadi."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "E'lon berish pullikmi?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yo'q. E'lon berish ham, e'lonlarni ko'rish ham butunlay bepul."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qanday qilib e'lon beraman?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Telegram, Google yoki email orqali kiring, \"E'lon berish\" tugmasini bosing, yo'nalish, sana, bo'sh joy va aloqa ma'lumotlaringizni kiriting. E'lon darhol taxtada paydo bo'ladi."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Что такое Elchi?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Elchi — бесплатная доска объявлений. Путешественники со свободным местом в чемодане и те, кому нужно передать посылку, находят друг друга здесь. Мы не участвуем в оплате и доставке — пользователи договариваются напрямую."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Сколько стоит размещение объявления?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Нисколько. Размещение и просмотр объявлений полностью бесплатны."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is Elchi?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Elchi is a free notice board. Travelers with spare luggage space and people who need to send a parcel find each other here. We take no part in payment or delivery — users arrange everything directly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is posting free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Posting an ad and browsing the board are both completely free."
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Static copy in all three languages so the raw HTML carries real text
+         before React mounts. Hidden once the app renders; crawlers and
+         no-JS visitors still read it. -->
+    <noscript>
+      <h1>Elchi — chamadoningizda joy bormi?</h1>
+      <p>
+        Elchi — sayohatchilar va pochta yubormoqchi bo'lganlar uchun bepul e'lon
+        taxtasi. Chamadoningizda bo'sh joy bo'lsa e'lon bering; hujjat, dori,
+        kiyim yoki sovg'a yuborish kerak bo'lsa, yo'lda ketayotgan odamni toping.
+        Elchi to'lov va yetkazib berishga aralashmaydi — foydalanuvchilar o'zaro
+        bevosita kelishadi.
+      </p>
+      <h2>Elchi — есть место в чемодане?</h2>
+      <p>
+        Elchi — бесплатная доска объявлений для путешественников и тех, кому
+        нужно передать посылку. Есть свободное место в чемодане — разместите
+        объявление; нужно отправить документы, лекарства, одежду или подарок —
+        найдите попутчика. Elchi не участвует в оплате и доставке: пользователи
+        договариваются напрямую.
+      </p>
+      <h2>Elchi — is there room in your suitcase?</h2>
+      <p>
+        Elchi is a free notice board for travelers and people who need to send a
+        parcel. Have spare luggage space — post an ad; need to send documents,
+        medicine, clothes or a gift — find someone already making the trip.
+        Elchi takes no part in payment or delivery: users arrange everything
+        directly.
+      </p>
+      <p>Bepul · Бесплатно · Free</p>
+    </noscript>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
