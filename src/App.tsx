@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Post, Locale, PostType } from "./types";
 import { translations, defaultLocale } from "./translations";
-import { KOREA_CITIES } from "./constants";
+import { COUNTRIES, getCountry } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
+import { RouteSelector } from "./components/RouteSelector";
 import { PostFormModal } from "./components/PostFormModal";
 import { LoginModal } from "./components/LoginModal";
 import { ProfileSheet } from "./components/ProfileSheet";
@@ -39,7 +40,9 @@ export default function App() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("all");
+  // Route filter — an exact ISO country pair chosen in the RouteSelector card.
+  // Defaults to the main corridor, Korea → Uzbekistan.
+  const [route, setRoute] = useState<{ from: string; to: string }>({ from: "KR", to: "UZ" });
   const [formOpen, setFormOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
@@ -87,10 +90,10 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [langMenuOpen]);
 
-  // Reset visible posts count when filter changes to avoid confusion
+  // Reset visible posts count when the route filter changes to avoid confusion
   useEffect(() => {
     setVisibleCount(8);
-  }, [filter]);
+  }, [route]);
 
   // Active translation dictionary
   const t = translations[locale];
@@ -244,21 +247,11 @@ export default function App() {
     localStorage.setItem("elchi_locale", newLocale);
   };
 
-  // Filter posts locally
-  const filteredPosts = posts.filter((post) => {
-    if (filter === "all") return true;
-
-    const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === post.from_city.toLowerCase());
-
-    if (filter === "k2u") return isFromKorea;
-    if (filter === "u2k") return !isFromKorea;
-    if (filter === "traveler") return post.type === "traveler";
-    if (filter === "request") return post.type === "request";
-    return true;
-  });
-
-  const travelerCount = posts.filter((p) => p.type === "traveler").length;
-  const requestCount = posts.filter((p) => p.type === "request").length;
+  // Filter posts locally — route matching is an exact compare on the stored
+  // origin country code (all rows are backfilled by the countries migration).
+  const filteredPosts = posts.filter(
+    (post) => post.from_country === route.from && post.to_country === route.to
+  );
 
   const handlePostSubmitSuccess = () => {
     setFormOpen(false);
@@ -333,11 +326,11 @@ export default function App() {
     }
   };
 
-  // Flights only run between Korea and Uzbekistan — the headline shows that country
-  // route, while the traveler's actual city is shown separately
-  const getHubRoute = (fromCity: string) => {
-    const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === fromCity.toLowerCase());
-    return { hubFrom: isFromKorea ? t.korea : t.uzbekistan, hubTo: isFromKorea ? t.uzbekistan : t.korea };
+  // Route headline = localized country names from the stored ISO codes
+  const getHubRoute = (post: Post) => {
+    const from = getCountry(post.from_country) ?? COUNTRIES[0];
+    const to = getCountry(post.to_country) ?? COUNTRIES.find((c) => c.code !== from.code)!;
+    return { hubFrom: from.names[locale], hubTo: to.names[locale] };
   };
 
   return (
@@ -423,60 +416,14 @@ export default function App() {
             </span>
           </div>
 
-          {/* Filter Chips */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-thin">
-            <button
-              onClick={() => setFilter("all")}
-              className={`font-mono text-xs px-3.5 py-1.5 border rounded-full transition-all flex-shrink-0 ${
-                filter === "all"
-                  ? "bg-[#1B2A4A] text-[#FCFBF6] border-[#1B2A4A] font-bold"
-                  : "bg-[#FCFBF6] text-[#1B2A4A] border-[#D8D3C4] hover:border-[#1B2A4A]"
-              }`}
-            >
-              {t.allPosts}
-            </button>
-            <button
-              onClick={() => setFilter("k2u")}
-              className={`font-mono text-xs px-3.5 py-1.5 border rounded-full transition-all flex-shrink-0 ${
-                filter === "k2u"
-                  ? "bg-[#1B2A4A] text-[#FCFBF6] border-[#1B2A4A] font-bold"
-                  : "bg-[#FCFBF6] text-[#1B2A4A] border-[#D8D3C4] hover:border-[#1B2A4A]"
-              }`}
-            >
-              {t.koreaToUzbekistan}
-            </button>
-            <button
-              onClick={() => setFilter("u2k")}
-              className={`font-mono text-xs px-3.5 py-1.5 border rounded-full transition-all flex-shrink-0 ${
-                filter === "u2k"
-                  ? "bg-[#1B2A4A] text-[#FCFBF6] border-[#1B2A4A] font-bold"
-                  : "bg-[#FCFBF6] text-[#1B2A4A] border-[#D8D3C4] hover:border-[#1B2A4A]"
-              }`}
-            >
-              {t.uzbekistanToKorea}
-            </button>
-            <button
-              onClick={() => setFilter("traveler")}
-              className={`font-mono text-xs px-3.5 py-1.5 border rounded-full transition-all flex-shrink-0 flex items-center gap-1.5 ${
-                filter === "traveler"
-                  ? "bg-[#2A4B8D] text-[#FCFBF6] border-[#2A4B8D] font-bold"
-                  : "bg-[#FCFBF6] text-[#1B2A4A] border-[#D8D3C4] hover:border-[#2A4B8D]"
-              }`}
-            >
-              <Briefcase className="w-3 h-3" />
-              {t.travelerTag} · {travelerCount}
-            </button>
-            <button
-              onClick={() => setFilter("request")}
-              className={`font-mono text-xs px-3.5 py-1.5 border rounded-full transition-all flex-shrink-0 flex items-center gap-1.5 ${
-                filter === "request"
-                  ? "bg-[#C23B3B] text-[#FCFBF6] border-[#C23B3B] font-bold"
-                  : "bg-[#FCFBF6] text-[#1B2A4A] border-[#D8D3C4] hover:border-[#C23B3B]"
-              }`}
-            >
-              <Package className="w-3 h-3" />
-              {t.requestTag} · {requestCount}
-            </button>
+          {/* Route selector card — picking any pair of countries filters the feed */}
+          <div className="mb-6">
+            <RouteSelector
+              locale={locale}
+              fromCode={route.from}
+              toCode={route.to}
+              onChange={(from, to) => setRoute({ from, to })}
+            />
           </div>
 
           {/* Posts Feed */}
@@ -625,9 +572,9 @@ export default function App() {
                 {selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
               </div>
 
-              {/* Destinations (flight route is always Korea/Uzbekistan) */}
+              {/* Destinations (country route from the stored ISO codes; cities shown as detail) */}
               {(() => {
-                const { hubFrom, hubTo } = getHubRoute(selectedPost.from_city);
+                const { hubFrom, hubTo } = getHubRoute(selectedPost);
                 const showActualCities = selectedPost.from_city !== hubFrom || selectedPost.to_city !== hubTo;
                 return (
                   <>

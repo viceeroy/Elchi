@@ -9,6 +9,13 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 // Allowed request-parcel categories (mirrors the chips in PostFormModal).
 const ALLOWED_CATEGORIES = new Set(['docs', 'clothes', 'meds', 'food', 'phone', 'gift', 'other']);
 
+// Countries the board currently serves (ISO 3166-1 alpha-2). To open a new
+// route (e.g. Kazakhstan), add the code here and to COUNTRIES in
+// src/constants.ts — no schema change needed.
+// KZ / TJ / KG / TM are ready to enable — add here + uncomment in
+// src/constants.ts COUNTRIES.
+const ALLOWED_COUNTRIES = new Set(['KR', 'UZ']);
+
 // A Supabase client that acts AS the logged-in user, so row-level security sees
 // their auth.uid() on insert. Built per-request from their bearer token.
 function userScopedClient(token: string) {
@@ -57,6 +64,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const {
       type,
       direction,
+      from_country,
+      to_country,
       from_city,
       to_city,
       date,
@@ -111,6 +120,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
     }
 
+    // Route countries. New clients send them; older cached clients send only
+    // the legacy direction, from which we derive the codes. The route must be
+    // between two different supported countries.
+    let fromCountry = typeof from_country === 'string' ? from_country.toUpperCase() : null;
+    let toCountry = typeof to_country === 'string' ? to_country.toUpperCase() : null;
+    if (!fromCountry && direction) {
+      fromCountry = direction === 'k2u' ? 'KR' : 'UZ';
+      toCountry = direction === 'k2u' ? 'UZ' : 'KR';
+    }
+    if (
+      !fromCountry || !toCountry ||
+      !ALLOWED_COUNTRIES.has(fromCountry) || !ALLOWED_COUNTRIES.has(toCountry) ||
+      fromCountry === toCountry
+    ) {
+      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+    }
+
+    // Keep the legacy direction column coherent for old readers while both
+    // exist. Only meaningful for the KR↔UZ pair; other routes store null.
+    const legacyDirection =
+      fromCountry === 'KR' && toCountry === 'UZ' ? 'k2u'
+      : fromCountry === 'UZ' && toCountry === 'KR' ? 'u2k'
+      : null;
+
     const isContactType = (v: unknown) => v === 'telegram' || v === 'phone';
     if (!isContactType(contact_type) || (contact2 && !isContactType(contact2_type))) {
       return res.status(400).json({ error: 'Noto\'g\'ri aloqa turi' });
@@ -149,7 +182,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .insert([
         {
           type,
-          direction: direction || null,
+          direction: legacyDirection,
+          from_country: fromCountry,
+          to_country: toCountry,
           from_city,
           to_city,
           date,

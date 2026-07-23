@@ -1,3 +1,59 @@
+// Country registry — the source of truth for which countries the board supports.
+// Cities are free text typed by the user; only the country is structured data.
+// To support a new country (e.g. Kazakhstan), add an entry here AND to
+// ALLOWED_COUNTRIES in api/posts.ts — posts, filtering, and the route selector
+// all key off the ISO code.
+export interface Country {
+  code: string; // ISO 3166-1 alpha-2, stored on posts (from_country / to_country)
+  airport: string; // IATA code of the main hub airport, shown big in the route card
+  names: { uz: string; ru: string; en: string };
+  cityNames: { uz: string; ru: string; en: string }; // hub city, shown in dropdowns
+}
+
+export const COUNTRIES: Country[] = [
+  {
+    code: "KR",
+    airport: "ICN",
+    names: { uz: "Koreya", ru: "Корея", en: "Korea" },
+    cityNames: { uz: "Incheon", ru: "Инчхон", en: "Incheon" },
+  },
+  {
+    code: "UZ",
+    airport: "TAS",
+    names: { uz: "O'zbekiston", ru: "Узбекистан", en: "Uzbekistan" },
+    cityNames: { uz: "Toshkent", ru: "Ташкент", en: "Tashkent" },
+  },
+  // To launch more corridors, uncomment (and mirror in ALLOWED_COUNTRIES in
+  // api/posts.ts). Verified working 2026-07-23.
+  // {
+  //   code: "KZ",
+  //   airport: "ALA",
+  //   names: { uz: "Qozog'iston", ru: "Казахстан", en: "Kazakhstan" },
+  //   cityNames: { uz: "Almati", ru: "Алматы", en: "Almaty" },
+  // },
+  // {
+  //   code: "TJ",
+  //   airport: "DYU",
+  //   names: { uz: "Tojikiston", ru: "Таджикистан", en: "Tajikistan" },
+  //   cityNames: { uz: "Dushanbe", ru: "Душанбе", en: "Dushanbe" },
+  // },
+  // {
+  //   code: "KG",
+  //   airport: "FRU",
+  //   names: { uz: "Qirg'iziston", ru: "Кыргызстан", en: "Kyrgyzstan" },
+  //   cityNames: { uz: "Bishkek", ru: "Бишкек", en: "Bishkek" },
+  // },
+  // {
+  //   code: "TM",
+  //   airport: "ASB",
+  //   names: { uz: "Turkmaniston", ru: "Туркменистан", en: "Turkmenistan" },
+  //   cityNames: { uz: "Ashxobod", ru: "Ашхабад", en: "Ashgabat" },
+  // },
+];
+
+export const getCountry = (code: string | null | undefined): Country | undefined =>
+  COUNTRIES.find((c) => c.code === code);
+
 // Full list of South Korean cities (Seoul, Sejong, 6 metropolitan cities, and all "si" cities per province)
 export const KOREA_CITIES = [
   "Seoul", "Busan", "Daegu", "Incheon", "Gwangju", "Daejeon", "Ulsan", "Sejong",

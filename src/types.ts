@@ -9,7 +9,12 @@ export type ContactMethod = "telegram" | "phone";
 export interface Post {
   id: string;
   type: PostType;
-  direction: Direction | null;
+  direction: Direction | null; // legacy KR↔UZ pair; null on other routes
+  // ISO 3166-1 alpha-2 route countries — the structured, filterable data.
+  // Nullable only for rows created before the countries migration.
+  from_country: string | null;
+  to_country: string | null;
+  // Free-text cities — display only, never used for filtering
   from_city: string;
   to_city: string;
   date: string; // YYYY-MM-DD

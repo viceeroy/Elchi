@@ -1,7 +1,7 @@
 import React from "react";
 import { Post, Locale, Translations } from "../types";
 import { Briefcase, Package } from "lucide-react";
-import { KOREA_CITIES } from "../constants";
+import { COUNTRIES, getCountry } from "../constants";
 
 interface BoardingPassProps {
   post: Post;
@@ -19,11 +19,14 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   const isTraveler = post.type === "traveler";
   const tagLabel = isTraveler ? t.travelerTag : t.requestTag;
 
-  // Flights only run between Korea and Uzbekistan — show that as the headline route,
-  // and the traveler's actual city as a smaller line
-  const isFromKorea = KOREA_CITIES.some(c => c.toLowerCase() === post.from_city.toLowerCase());
-  const hubFrom = isFromKorea ? t.korea : t.uzbekistan;
-  const hubTo = isFromKorea ? t.uzbekistan : t.korea;
+  // Route = country names from the stored ISO codes (the registry falls back
+  // to the first entry so a malformed row can't crash the card).
+  const fromCountry = getCountry(post.from_country) ?? COUNTRIES[0];
+  const toCountry =
+    getCountry(post.to_country) ?? COUNTRIES.find((c) => c.code !== fromCountry.code)!;
+  const hubFrom = fromCountry.names[locale];
+  const hubTo = toCountry.names[locale];
+  // Free-text cities are display-only detail under the country route
   const showActualCities = post.from_city !== hubFrom || post.to_city !== hubTo;
 
   // Render sticker styles with distinct airmail tilt angle

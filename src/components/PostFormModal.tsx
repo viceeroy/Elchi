@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Locale, Translations, PostType } from "../types";
+import { COUNTRIES } from "../constants";
 import { supabaseBrowser } from "../supabaseClient";
 import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle } from "lucide-react";
 
@@ -39,7 +40,20 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   onSubmitSuccess,
 }) => {
   const [postType, setPostType] = useState<PostType>("traveler");
-  const [direction, setDirection] = useState<"k2u" | "u2k">("k2u");
+  // Route countries (ISO codes). Picking on one side the country already on
+  // the other side swaps them, so from ≠ to always holds.
+  const [fromCountry, setFromCountry] = useState<string>("KR");
+  const [toCountry, setToCountry] = useState<string>("UZ");
+
+  const pickCountry = (side: "from" | "to", code: string) => {
+    if (side === "from") {
+      if (code === toCountry) setToCountry(fromCountry);
+      setFromCountry(code);
+    } else {
+      if (code === fromCountry) setFromCountry(toCountry);
+      setToCountry(code);
+    }
+  };
   const [fromCity, setFromCity] = useState<string>("");
   const [toCity, setToCity] = useState<string>("");
   const [note, setNote] = useState("");
@@ -219,7 +233,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
       const postData = {
         type: postType,
-        direction,
+        // Structured route countries — the API derives the legacy direction
+        // column for the KR↔UZ pair itself.
+        from_country: fromCountry,
+        to_country: toCountry,
         from_city: fromCity.trim(),
         to_city: toCity.trim(),
         date: dateString,
@@ -357,33 +374,47 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               {t.fromToLabel}
             </label>
             
-            {/* Direction Toggle */}
-            <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-1 mb-4 gap-1">
-              <button 
-                type="button" 
-                onClick={() => setDirection("k2u")}
-                className={`flex-1 py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
-                  direction === "k2u" 
-                    ? "bg-[#2A4B8D] text-white shadow" 
-                    : "text-[#5A6272] hover:text-[#1B2A4A]"
-                }`}
-              >
-                {t.koreaToUzbekistan}
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setDirection("u2k")}
-                className={`flex-1 py-2.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
-                  direction === "u2k" 
-                    ? "bg-[#C23B3B] text-white shadow" 
-                    : "text-[#5A6272] hover:text-[#1B2A4A]"
-                }`}
-              >
-                {t.uzbekistanToKorea}
-              </button>
+            {/* Country pickers — any pair of two different countries. Picking
+                the country already on the other side swaps them. */}
+            <div className="flex flex-row items-end gap-2 sm:gap-3 mb-4">
+              <div className="flex-1 min-w-0">
+                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+                  {locale === "uz" ? "Qaysi davlatdan" : locale === "ru" ? "Из какой страны" : "From country"}
+                </label>
+                <select
+                  value={fromCountry}
+                  onChange={(e) => pickCountry("from", e.target.value)}
+                  className="w-full p-3 border border-[#D8D3C4] focus:border-[#2A4B8D] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none font-semibold"
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.names[locale]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <span className="flex items-center justify-center text-[#C79A3E] font-bold text-lg pb-2.5 flex-shrink-0">➔</span>
+
+              <div className="flex-1 min-w-0">
+                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+                  {locale === "uz" ? "Qaysi davlatga" : locale === "ru" ? "В какую страну" : "To country"}
+                </label>
+                <select
+                  value={toCountry}
+                  onChange={(e) => pickCountry("to", e.target.value)}
+                  className="w-full p-3 border border-[#D8D3C4] focus:border-[#2A4B8D] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none font-semibold"
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.names[locale]}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Free-text From / To cities */}
+            {/* Free-text From / To cities (display only — filtering uses countries) */}
             <div className="flex flex-row items-end gap-2 sm:gap-3">
               <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
