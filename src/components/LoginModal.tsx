@@ -31,6 +31,10 @@ const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "";
 export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSuccess }) => {
   const [loading, setLoading] = useState<"telegram" | "google" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Telegram renders a fixed-width iframe button we can't restyle. Measure it
+  // once it mounts and match the Google button + divider to the same width so
+  // the two options read as a set.
+  const [tgWidth, setTgWidth] = useState<number | null>(null);
 
   const handleGoogleLogin = async () => {
     setLoading("google");
@@ -92,7 +96,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
     telegramContainerRef.current.innerHTML = "";
     telegramContainerRef.current.appendChild(script);
 
+    // Once Telegram injects its iframe, read its width so the Google button and
+    // divider below can match it. Watch for the iframe appearing/resizing.
+    const observer = new MutationObserver(() => {
+      const iframe = telegramContainerRef.current?.querySelector("iframe");
+      if (iframe && iframe.offsetWidth > 0) {
+        setTgWidth(iframe.offsetWidth);
+      }
+    });
+    observer.observe(telegramContainerRef.current, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+
     return () => {
+      observer.disconnect();
       window.onTelegramAuth = undefined;
     };
   }, []);
@@ -117,9 +136,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
         <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight mb-1">{t.loginTitle}</h2>
         <p className="text-sm text-[#5A6272] mb-6">{t.loginSubtitle}</p>
 
-        {/* Auth options in a centered column so the fixed-width Telegram widget
-            and the Google button share the same footprint and read as a set. */}
-        <div className="max-w-[280px] mx-auto flex flex-col items-stretch">
+        {/* Auth options in a centered column sized to the Telegram widget, so
+            the fixed-width Telegram button and the Google button below share the
+            same footprint and read as a set. Falls back to 280px until measured. */}
+        <div
+          className="mx-auto flex flex-col items-stretch"
+          style={{ width: tgWidth ? `${tgWidth}px` : "280px" }}
+        >
           {/* Native Telegram login widget. Telegram renders its own iframe button
               whose click target must not be overlaid or resized, or the button
               silently stops responding — so it's shown as-is, centered. */}
