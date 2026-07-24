@@ -350,11 +350,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
           </button>
         </div>
 
-        {/* Header Title & Subtitle */}
-        <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight mb-1">{t.addPostTitle}</h2>
-        <div className="text-[13.5px] text-[#6B7280] leading-relaxed mb-6">
-          {postType === "traveler" ? t.addPostSubTraveler : t.addPostSubRequest}
-        </div>
+        {/* Header Title */}
+        <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight mb-6">{t.addPostTitle}</h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Honeypot Spam Trap (Hidden for humans) */}
@@ -370,10 +367,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
           {/* Route Section with Direction Toggle and Dropdowns */}
           <div>
-            <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold mb-3">
-              {t.fromToLabel}
-            </label>
-            
             {/* Country pickers — any pair of two different countries. Picking
                 the country already on the other side swaps them. */}
             <div className="flex flex-row items-end gap-2 sm:gap-3 mb-4">

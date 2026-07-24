@@ -494,7 +494,7 @@ export default function App() {
           )}
 
           {/* Disclaimer Banner */}
-          <div className="mt-8 p-5 bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] rounded-r-xl text-[13px] text-[#6B7280] leading-relaxed shadow-sm">
+          <div className="mt-6 p-3 bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] rounded-r-xl text-[13px] text-[#6B7280] leading-snug shadow-sm">
             <span className="font-bold text-[#1B2A4A] mr-1">{t.disclaimerTitle}</span>
             {t.disclaimerText}
           </div>
