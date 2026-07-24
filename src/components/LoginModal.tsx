@@ -117,33 +117,46 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
         <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight mb-1">{t.loginTitle}</h2>
         <p className="text-sm text-[#5A6272] mb-6">{t.loginSubtitle}</p>
 
-        {/* Native Telegram login widget. Telegram renders its own iframe button
-            whose click target must not be overlaid or resized, or the button
-            silently stops responding — so it's shown as-is, centered. */}
-        <div className="mb-3 flex justify-center min-h-[46px]" ref={telegramContainerRef} />
-        {!TELEGRAM_BOT_USERNAME && (
-          <p className="text-[#C23B3B] text-xs mb-3 text-center">
-            {t.loginErrorGeneral || "Telegram login unavailable"}
-          </p>
-        )}
+        {/* Auth options in a centered column so the fixed-width Telegram widget
+            and the Google button share the same footprint and read as a set. */}
+        <div className="max-w-[280px] mx-auto flex flex-col items-stretch">
+          {/* Native Telegram login widget. Telegram renders its own iframe button
+              whose click target must not be overlaid or resized, or the button
+              silently stops responding — so it's shown as-is, centered. */}
+          <div className="flex justify-center min-h-[40px]" ref={telegramContainerRef} />
+          {!TELEGRAM_BOT_USERNAME && (
+            <p className="text-[#C23B3B] text-xs text-center">
+              {t.loginErrorGeneral || "Telegram login unavailable"}
+            </p>
+          )}
 
-        {/* Google OAuth */}
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading !== null}
-          className="w-full flex items-center justify-center gap-2 border border-[#D8D3C4] rounded-lg py-3 text-sm font-bold text-[#1B2A4A] bg-[#FCFBF6] hover:bg-[#F2EFE6] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09a6.6 6.6 0 0 1 0-4.18V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
-          </svg>
-          {t.continueWithGoogle}
-        </button>
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-4">
+            <span className="flex-1 h-px bg-[#E4E0D2]" />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-[#8A8F98]">
+              {t.orDivider || "yoki"}
+            </span>
+            <span className="flex-1 h-px bg-[#E4E0D2]" />
+          </div>
 
-        {(loading === "telegram" || loading === "google") && <p className="text-[#5A6272] text-sm mt-2">...</p>}
-        {error && <p className="text-[#C23B3B] text-sm mt-4">{error}</p>}
+          {/* Google OAuth */}
+          <button
+            onClick={handleGoogleLogin}
+            disabled={loading !== null}
+            className="w-full flex items-center justify-center gap-2 border border-[#D8D3C4] rounded-lg py-3 text-sm font-bold text-[#1B2A4A] bg-[#FCFBF6] hover:bg-[#F2EFE6] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09a6.6 6.6 0 0 1 0-4.18V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+            </svg>
+            {t.continueWithGoogle}
+          </button>
+
+          {(loading === "telegram" || loading === "google") && <p className="text-[#5A6272] text-sm mt-2 text-center">...</p>}
+          {error && <p className="text-[#C23B3B] text-sm mt-4 text-center">{error}</p>}
+        </div>
       </div>
     </div>
   );
