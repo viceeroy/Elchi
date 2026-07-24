@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import { supabaseAdmin } from '../lib/supabase-admin.js';
+import { getSupabaseAdmin } from '../lib/supabase-admin.js';
 import { checkRateLimit, clientIp } from '../lib/rate-limit.js';
 
 interface TelegramAuthPayload {
@@ -35,7 +35,7 @@ function verifyTelegramHash(payload: TelegramAuthPayload, botToken: string): boo
   return crypto.timingSafeEqual(received, computed);
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -67,6 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Tasdiqlash muvaffaqiyatsiz' });
   }
 
+  const supabaseAdmin = getSupabaseAdmin();
   const syntheticEmail = `telegram_${payload.id}@elchi.local`;
 
   const { error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -108,4 +109,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   return res.status(200).json({ hashed_token: linkData.properties.hashed_token });
+}
+
+// Outer guard so any unexpected throw (e.g. a missing service-role key or a
+// Supabase admin API failure) returns clean JSON the client can parse, instead
+// of Vercel's raw "FUNCTION_INVOCATION_FAILED" HTML that breaks res.json().
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    return await handleTelegramAuth(req, res);
+  } catch (err) {
+    console.error('Unhandled error in auth-telegram:', err);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+  }
 }
