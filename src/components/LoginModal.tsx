@@ -35,6 +35,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
   // once it mounts and match the Google button + divider to the same width so
   // the two options read as a set.
   const [tgWidth, setTgWidth] = useState<number | null>(null);
+  // The Telegram widget script loads from telegram.org and renders its iframe
+  // async, leaving a blank gap on slow connections. Track when the iframe
+  // actually paints so we can show a skeleton placeholder until then.
+  const [tgReady, setTgReady] = useState(false);
 
   const handleGoogleLogin = async () => {
     setLoading("google");
@@ -102,6 +106,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
       const iframe = telegramContainerRef.current?.querySelector("iframe");
       if (iframe && iframe.offsetWidth > 0) {
         setTgWidth(iframe.offsetWidth);
+        setTgReady(true);
       }
     });
     observer.observe(telegramContainerRef.current, {
@@ -146,7 +151,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
           {/* Native Telegram login widget. Telegram renders its own iframe button
               whose click target must not be overlaid or resized, or the button
               silently stops responding — so it's shown as-is, centered. */}
-          <div className="flex justify-center min-h-[40px]" ref={telegramContainerRef} />
+          <div className="relative flex justify-center min-h-[40px]">
+            {TELEGRAM_BOT_USERNAME && !tgReady && (
+              <div className="absolute inset-0 h-10 rounded-lg bg-[#E4E0D2] animate-pulse" />
+            )}
+            <div className="flex justify-center w-full" ref={telegramContainerRef} />
+          </div>
           {!TELEGRAM_BOT_USERNAME && (
             <p className="text-[#C23B3B] text-xs text-center">
               {t.loginErrorGeneral || "Telegram login unavailable"}
