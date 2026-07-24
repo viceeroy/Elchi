@@ -81,8 +81,8 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           align === "left" ? "items-start text-left" : "items-end text-right"
         }`}
       >
-        <span className="font-mono font-bold text-[26px] sm:text-[30px] leading-none tracking-[2px] text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors flex items-center gap-1">
-          {info.code}
+        <span className="font-bold text-[26px] sm:text-[30px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors flex items-center gap-1">
+          {info.country}
           <svg
             width="10"
             height="10"
@@ -97,7 +97,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </span>
-        <span className="text-[12px] text-[#8A8F98] mt-1 font-medium">{info.country}</span>
+        <span className="text-[12px] text-[#8A8F98] mt-1 font-medium">{info.city}</span>
       </button>
 
       {/* Country dropdown */}
