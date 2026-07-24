@@ -98,6 +98,16 @@ export default function App() {
   // Active translation dictionary
   const t = translations[locale];
 
+  // Keep the document title, meta description and <html lang> in sync with the
+  // chosen locale — the static index.html ships Uzbek, so RU/EN users would
+  // otherwise see Uzbek metadata in the tab and in search/social previews.
+  useEffect(() => {
+    document.title = t.metaTitle;
+    document.documentElement.lang = locale;
+    const desc = document.querySelector('meta[name="description"]');
+    if (desc) desc.setAttribute("content", t.metaDescription);
+  }, [locale, t.metaTitle, t.metaDescription]);
+
   // Handle URL deep linking
   useEffect(() => {
     if (posts.length > 0) {

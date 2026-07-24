@@ -39,6 +39,8 @@ export interface Post {
 export type Locale = "uz" | "ru" | "en";
 
 export interface Translations {
+  metaTitle: string;
+  metaDescription: string;
   tagline: string;
   title: string;
   titleAccent: string;

@@ -2,6 +2,8 @@ import { Locale, Translations } from "./types";
 
 export const translations: Record<Locale, Translations> = {
   uz: {
+    metaTitle: "Elchi — Chamadoningizda joy bormi? | Bepul e'lon taxtasi",
+    metaDescription: "Sayohatchilar va pochta yubormoqchi bo'lganlar uchun bepul e'lon taxtasi. Chamadoningizda bo'sh joyni e'lon qiling yoki yo'lovchi orqali pochta yuboring.",
     tagline: "SAYOHATDA YORDAM BERISH",
     title: "Chamadoningizda ",
     titleAccent: "joy bormi?",
@@ -98,6 +100,8 @@ export const translations: Record<Locale, Translations> = {
     methodGoogle: "Google",
   },
   ru: {
+    metaTitle: "Elchi — Есть ли место в чемодане? | Бесплатная доска объявлений",
+    metaDescription: "Бесплатная доска объявлений для путешественников и тех, кому нужно передать посылку. Разместите объявление о свободном месте в чемодане или отправьте посылку с попутчиком.",
     tagline: "ПОМОЩЬ В ПУТЕШЕСТВИИ",
     title: "Есть ли место",
     titleAccent: " в чемодане?",
@@ -194,6 +198,8 @@ export const translations: Record<Locale, Translations> = {
     methodGoogle: "Google",
   },
   en: {
+    metaTitle: "Elchi — Is there room in your suitcase? | Free notice board",
+    metaDescription: "A free notice board for travelers and people who need to send a parcel. Post your spare luggage space or send a parcel with someone already making the trip.",
     tagline: "HELP WHILE TRAVELING",
     title: "Is there room",
     titleAccent: " in your suitcase?",
