@@ -57,6 +57,8 @@ export const translations: Record<Locale, Translations> = {
     errorFieldCategory: "Kamida bitta turini tanlang.",
     errorFieldNote: "Qisqacha izoh yozing.",
     errorFieldContact: "Bog'lanish ma'lumotini kiriting.",
+    errorContactTelegram: "Telegram username 5-32 ta harf, raqam yoki _ dan iborat bo'lishi va harf bilan boshlanishi kerak.",
+    errorContactPhone: "Telefon raqamini to'liq kiriting (7-15 ta raqam).",
     autoDeleteLabel: "E'lon safar sanasidan keyin avtomatik o'chadi.",
     deleteBtn: "O'chirish",
     deleteConfirm: "E'lonni o'chirmoqchimisiz?",
@@ -98,6 +100,8 @@ export const translations: Record<Locale, Translations> = {
     profileLoginMethod: "Kirish usuli",
     methodTelegram: "Telegram",
     methodGoogle: "Google",
+    contactLockedText: "E'lon egasining kontaktini ko'rish uchun tizimga kiring. Bu foydalanuvchilar raqamlarini spamdan himoya qiladi.",
+    contactLockedBtn: "Kirish va kontaktni ko'rish",
   },
   ru: {
     metaTitle: "Elchi — Есть ли место в чемодане? | Бесплатная доска объявлений",
@@ -155,6 +159,8 @@ export const translations: Record<Locale, Translations> = {
     errorFieldCategory: "Выберите хотя бы одну категорию.",
     errorFieldNote: "Напишите короткое примечание.",
     errorFieldContact: "Укажите контактные данные.",
+    errorContactTelegram: "Имя пользователя Telegram: 5-32 символа (буквы, цифры, _), начинается с буквы.",
+    errorContactPhone: "Введите номер телефона полностью (7-15 цифр).",
     autoDeleteLabel: "Объявление автоматически удалится после указанной даты.",
     deleteBtn: "Удалить",
     deleteConfirm: "Удалить объявление?",
@@ -196,6 +202,8 @@ export const translations: Record<Locale, Translations> = {
     profileLoginMethod: "Способ входа",
     methodTelegram: "Telegram",
     methodGoogle: "Google",
+    contactLockedText: "Войдите, чтобы увидеть контакт автора объявления. Так номера пользователей защищены от спама.",
+    contactLockedBtn: "Войти и увидеть контакт",
   },
   en: {
     metaTitle: "Elchi — Is there room in your suitcase? | Free notice board",
@@ -253,6 +261,8 @@ export const translations: Record<Locale, Translations> = {
     errorFieldCategory: "Pick at least one category.",
     errorFieldNote: "Add a short note.",
     errorFieldContact: "Enter your contact info.",
+    errorContactTelegram: "A Telegram username is 5-32 letters, digits or _, starting with a letter.",
+    errorContactPhone: "Enter the full phone number (7-15 digits).",
     autoDeleteLabel: "The post will expire automatically after the travel/needed date.",
     deleteBtn: "Delete",
     deleteConfirm: "Delete this post?",
@@ -294,6 +304,8 @@ export const translations: Record<Locale, Translations> = {
     profileLoginMethod: "Login method",
     methodTelegram: "Telegram",
     methodGoogle: "Google",
+    contactLockedText: "Log in to see this poster's contact. It keeps people's numbers away from scrapers and spam.",
+    contactLockedBtn: "Log in to see contact",
   }
 };
 export const defaultLocale: Locale = "uz";

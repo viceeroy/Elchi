@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase.js';
 import { checkRateLimit, clientIp } from '../lib/rate-limit.js';
+import { isContactKind, isValidContact, type ContactKind } from '../lib/contact.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
@@ -25,40 +26,206 @@ function userScopedClient(token: string) {
   });
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === 'GET') {
-    const today = new Date().toISOString().split('T')[0];
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*')
-      .gte('expires_at', today)
-      .order('created_at', { ascending: false });
+// Columns the board renders. Read from the `public_posts` view, which omits the
+// contact values and user_id entirely — those never travel in a list response.
+const PUBLIC_COLUMNS =
+  'id,type,direction,from_country,to_country,from_city,to_city,date,' +
+  'weight_kg,luggage_count,categories,category_other,weight,note,' +
+  'contact_type,contact2_type,has_contact2,created_at,expires_at';
 
-    if (error) {
-      console.error('Error fetching posts:', error);
-      return res.status(500).json({ error: 'Xatolik yuz berdi' });
+const DEFAULT_PAGE_SIZE = 24;
+const MAX_PAGE_SIZE = 100;
+
+// Post ids are UUIDs. Checking the shape here turns a malformed id into a 400
+// instead of letting Postgres reject the cast and surface as a 500.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function postId(req: VercelRequest): string | null {
+  const raw = typeof req.query.id === 'string' ? req.query.id : null;
+  return raw && UUID_RE.test(raw) ? raw : null;
+}
+
+// Resolves the caller's user id from a bearer token, or null when absent or
+// invalid. Never throws — an unauthenticated GET is a normal case.
+async function resolveUser(req: VercelRequest): Promise<{ id: string; token: string } | null> {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user?.id) return null;
+  return { id: data.user.id, token };
+}
+
+// Marks which of the returned posts belong to the caller, so the client can
+// show its delete button without user_id ever being exposed to other viewers.
+async function markOwnership(
+  posts: Array<Record<string, unknown>>,
+  user: { id: string; token: string } | null,
+) {
+  if (!user || posts.length === 0) {
+    return posts.map((p) => ({ ...p, is_mine: false }));
+  }
+  const db = userScopedClient(user.token);
+  const { data, error } = await db
+    .from('posts')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('id', posts.map((p) => p.id as string));
+
+  if (error) {
+    console.error('Error resolving post ownership:', error);
+    return posts.map((p) => ({ ...p, is_mine: false }));
+  }
+  const mine = new Set((data ?? []).map((row) => row.id as string));
+  return posts.map((p) => ({ ...p, is_mine: mine.has(p.id as string) }));
+}
+
+async function handleGet(req: VercelRequest, res: VercelResponse) {
+  // Post data is personal (free-text notes, routes, and — behind auth — phone
+  // numbers). Never let an edge or intermediary cache a response.
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  // Loose per-IP cap on reads. Deliberately generous: a large share of users in
+  // both corridors are behind carrier-grade NAT, so many people share one
+  // address and a tight cap here would lock out real traffic. This is a
+  // denial-of-service guard, not the privacy control — the feed carries no
+  // contact values, and the reveal path below is what's actually throttled.
+  const allowedRead = await checkRateLimit('read', clientIp(req), 600, 600);
+  if (!allowedRead) {
+    return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
+  }
+
+  const id = postId(req);
+  const wantsContact = req.query.fields === 'contact';
+
+  // --- Contact reveal: the sensitive path. ------------------------------
+  // One post per call, logged-in callers only, rate limited on the user id
+  // rather than the IP so an account (not a proxy pool) is the cost of
+  // scraping. get_post_contact enforces the auth requirement server-side too.
+  if (wantsContact) {
+    if (!id) {
+      return res.status(400).json({ error: 'E\'lon topilmadi' });
+    }
+    const user = await resolveUser(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Avval tizimga kiring' });
     }
 
-    return res.status(200).json(data);
+    // Two buckets. The per-user cap is the real control: an account is the
+    // cost of scraping, and it can be revoked. The per-IP cap is a backstop so
+    // one host can't drive the reveal endpoint through a pile of throwaway
+    // accounts — loose enough to survive shared/NAT addresses.
+    const perUser = await checkRateLimit('contact', `user:${user.id}`, 60, 600);
+    const perIp = perUser && await checkRateLimit('contact-ip', clientIp(req), 240, 600);
+    if (!perUser || !perIp) {
+      return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
+    }
+
+    const db = userScopedClient(user.token);
+    const { data, error } = await db.rpc('get_post_contact', { p_id: id });
+    if (error) {
+      console.error('Error fetching post contact:', error);
+      return res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
+      return res.status(404).json({ error: 'E\'lon topilmadi' });
+    }
+    return res.status(200).json(row);
+  }
+
+  const user = await resolveUser(req);
+
+  // --- Single post (deep links: ?postId=... may point outside page 1). ---
+  if (id) {
+    const { data, error } = await supabase
+      .from('public_posts')
+      .select(PUBLIC_COLUMNS)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching post:', error);
+      return res.status(500).json({ error: 'Xatolik yuz berdi' });
+    }
+    if (!data) {
+      return res.status(404).json({ error: 'E\'lon topilmadi' });
+    }
+    // The project has no generated Supabase types, so a select() over an
+    // explicit column list comes back as an opaque row shape.
+    const row = data as unknown as Record<string, unknown>;
+    const [withOwnership] = await markOwnership([row], user);
+    return res.status(200).json(withOwnership);
+  }
+
+  // --- Paged list. ------------------------------------------------------
+  // The route filter runs in SQL, not in the browser, so a bounded page can't
+  // starve a quiet corridor of results the way a global "newest N" would.
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0
+    ? Math.min(MAX_PAGE_SIZE, Math.floor(rawLimit))
+    : DEFAULT_PAGE_SIZE;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+
+  let query = supabase
+    .from('public_posts')
+    .select(PUBLIC_COLUMNS, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit); // one extra row to detect a next page
+
+  const from = typeof req.query.from === 'string' ? req.query.from.toUpperCase() : null;
+  const to = typeof req.query.to === 'string' ? req.query.to.toUpperCase() : null;
+  if (from && to) {
+    if (!ALLOWED_COUNTRIES.has(from) || !ALLOWED_COUNTRIES.has(to) || from === to) {
+      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+    }
+    query = query.eq('from_country', from).eq('to_country', to);
+  }
+
+  const { data, error, count } = await query;
+  if (error) {
+    console.error('Error fetching posts:', error);
+    return res.status(500).json({ error: 'Xatolik yuz berdi' });
+  }
+
+  const rows = (data ?? []) as unknown as Record<string, unknown>[];
+  const hasMore = rows.length > limit;
+  const page = await markOwnership(hasMore ? rows.slice(0, limit) : rows, user);
+
+  return res.status(200).json({
+    posts: page,
+    hasMore,
+    total: count ?? offset + page.length,
+  });
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method === 'GET') {
+    return handleGet(req, res);
   } else if (req.method === 'POST') {
-    // Rate limit before any work: cap post creation per IP to blunt automated
-    // flooding (the honeypot only stops naive bots).
-    const allowed = await checkRateLimit('post', clientIp(req), 5, 600);
-    if (!allowed) {
+    // Loose per-IP backstop before any work, so unauthenticated flooding is
+    // turned away cheaply.
+    const ipAllowed = await checkRateLimit('post-ip', clientIp(req), 40, 600);
+    if (!ipAllowed) {
       return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
     }
 
     // Posting requires a logged-in user. The author is taken from the verified
     // bearer token, never a body field, so it can't be spoofed.
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (!token) {
+    const user = await resolveUser(req);
+    if (!user) {
       return res.status(401).json({ error: 'Avval tizimga kiring' });
     }
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    const user_id = userData.user?.id ?? null;
-    if (userError || !user_id) {
-      return res.status(401).json({ error: 'Avval tizimga kiring' });
+    const { id: user_id, token } = user;
+
+    // The real cap is per author, not per address. Keying this on the IP made
+    // sense only while the IP was forgeable and the limit therefore toothless;
+    // now that clientIp() returns the true peer, a per-IP cap of 5 would lock
+    // out everyone sharing a carrier-grade NAT address.
+    const allowed = await checkRateLimit('post', `user:${user_id}`, 5, 600);
+    if (!allowed) {
+      return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
     }
 
     const {
@@ -86,20 +253,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Spam aniqlandi' });
     }
 
-    if (!type || !from_city || !to_city || !date || !weight || !contact) {
+    // Normalise once, up front, and use these values for every check AND for
+    // the insert. The previous code measured `from_city.trim().length` but
+    // stored the untrimmed string, so 100 characters plus padding passed
+    // validation and then blew up against VARCHAR(100) as a 500.
+    const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+    const fromCity = str(from_city);
+    const toCity = str(to_city);
+    const contactVal = str(contact);
+    const contact2Val = str(contact2);
+    const noteVal = str(note);
+    const categoryOtherVal = str(category_other);
+    const weightVal = str(weight);
+
+    if (!type || !fromCity || !toCity || !date || !weightVal || !contactVal) {
       return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
     }
 
     // Length caps — mirror the DB column widths and keep free-text fields sane
     // so a direct API caller can't store multi-MB blobs.
     const tooLong =
-      String(from_city).trim().length > 100 ||
-      String(to_city).trim().length > 100 ||
-      String(contact).trim().length > 100 ||
-      (contact2 && String(contact2).trim().length > 100) ||
-      (note && String(note).length > 1000) ||
-      (category_other && String(category_other).length > 100) ||
-      String(weight).length > 200;
+      fromCity.length > 100 ||
+      toCity.length > 100 ||
+      contactVal.length > 100 ||
+      contact2Val.length > 100 ||
+      noteVal.length > 1000 ||
+      categoryOtherVal.length > 100 ||
+      weightVal.length > 200;
     if (tooLong) {
       return res.status(400).json({ error: 'Maydon juda uzun' });
     }
@@ -144,9 +324,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : fromCountry === 'UZ' && toCountry === 'KR' ? 'u2k'
       : null;
 
-    const isContactType = (v: unknown) => v === 'telegram' || v === 'phone';
-    if (!isContactType(contact_type) || (contact2 && !isContactType(contact2_type))) {
+    if (!isContactKind(contact_type) || (contact2Val && !isContactKind(contact2_type))) {
       return res.status(400).json({ error: 'Noto\'g\'ri aloqa turi' });
+    }
+
+    // The handle must match the channel it claims to be. Previously only the
+    // length was checked, so `contact_type` and `contact` could disagree — and
+    // the UI, which decided tel: vs t.me by sniffing a leading "@", would then
+    // build a link that contradicted the stored type.
+    if (!isValidContact(contactVal, contact_type)) {
+      return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
+    }
+    if (contact2Val && !isValidContact(contact2Val, contact2_type as ContactKind)) {
+      return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
     }
 
     const postDate = new Date(date);
@@ -185,24 +375,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           direction: legacyDirection,
           from_country: fromCountry,
           to_country: toCountry,
-          from_city,
-          to_city,
+          // The normalised values, so what was validated is what gets stored.
+          from_city: fromCity,
+          to_city: toCity,
           date,
           weight_kg: safeWeightKg,
           luggage_count: safeLuggage,
           categories: Array.isArray(categories) ? categories : [],
-          category_other: category_other || null,
-          weight,
-          note: note || null,
-          contact,
+          category_other: categoryOtherVal || null,
+          weight: weightVal,
+          note: noteVal || null,
+          contact: contactVal,
           contact_type,
-          contact2: contact2 || null,
-          contact2_type: contact2 ? contact2_type : null,
+          contact2: contact2Val || null,
+          contact2_type: contact2Val ? contact2_type : null,
           user_id,
           expires_at
         }
       ])
-      .select()
+      // Only the id comes back: `authenticated` holds a column-level SELECT
+      // grant on (id, user_id) and nothing more, so `.select()` with no
+      // argument would now fail on the contact columns.
+      .select('id')
       .single();
 
     if (error) {
@@ -210,22 +404,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }
 
-    return res.status(201).json(data);
+    return res.status(201).json({ id: data.id });
   } else if (req.method === 'DELETE') {
     // Delete requires a logged-in user; the author is taken from the verified
     // bearer token, never a body field, so it can't be spoofed.
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (!token) {
+    const user = await resolveUser(req);
+    if (!user) {
       return res.status(401).json({ error: 'Avval tizimga kiring' });
     }
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    const user_id = userData.user?.id ?? null;
-    if (userError || !user_id) {
-      return res.status(401).json({ error: 'Avval tizimga kiring' });
+    const { id: user_id, token } = user;
+
+    // Deletion is authz-safe (RLS scopes it to the author), so this is an abuse
+    // cap only: nobody legitimately deletes 30 posts in ten minutes.
+    const allowed = await checkRateLimit('delete', `user:${user_id}`, 30, 600);
+    if (!allowed) {
+      return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
     }
 
-    const id = typeof req.query.id === 'string' ? req.query.id : null;
+    const id = postId(req);
     if (!id) {
       return res.status(400).json({ error: 'E\'lon topilmadi' });
     }

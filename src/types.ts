@@ -27,13 +27,28 @@ export interface Post {
   // "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon".
   weight: string;
   note: string | null;
+  // Contact VALUES are deliberately absent from this shape. The feed reads the
+  // `public_posts` view, which omits them, so a scraper cannot pull every
+  // author's phone number in one request. The channel of each contact is still
+  // exposed so the UI can render the right icon before the viewer logs in;
+  // the handles themselves come from fetchPostContact() — see PostContact.
+  contact_type: ContactMethod | null;
+  contact2_type: ContactMethod | null;
+  has_contact2: boolean;
+  created_at: string;
+  expires_at: string;
+  // Set by the API from the caller's bearer token. user_id itself is never
+  // sent to the client, so posts can't be correlated back to an author.
+  is_mine?: boolean;
+}
+
+// Contact handles for a single post, fetched on demand and only for logged-in
+// viewers (GET /api/posts?id=...&fields=contact).
+export interface PostContact {
   contact: string;
   contact_type: ContactMethod | null;
   contact2: string | null;
   contact2_type: ContactMethod | null;
-  created_at: string;
-  expires_at: string;
-  user_id?: string | null;
 }
 
 export type Locale = "uz" | "ru" | "en";
@@ -96,6 +111,8 @@ export interface Translations {
   errorFieldCategory?: string;
   errorFieldNote?: string;
   errorFieldContact?: string;
+  errorContactTelegram: string;
+  errorContactPhone: string;
   autoDeleteLabel: string;
   deleteBtn?: string;
   deleteConfirm?: string;
@@ -137,4 +154,6 @@ export interface Translations {
   profileLoginMethod?: string;
   methodTelegram?: string;
   methodGoogle?: string;
+  contactLockedText: string;
+  contactLockedBtn: string;
 }

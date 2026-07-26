@@ -41,8 +41,13 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Throttle auth attempts per IP to slow brute-forcing / abuse of the bridge.
-  const allowed = await checkRateLimit('auth', clientIp(req), 10, 600);
+  // Throttle auth attempts per IP to slow abuse of the bridge. Forging the
+  // payload is not the threat this stops — the HMAC below makes that
+  // infeasible — so the cap is sized against hammering Supabase's admin API,
+  // and left loose enough that a shared carrier-grade NAT address (common in
+  // both corridors) doesn't lock out real users. It only became a real limit
+  // at all once clientIp() stopped trusting a client-supplied header.
+  const allowed = await checkRateLimit('auth', clientIp(req), 60, 600);
   if (!allowed) {
     return res.status(429).json({ error: 'Juda ko\'p urinish. Birozdan keyin urinib ko\'ring' });
   }
@@ -58,8 +63,12 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Noto\'g\'ri so\'rov' });
   }
 
+  // Two-sided window. The one-sided check accepted any auth_date in the future,
+  // so a payload timestamped years ahead would never expire. The HMAC covers
+  // auth_date, so forging one isn't practical — but the bound should not depend
+  // on that being true, and a small allowance absorbs clock skew.
   const nowSeconds = Math.floor(Date.now() / 1000);
-  if (nowSeconds - payload.auth_date > AUTH_DATE_MAX_AGE_SECONDS) {
+  if (Math.abs(nowSeconds - payload.auth_date) > AUTH_DATE_MAX_AGE_SECONDS) {
     return res.status(401).json({ error: 'Sessiya muddati o\'tgan' });
   }
 

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Locale, Translations, PostType } from "../types";
 import { COUNTRIES } from "../constants";
 import { supabaseBrowser } from "../supabaseClient";
+import { isValidContact } from "../../lib/contact";
 import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle } from "lucide-react";
 
 // Phone fields keep digits and the punctuation used by the +998/+82 formats
@@ -161,7 +162,21 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       nextErrors.weight = t.errorFieldWeight;
     }
     if (!note.trim()) nextErrors.note = t.errorFieldNote;
-    if (!contact.trim()) nextErrors.contact = t.errorFieldContact;
+    if (!contact.trim()) {
+      nextErrors.contact = t.errorFieldContact;
+    } else {
+      // Mirror the API's rule so a malformed handle is caught inline rather
+      // than coming back as an opaque server error. The API re-checks this —
+      // it is the security boundary; this is only the faster feedback path.
+      const normalized = contactMethod === "telegram"
+        ? (contact.trim().startsWith("@") ? contact.trim() : `@${contact.trim()}`)
+        : contact.trim().replace(/^@/, "");
+      if (!isValidContact(normalized, contactMethod)) {
+        nextErrors.contact = contactMethod === "telegram"
+          ? t.errorContactTelegram
+          : t.errorContactPhone;
+      }
+    }
 
     setErrors(nextErrors);
 

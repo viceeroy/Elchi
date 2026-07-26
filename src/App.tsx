@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Post, Locale, PostType } from "./types";
+import { Post, PostContact, Locale, PostType, ContactMethod } from "./types";
+import { telegramUsername, phoneDialString } from "../lib/contact";
 import { translations, defaultLocale } from "./translations";
 import { COUNTRIES, getCountry } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
@@ -9,7 +10,7 @@ import { LoginModal } from "./components/LoginModal";
 import { ProfileSheet } from "./components/ProfileSheet";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
-import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User, Trash2 } from "lucide-react";
+import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -22,6 +23,10 @@ const LOCALE_LABELS: Record<Locale, string> = {
 // regardless of the author's locale (see PostFormModal). Re-localize it here
 // from the count so it matches the viewer's current locale rather than
 // freezing to whichever language the post was created in.
+// The feed is paged server-side, so a bounded response can't be turned into a
+// full dump of the board.
+const PAGE_SIZE = 24;
+
 function localizeWeight(weight: string, locale: Locale): string {
   return weight.replace(/(\d+)\s*chamadon\b/gi, (_match, numStr: string) => {
     const n = parseInt(numStr, 10);
@@ -48,7 +53,14 @@ export default function App() {
   const [shareCopied, setShareCopied] = useState(false);
   const [contactCopied, setContactCopied] = useState(false);
   const [createdToastOpen, setCreatedToastOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState<number>(8);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalPosts, setTotalPosts] = useState(0);
+  // Contact handles for the open post. Never part of the feed payload — fetched
+  // on demand, and only for logged-in viewers.
+  const [revealedContact, setRevealedContact] = useState<PostContact | null>(null);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const langMenuRef = React.useRef<HTMLDivElement>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -90,11 +102,6 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [langMenuOpen]);
 
-  // Reset visible posts count when the route filter changes to avoid confusion
-  useEffect(() => {
-    setVisibleCount(8);
-  }, [route]);
-
   // Active translation dictionary
   const t = translations[locale];
 
@@ -108,19 +115,32 @@ export default function App() {
     if (desc) desc.setAttribute("content", t.metaDescription);
   }, [locale, t.metaTitle, t.metaDescription]);
 
-  // Handle URL deep linking
+  // Handle URL deep linking. Resolved against the API directly rather than the
+  // loaded feed: with server-side paging a shared post may sit past the first
+  // page, or on a different route than the one currently selected.
+  const deepLinkHandled = React.useRef(false);
   useEffect(() => {
-    if (posts.length > 0) {
-      const params = new URLSearchParams(window.location.search);
-      const postIdParam = params.get("postId") || params.get("post");
-      if (postIdParam) {
-        const found = posts.find((p) => String(p.id) === postIdParam);
-        if (found) {
-          setSelectedPost(found);
-        }
+    if (deepLinkHandled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const postIdParam = params.get("postId") || params.get("post");
+    if (!postIdParam) return;
+    deepLinkHandled.current = true;
+
+    (async () => {
+      try {
+        // Read the session directly rather than from state: this runs on mount,
+        // before onAuthStateChange has necessarily fired. Without it the author
+        // of a deep-linked post wouldn't see their own delete button.
+        const { data: { session: current } } = await supabaseBrowser.auth.getSession();
+        const res = await fetch(`/api/posts?id=${encodeURIComponent(postIdParam)}`, {
+          headers: current ? { Authorization: `Bearer ${current.access_token}` } : {},
+        });
+        if (res.ok) setSelectedPost(await res.json());
+      } catch (err) {
+        console.error("Error resolving shared post:", err);
       }
-    }
-  }, [posts]);
+    })();
+  }, []);
 
   // Lock background scroll while any modal (detail sheet or post form) is open.
   // Uses position:fixed on <body> so touch/swipe gestures can't scroll the list
@@ -156,6 +176,8 @@ export default function App() {
     setSelectedPost(null);
     setShareCopied(false);
     setContactCopied(false);
+    setRevealedContact(null);
+    setContactError(null);
     // Clean up query param if present to keep URL neat
     const params = new URLSearchParams(window.location.search);
     if (params.has("postId") || params.has("post")) {
@@ -172,9 +194,12 @@ export default function App() {
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?postId=${selectedPost.id}`;
     const shareWeight = localizeWeight(selectedPost.weight, locale);
+    // The contact handle is deliberately left out of the share text: it would
+    // republish someone's phone number into whatever app the link is sent to.
+    // The recipient opens the post and reveals it themselves.
     const shareText = selectedPost.type === "traveler"
-      ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman. Bog'lanish: ${selectedPost.contact}`
-      : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak. Bog'lanish: ${selectedPost.contact}`;
+      ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman.`
+      : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak.`;
 
     const shareTitle = t.shareTitle || "Elchi e'lon taxtasi";
 
@@ -228,40 +253,83 @@ export default function App() {
     }
   };
 
-  // Fetch posts from our Express API
-  const fetchPosts = async () => {
-    setLoading(true);
+  // Fetch a page of posts. The route filter and the page bounds are applied in
+  // SQL, so the client never holds — and the API never emits — the whole board.
+  // The bearer token is sent when present purely so the API can flag which
+  // posts are the viewer's own (is_mine); it is not required to read the feed.
+  const fetchPosts = async (opts?: { append?: boolean }) => {
+    const append = opts?.append ?? false;
+    if (append) setLoadingMore(true);
+    else setLoading(true);
+
     try {
-      const res = await fetch("/api/posts");
+      const params = new URLSearchParams({
+        from: route.from,
+        to: route.to,
+        limit: String(PAGE_SIZE),
+        offset: String(append ? posts.length : 0),
+      });
+      const { data: { session: current } } = await supabaseBrowser.auth.getSession();
+      const res = await fetch(`/api/posts?${params.toString()}`, {
+        headers: current ? { Authorization: `Bearer ${current.access_token}` } : {},
+      });
       if (res.ok) {
         const data = await res.json();
-        // Ensure posts are sorted by created_at in descending order (most recent first)
-        const sorted = Array.isArray(data) 
-          ? [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          : [];
-        setPosts(sorted);
+        const page: Post[] = Array.isArray(data.posts) ? data.posts : [];
+        setPosts((prev) => (append ? [...prev, ...page] : page));
+        setHasMore(Boolean(data.hasMore));
+        setTotalPosts(typeof data.total === "number" ? data.total : page.length);
       }
     } catch (err) {
       console.error("Error fetching posts:", err);
     } finally {
-      setLoading(false);
+      if (append) setLoadingMore(false);
+      else setLoading(false);
     }
   };
 
+  // Refetch from page 1 whenever the route changes, and when the session
+  // changes so is_mine is recomputed for the new viewer.
   useEffect(() => {
     fetchPosts();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.from, route.to, session?.user?.id]);
+
+  // Pull the open post's contact handles. Logged-out viewers get nothing to
+  // fetch — the reveal is gated server-side too, so this is UI only.
+  useEffect(() => {
+    setRevealedContact(null);
+    setContactError(null);
+    if (!selectedPost || !session) return;
+
+    let cancelled = false;
+    setContactLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/posts?id=${encodeURIComponent(selectedPost.id)}&fields=contact`,
+          { headers: { Authorization: `Bearer ${session.access_token}` } },
+        );
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok) setRevealedContact(data as PostContact);
+        else setContactError(data.error || t.errorGeneral);
+      } catch (err) {
+        console.error("Error fetching contact:", err);
+        if (!cancelled) setContactError(t.errorGeneral);
+      } finally {
+        if (!cancelled) setContactLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPost?.id, session?.user?.id]);
 
   const changeLocale = (newLocale: Locale) => {
     setLocale(newLocale);
     localStorage.setItem("elchi_locale", newLocale);
   };
-
-  // Filter posts locally — route matching is an exact compare on the stored
-  // origin country code (all rows are backfilled by the countries migration).
-  const filteredPosts = posts.filter(
-    (post) => post.from_country === route.from && post.to_country === route.to
-  );
 
   const handlePostSubmitSuccess = () => {
     setFormOpen(false);
@@ -296,21 +364,26 @@ export default function App() {
     }
   };
 
-  // Helper to construct Telegram or Contact link
-  const getContactLinkAndLabel = (contactStr: string) => {
+  // Build the Telegram or phone link for a contact.
+  //
+  // The channel comes from the stored contact_type, not from sniffing a leading
+  // "@" — the type is what the author actually chose and what the API now
+  // validates the handle against. The "@" heuristic only agreed with it by
+  // convention, and disagreed for any row where the two drifted. Rows written
+  // before contact_type existed were backfilled, but fall back to the old
+  // heuristic if it is somehow null.
+  const getContactLinkAndLabel = (contactStr: string, kind: ContactMethod | null) => {
     const trimmed = contactStr.trim();
-    if (trimmed.startsWith("@")) {
-      const username = trimmed.substring(1);
-      return {
-        url: `https://t.me/${username}`,
-        label: trimmed,
-        isTelegram: true,
-      };
-    }
+    const isTelegram = kind ? kind === "telegram" : trimmed.startsWith("@");
+
     return {
-      url: `tel:${trimmed}`,
+      // Both sides are sanitised rather than interpolated raw: a legacy row
+      // that predates validation can't steer the URL anywhere unintended.
+      url: isTelegram
+        ? `https://t.me/${telegramUsername(trimmed)}`
+        : `tel:${phoneDialString(trimmed)}`,
       label: trimmed,
-      isTelegram: false,
+      isTelegram,
     };
   };
 
@@ -422,7 +495,7 @@ export default function App() {
           <div className="flex items-baseline justify-between mb-4">
             <h2 className="text-xl font-extrabold tracking-tight text-[#1B2A4A]">{t.activeAds}</h2>
             <span className="font-mono text-[11px] text-[#8A8F98] tracking-wider">
-              {filteredPosts.length} {t.activeCount}
+              {totalPosts} {t.activeCount}
             </span>
           </div>
 
@@ -457,9 +530,9 @@ export default function App() {
                 </div>
               ))}
             </div>
-          ) : filteredPosts.length > 0 ? (
+          ) : posts.length > 0 ? (
             <div className="flex flex-col gap-4">
-              {filteredPosts.slice(0, visibleCount).map((post) => (
+              {posts.map((post) => (
                 <BoardingPass
                   key={post.id}
                   post={post}
@@ -469,17 +542,18 @@ export default function App() {
                 />
               ))}
 
-              {filteredPosts.length > visibleCount ? (
+              {hasMore ? (
                 <div className="mt-2 flex justify-center">
                   <button
                     type="button"
-                    onClick={() => setVisibleCount((prev) => prev + 8)}
-                    className="font-mono text-xs font-bold py-3 px-6 bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#2A4B8D] hover:text-[#2A4B8D] rounded-xl text-[#1B2A4A] flex items-center gap-2 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+                    onClick={() => fetchPosts({ append: true })}
+                    disabled={loadingMore}
+                    className="font-mono text-xs font-bold py-3 px-6 bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#2A4B8D] hover:text-[#2A4B8D] rounded-xl text-[#1B2A4A] flex items-center gap-2 transition-all shadow-sm active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <span>{t.loadMoreBtn || "Yana yuklash ↓"}</span>
+                    <span>{loadingMore ? (t.submittingBtn || "...") : (t.loadMoreBtn || "Yana yuklash ↓")}</span>
                   </button>
                 </div>
-              ) : filteredPosts.length > 8 ? (
+              ) : posts.length > PAGE_SIZE ? (
                 <div className="mt-4 text-center text-xs font-mono text-[#8A8F98] tracking-wider py-2">
                   ✓ {t.allLoaded || "Barcha e'lonlar yuklandi"}
                 </div>
@@ -643,7 +717,7 @@ export default function App() {
                   )}
                 </button>
 
-                {session?.user?.id && selectedPost.user_id === session.user.id && (
+                {session?.user?.id && selectedPost.is_mine && (
                   <button
                     onClick={handleDeletePost}
                     disabled={deleting}
@@ -659,17 +733,69 @@ export default function App() {
 
               {/* Action and Contact segment — single unified section */}
               {(() => {
-                const contactInfo = getContactLinkAndLabel(selectedPost.contact);
-                const contact2Info = selectedPost.contact2 ? getContactLinkAndLabel(selectedPost.contact2) : null;
+                const sectionLabel = (
+                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98]">
+                    {t.contactLabel}
+                  </div>
+                );
+
+                // Logged out: there is nothing to render. Contact handles are
+                // not part of the feed payload and the reveal endpoint rejects
+                // unauthenticated callers, so this prompt is the only route to
+                // them — which is what stops the board being scraped for phone
+                // numbers.
+                if (!session) {
+                  return (
+                    <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
+                      {sectionLabel}
+                      <p className="text-[13px] text-[#6B7280] m-0 leading-snug">
+                        {t.contactLockedText}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setLoginOpen(true)}
+                        className="font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
+                        id="reveal-contact-btn"
+                      >
+                        <Lock className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{t.contactLockedBtn}</span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (contactLoading) {
+                  return (
+                    <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
+                      {sectionLabel}
+                      <div className="h-5 w-2/3 bg-[#E3DFD1] rounded animate-pulse" />
+                      <div className="h-10 w-full bg-[#E3DFD1] rounded-lg animate-pulse" />
+                    </div>
+                  );
+                }
+
+                if (contactError || !revealedContact) {
+                  return (
+                    <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
+                      {sectionLabel}
+                      <p className="text-[13px] text-[#C23B3B] m-0 leading-snug">
+                        {contactError || t.errorGeneral}
+                      </p>
+                    </div>
+                  );
+                }
+
+                const contactInfo = getContactLinkAndLabel(revealedContact.contact, revealedContact.contact_type);
+                const contact2Info = revealedContact.contact2
+                  ? getContactLinkAndLabel(revealedContact.contact2, revealedContact.contact2_type)
+                  : null;
                 const actionLabel = (isTg: boolean) => isTg
                   ? (locale === "uz" ? "Telegramda ochish ↗" : locale === "ru" ? "Открыть в Telegram ↗" : "Open in Telegram ↗")
                   : (locale === "uz" ? "Qo'ng'iroq qilish ✆" : locale === "ru" ? "Позвонить ✆" : "Call ✆");
 
                 return (
                   <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
-                    <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98]">
-                      {t.contactLabel}
-                    </div>
+                    {sectionLabel}
 
                     {/* Values side by side, each with its own copy button */}
                     <div className="flex items-center gap-2">
@@ -681,12 +807,12 @@ export default function App() {
                             <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
                           )}
                           <span className={`truncate ${contactInfo.isTelegram ? "text-[#2A4B8D]" : "text-emerald-700"}`}>
-                            {selectedPost.contact}
+                            {revealedContact.contact}
                           </span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleCopyContact(selectedPost.contact)}
+                          onClick={() => handleCopyContact(revealedContact.contact)}
                           className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
                           title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                         >
@@ -694,7 +820,7 @@ export default function App() {
                         </button>
                       </div>
 
-                      {selectedPost.contact2 && contact2Info && (
+                      {revealedContact.contact2 && contact2Info && (
                         <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0 border-l border-[#D8D3C4] pl-2">
                           <div className="flex items-center gap-1.5 font-mono text-sm font-bold min-w-0">
                             {contact2Info.isTelegram ? (
@@ -703,12 +829,12 @@ export default function App() {
                               <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
                             )}
                             <span className={`truncate ${contact2Info.isTelegram ? "text-[#2A4B8D]" : "text-emerald-700"}`}>
-                              {selectedPost.contact2}
+                              {revealedContact.contact2}
                             </span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleCopyContact(selectedPost.contact2!)}
+                            onClick={() => handleCopyContact(revealedContact.contact2!)}
                             className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
                             title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                           >
@@ -735,7 +861,7 @@ export default function App() {
                         <span className="truncate">{actionLabel(contactInfo.isTelegram)}</span>
                       </a>
 
-                      {selectedPost.contact2 && contact2Info && (
+                      {revealedContact.contact2 && contact2Info && (
                         <a
                           href={contact2Info.url}
                           target={contact2Info.isTelegram ? "_blank" : undefined}

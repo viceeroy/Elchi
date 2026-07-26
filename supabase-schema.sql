@@ -115,16 +115,37 @@ DROP TABLE IF EXISTS reports;
 -- ---------------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------------
--- Reading is public: anyone may read active posts. Creating a post requires a
--- logged-in author (user_id must equal auth.uid()), so the shipped anon key
--- cannot insert or attribute a post to someone else. There is no UPDATE policy,
--- so posts can't be tampered with; DELETE is scoped to the author only.
+-- Reading the table directly is NOT public. The anon key ships inside the
+-- browser bundle, so a world-readable `posts` table means anyone can download
+-- every active post's phone number and Telegram handle straight from PostgREST,
+-- bypassing the API entirely. Instead:
+--   * anon reads the `public_posts` view (no contact values, no user_id);
+--   * authenticated gets a column-level SELECT grant on (id, user_id) only;
+--   * contact values come one at a time from get_post_contact().
+-- Creating a post requires a logged-in author (user_id must equal auth.uid()),
+-- so the shipped anon key cannot insert or attribute a post to someone else.
+-- There is no UPDATE policy, so posts can't be tampered with; DELETE is scoped
+-- to the author only.
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 
+-- Kept defined (scoped to authenticated) so that if a SELECT grant is ever
+-- restored by hand, the table does not silently become world-readable again.
+-- With the grants below it governs only the (id, user_id) columns.
 DROP POLICY IF EXISTS "Allow public read access to active posts" ON posts;
-CREATE POLICY "Allow public read access to active posts"
+DROP POLICY IF EXISTS "Authenticated users read active posts" ON posts;
+CREATE POLICY "Authenticated users read active posts"
 ON posts FOR SELECT
+TO authenticated
 USING (expires_at >= CURRENT_DATE);
+
+REVOKE SELECT ON posts FROM anon;
+REVOKE SELECT ON posts FROM authenticated;
+
+-- Column-level grant: enough for `DELETE ... WHERE id = ? AND user_id = ?`
+-- (Postgres requires SELECT on every column a statement references), for the
+-- `.select('id')` that follows an insert, and for the profile post count.
+-- Not enough to read a single contact value.
+GRANT SELECT (id, user_id) ON posts TO authenticated;
 
 DROP POLICY IF EXISTS "Allow public inserts to posts" ON posts;
 DROP POLICY IF EXISTS "Authenticated users insert own posts" ON posts;
@@ -136,6 +157,76 @@ DROP POLICY IF EXISTS "Users can delete own posts" ON posts;
 CREATE POLICY "Users can delete own posts"
 ON posts FOR DELETE
 USING (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- public_posts — the board's read model
+-- ---------------------------------------------------------------------------
+-- Everything the feed needs to render, minus the contact values and minus
+-- user_id. Deliberately a SECURITY DEFINER view (security_invoker = false): it
+-- runs as its owner and bypasses the `posts` RLS above, which is what lets anon
+-- read the non-sensitive columns while having no access to the table itself.
+-- The expires_at filter is reproduced here so the view cannot leak expired rows.
+--
+-- contact_type / contact2_type are exposed (telegram vs phone) but the handles
+-- are not, so the UI can render the right icon before the viewer logs in.
+-- Requires PostgreSQL 15+ for the security_invoker option.
+DROP VIEW IF EXISTS public_posts;
+CREATE VIEW public_posts
+WITH (security_invoker = false) AS
+SELECT
+    p.id,
+    p.type,
+    p.direction,
+    p.from_country,
+    p.to_country,
+    p.from_city,
+    p.to_city,
+    p.date,
+    p.weight_kg,
+    p.luggage_count,
+    p.categories,
+    p.category_other,
+    p.weight,
+    p.note,
+    p.contact_type,
+    p.contact2_type,
+    (p.contact2 IS NOT NULL) AS has_contact2,
+    p.created_at,
+    p.expires_at
+FROM posts p
+WHERE p.expires_at >= CURRENT_DATE;
+
+GRANT SELECT ON public_posts TO anon, authenticated;
+
+-- The only route to a contact value: one post per call, authenticated callers
+-- only, so harvesting requires an account and is rate-limitable per user.
+-- SECURITY DEFINER so it can read columns the caller's own grants exclude;
+-- search_path is pinned so the definer context can't be hijacked.
+CREATE OR REPLACE FUNCTION get_post_contact(p_id UUID)
+RETURNS TABLE (
+    contact       TEXT,
+    contact_type  TEXT,
+    contact2      TEXT,
+    contact2_type TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RAISE EXCEPTION 'authentication required' USING ERRCODE = '42501';
+    END IF;
+
+    RETURN QUERY
+    SELECT p.contact::TEXT, p.contact_type::TEXT, p.contact2::TEXT, p.contact2_type::TEXT
+    FROM posts p
+    WHERE p.id = p_id AND p.expires_at >= CURRENT_DATE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION get_post_contact(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_post_contact(UUID) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
 -- profiles (Supabase Auth)
@@ -160,8 +251,17 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- telegram_<id>@elchi.local for the Telegram bridge), so Google rows are no
 -- longer missing their address. display_name/avatar come from user metadata
 -- (google: full_name/name + picture; telegram: display_name + avatar_url).
+-- search_path is pinned because this is a SECURITY DEFINER function firing on
+-- every auth.users insert: without it, a role that can create objects in an
+-- earlier schema could shadow `profiles` and have its own table written to as
+-- the function owner. pg_temp comes last so a temp table can't shadow a real
+-- one either.
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     INSERT INTO public.profiles (id, email, display_name, avatar_url, auth_provider, telegram_id, telegram_username)
     VALUES (
@@ -175,7 +275,7 @@ BEGIN
     );
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -226,7 +326,7 @@ CREATE OR REPLACE FUNCTION check_rate_limit(
 ) RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_window_start TIMESTAMPTZ := NOW() - make_interval(secs => p_window_sec);

@@ -38,13 +38,36 @@ export async function checkRateLimit(
   }
 }
 
-// Best-effort client IP from Vercel's proxy headers. x-forwarded-for is a
-// comma-separated chain; the left-most entry is the original client.
+// Client IP from Vercel's proxy headers.
+//
+// The left-most entry of x-forwarded-for is NOT trustworthy: it is whatever the
+// client sent, and the proxy appends the real address to the right. Reading it
+// let anyone defeat every limit here with `-H "X-Forwarded-For: <random>"`,
+// since each forged value opened a fresh bucket.
+//
+// Order of preference:
+//   1. x-vercel-forwarded-for — set by Vercel's edge, not forwardable by the
+//      client, so it is the real peer address.
+//   2. x-real-ip — likewise set by the platform.
+//   3. the RIGHT-most x-forwarded-for entry — the hop our proxy actually saw.
+//      Still the last resort, but not attacker-chosen.
 export function clientIp(req: VercelRequest): string {
-  const fwd = req.headers['x-forwarded-for'];
-  const raw = Array.isArray(fwd) ? fwd[0] : fwd;
-  if (raw) return raw.split(',')[0].trim();
-  const real = req.headers['x-real-ip'];
-  if (typeof real === 'string' && real) return real;
+  const first = (v: string | string[] | undefined): string | null => {
+    const raw = Array.isArray(v) ? v[0] : v;
+    return raw && raw.trim() ? raw.trim() : null;
+  };
+
+  const vercelIp = first(req.headers['x-vercel-forwarded-for']);
+  if (vercelIp) return vercelIp;
+
+  const realIp = first(req.headers['x-real-ip']);
+  if (realIp) return realIp;
+
+  const fwd = first(req.headers['x-forwarded-for']);
+  if (fwd) {
+    const hops = fwd.split(',').map((h) => h.trim()).filter(Boolean);
+    if (hops.length) return hops[hops.length - 1];
+  }
+
   return 'unknown';
 }
