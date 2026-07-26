@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "ELCHI_DEV_CSP=1 vercel dev",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
