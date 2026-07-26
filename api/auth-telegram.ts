@@ -79,16 +79,20 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
   const supabaseAdmin = getSupabaseAdmin();
   const syntheticEmail = `telegram_${payload.id}@elchi.local`;
 
+  // Built once and reused by both the create and the refresh below, so the two
+  // representations of the same Telegram identity can't drift apart.
+  const metadata = {
+    telegram_id: payload.id,
+    telegram_username: payload.username || null,
+    display_name: payload.first_name || payload.username || null,
+    avatar_url: payload.photo_url || null,
+    provider: 'telegram',
+  };
+
   const { error: createError } = await supabaseAdmin.auth.admin.createUser({
     email: syntheticEmail,
     email_confirm: true,
-    user_metadata: {
-      telegram_id: payload.id,
-      telegram_username: payload.username || null,
-      display_name: payload.first_name || payload.username || null,
-      avatar_url: payload.photo_url || null,
-      provider: 'telegram',
-    },
+    user_metadata: metadata,
   });
 
   // Idempotent: repeat logins from the same Telegram account hit the same
@@ -115,6 +119,24 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
   if (linkError || !linkData?.properties?.hashed_token) {
     console.error('Error generating Telegram session link:', linkError);
     return res.status(500).json({ error: 'Xatolik yuz berdi' });
+  }
+
+  // Repeat logins take the "already exists" branch above and so never touched
+  // user_metadata, leaving the first-ever username frozen in place. The post
+  // form now pre-fills a contact handle from it, and a handle the author
+  // renamed away from is a dead t.me link on a live post — so write the current
+  // payload back on every login. generateLink already resolved the user, so
+  // this costs no extra lookup. A failure here is logged and swallowed: the
+  // login itself passed HMAC verification and must not be blocked by a stale
+  // avatar.
+  if (linkData.user?.id) {
+    const { error: refreshError } = await supabaseAdmin.auth.admin.updateUserById(
+      linkData.user.id,
+      { user_metadata: metadata },
+    );
+    if (refreshError) {
+      console.error('Error refreshing Telegram user metadata:', refreshError);
+    }
   }
 
   return res.status(200).json({ hashed_token: linkData.properties.hashed_token });

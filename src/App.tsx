@@ -591,6 +591,7 @@ export default function App() {
         <PostFormModal
           t={t}
           locale={locale}
+          session={session}
           onClose={() => setFormOpen(false)}
           onSubmitSuccess={handlePostSubmitSuccess}
         />
