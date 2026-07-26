@@ -130,7 +130,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         <div>
           {/* Destination Header (flight route is always Korea/Uzbekistan) */}
           <div className="mb-2">
-            <div className="flex items-center gap-2.5 font-extrabold text-[19px] text-[#1B2A4A] tracking-tight">
+            <div className="flex items-center gap-2.5 font-extrabold text-[16px] sm:text-[19px] text-[#1B2A4A] tracking-tight">
               <span>{hubFrom}</span>
               <span className="text-[#C79A3E] flex items-center">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

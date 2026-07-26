@@ -71,18 +71,24 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
   const swap = () => onChange(to.iso, from.iso);
 
   const renderSide = (side: "from" | "to", info: CountryInfo, align: "left" | "right") => (
-    <div className={`relative flex flex-col ${align === "left" ? "items-start" : "items-end"}`}>
+    // basis-0 + flex-1 keeps both sides the same width whatever the country
+    // name length is, so the plane stays dead centre; long names truncate.
+    <div
+      className={`relative flex flex-col flex-1 basis-0 min-w-0 ${
+        align === "left" ? "items-start" : "items-end"
+      }`}
+    >
       <button
         type="button"
         onClick={() => setOpenSide(openSide === side ? null : side)}
         aria-label={`${side === "from" ? "From" : "To"}: ${info.country}`}
         aria-expanded={openSide === side}
-        className={`group/side flex flex-col bg-transparent border-none p-0 cursor-pointer ${
+        className={`group/side flex flex-col max-w-full min-w-0 bg-transparent border-none p-0 cursor-pointer ${
           align === "left" ? "items-start text-left" : "items-end text-right"
         }`}
       >
-        <span className="font-bold text-[15px] sm:text-[17px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors flex items-center gap-1">
-          {info.country}
+        <span className="font-bold text-[13px] sm:text-[17px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors flex items-center gap-1 max-w-full min-w-0">
+          <span className="truncate">{info.country}</span>
           <svg
             width="10"
             height="10"
@@ -92,7 +98,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`text-[#B9B4A5] group-hover/side:text-[#2A4B8D] transition-transform ${openSide === side ? "rotate-180" : ""}`}
+            className={`shrink-0 text-[#B9B4A5] group-hover/side:text-[#2A4B8D] transition-transform ${openSide === side ? "rotate-180" : ""}`}
           >
             <polyline points="6 9 12 15 18 9" />
           </svg>
