@@ -4,21 +4,6 @@ import { COUNTRIES } from "../constants";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
 import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle } from "lucide-react";
-import type { Session } from "@supabase/supabase-js";
-
-// The author's own Telegram handle, when the session came from Telegram login —
-// the contact field starts pre-filled with it so a user who just proved
-// ownership of the account doesn't retype it.
-//
-// Returns null unless the handle would survive the same check the API applies:
-// accounts without a username, and anything outside the username rules, fall
-// through to an empty field and the form behaves as it always did.
-const telegramHandleOf = (session: Session | null): string | null => {
-  const username = session?.user?.user_metadata?.telegram_username;
-  if (typeof username !== "string" || !username) return null;
-  const handle = username.startsWith("@") ? username : `@${username}`;
-  return isValidContact(handle, "telegram") ? handle : null;
-};
 
 // Phone fields keep digits and the punctuation used by the +998/+82 formats
 // in the placeholder; letters and everything else are dropped as the user types.
@@ -45,7 +30,6 @@ const ERROR_INPUT_CLASS = "border-[#C23B3B] focus:border-[#C23B3B] ring-1 ring-[
 interface PostFormModalProps {
   t: Translations;
   locale: Locale;
-  session: Session | null;
   onClose: () => void;
   onSubmitSuccess: () => void;
 }
@@ -53,7 +37,6 @@ interface PostFormModalProps {
 export const PostFormModal: React.FC<PostFormModalProps> = ({
   t,
   locale,
-  session,
   onClose,
   onSubmitSuccess,
 }) => {
@@ -75,10 +58,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [fromCity, setFromCity] = useState<string>("");
   const [toCity, setToCity] = useState<string>("");
   const [note, setNote] = useState("");
-  // Stored with the leading "@", the shape submit and validation expect; the
-  // input strips it for display below.
-  const ownHandle = telegramHandleOf(session);
-  const [contact, setContact] = useState(() => ownHandle || "");
+  const [contact, setContact] = useState("");
   const [contactMethod, setContactMethod] = useState<"telegram" | "phone">("telegram");
   const [showContact2, setShowContact2] = useState(false);
   const [contact2, setContact2] = useState("");
@@ -688,14 +668,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     type="button"
                     onClick={() => {
                       setContactMethod("telegram");
-                      clearError("contact");
                       // Convert or auto-prepend if appropriate
                       if (contact && !contact.startsWith("@") && !contact.includes("+") && contact.length < 15) {
                         setContact("@" + contact.trim());
                       } else if (!contact) {
-                        // Coming back to an empty field restores the pre-fill
-                        // the phone toggle cleared.
-                        setContact(ownHandle || "@");
+                        setContact("@");
                       }
                     }}
                     className={`px-3 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${
@@ -711,13 +688,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     type="button"
                     onClick={() => {
                       setContactMethod("phone");
-                      clearError("contact");
-                      // An untouched pre-fill is cleared rather than stripped:
-                      // the plain "@"-less username would otherwise sit in a
-                      // phone field looking like the author typed it there.
-                      if (ownHandle && contact === ownHandle) {
-                        setContact("");
-                      } else if (contact.startsWith("@")) {
+                      if (contact.startsWith("@")) {
                         setContact(contact.replace("@", ""));
                       }
                     }}
