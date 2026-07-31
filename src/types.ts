@@ -85,6 +85,7 @@ export interface Translations {
   dateLabelTraveler: string;
   dateLabelRequest: string;
   selectDatePlaceholder: string;
+  dateFlexibleBtn: string;
   weightLabelTraveler: string;
   weightLabelRequest: string;
   weightUnitKg: string;

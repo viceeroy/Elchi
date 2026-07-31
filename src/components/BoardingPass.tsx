@@ -77,6 +77,9 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
 
   // Human friendly date helper
   const formatDate = (dateStr: string) => {
+    if (dateStr === "flexible") {
+      return locale === "uz" ? "Kelishiladi" : locale === "ru" ? "По договорённости" : "Flexible";
+    }
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;

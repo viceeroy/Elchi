@@ -389,6 +389,9 @@ export default function App() {
 
   // Human-friendly date inside detail modal
   const formatDetailDate = (dateStr: string) => {
+    if (dateStr === "flexible") {
+      return locale === "uz" ? "Kelishiladi" : locale === "ru" ? "По договорённости" : "Flexible";
+    }
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;

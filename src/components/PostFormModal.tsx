@@ -67,6 +67,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const today = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  // "Kelishiladi" — requester has no fixed date, date is negotiable
+  const [dateFlexible, setDateFlexible] = useState(false);
 
   // Weight & Luggage State — starts at 0 (no preselected weight); 0 kg is allowed
   const [weightKg, setWeightKg] = useState<number>(0);
@@ -157,7 +159,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
     if (!fromCity.trim()) nextErrors.fromCity = t.errorFieldFromCity;
     if (!toCity.trim()) nextErrors.toCity = t.errorFieldToCity;
-    if (selectedDay === null) nextErrors.date = t.errorFieldDate;
+    if (selectedDay === null && !dateFlexible) nextErrors.date = t.errorFieldDate;
     if (postType === "traveler" && weightKg === 0 && weightLuggage === 0) {
       nextErrors.weight = t.errorFieldWeight;
     }
@@ -195,8 +197,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     setSubmitting(true);
 
     try {
-      // Build ISO Date string (YYYY-MM-DD)
-      const dateString = `${currentYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
+      // Build ISO Date string (YYYY-MM-DD), or "flexible" when the requester
+      // has no fixed date and it's left to be negotiated with the traveler.
+      const dateString = dateFlexible
+        ? "flexible"
+        : `${currentYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
 
       // Build Weight representation. 0 kg is valid: for a traveler it means
       // luggage-only (no per-kg space), for a request it drops the weight suffix.
@@ -469,25 +474,41 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               {postType === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest}
             </label>
             <div className="flex flex-col gap-3">
-              {/* Month Tabs */}
+              {/* Month Tabs + Flexible/Negotiable toggle (request posts only —
+                  a requester may not have a fixed deadline, so the date can be
+                  left to be worked out with the traveler). */}
               <div className="flex gap-2">
                 {monthOptions.map(m => (
                   <button
                     key={m.value}
                     type="button"
-                    onClick={() => { setSelectedMonth(m.value); setSelectedDay(null); }}
+                    onClick={() => { setSelectedMonth(m.value); setSelectedDay(null); setDateFlexible(false); }}
                     className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
-                      selectedMonth === m.value 
-                        ? "bg-[#1B2A4A] text-[#FCFBF6]" 
+                      selectedMonth === m.value && !dateFlexible
+                        ? "bg-[#1B2A4A] text-[#FCFBF6]"
                         : "bg-[#F2EFE6] text-[#6B7280] hover:bg-[#E4E0D2]"
                     }`}
                   >
                     {m.label}
                   </button>
                 ))}
+                {postType === "request" && (
+                  <button
+                    type="button"
+                    onClick={() => { setDateFlexible(true); setSelectedDay(null); clearError("date"); }}
+                    className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
+                      dateFlexible
+                        ? "bg-[#C79A3E] text-[#FCFBF6]"
+                        : "bg-[#F2EFE6] text-[#6B7280] hover:bg-[#E4E0D2]"
+                    }`}
+                  >
+                    {t.dateFlexibleBtn}
+                  </button>
+                )}
               </div>
 
               {/* Horizontal Days Selector */}
+              {!dateFlexible && (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
                 {daysList.map(d => {
                   const isSelected = d.getDate() === selectedDay;
@@ -511,6 +532,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   );
                 })}
               </div>
+              )}
             </div>
             <FieldError message={errors.date} />
           </div>

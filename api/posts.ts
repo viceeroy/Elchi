@@ -339,23 +339,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
     }
 
-    const postDate = new Date(date);
-    if (isNaN(postDate.getTime())) {
-      return res.status(400).json({ error: 'Noto\'g\'ri sana formati' });
-    }
+    // "flexible" means the requester has no fixed date — it's negotiated
+    // directly with the traveler — so it skips date parsing/range checks and
+    // gets a flat 30-day expiry instead of one derived from the post date.
+    const isFlexibleDate = date === 'flexible';
+    let expires_at: string;
 
-    // Reject dates in the past or absurdly far in the future — the latter would
-    // otherwise create a post that effectively never expires.
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const maxFuture = new Date(startOfToday);
-    maxFuture.setDate(maxFuture.getDate() + 365);
-    if (postDate < startOfToday || postDate > maxFuture) {
-      return res.status(400).json({ error: 'Noto\'g\'ri sana' });
-    }
+    if (isFlexibleDate) {
+      const flexibleExpiry = new Date();
+      flexibleExpiry.setHours(0, 0, 0, 0);
+      flexibleExpiry.setDate(flexibleExpiry.getDate() + 30);
+      expires_at = flexibleExpiry.toISOString().split('T')[0];
+    } else {
+      const postDate = new Date(date);
+      if (isNaN(postDate.getTime())) {
+        return res.status(400).json({ error: 'Noto\'g\'ri sana formati' });
+      }
 
-    postDate.setDate(postDate.getDate() + 1);
-    const expires_at = postDate.toISOString().split('T')[0];
+      // Reject dates in the past or absurdly far in the future — the latter would
+      // otherwise create a post that effectively never expires.
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const maxFuture = new Date(startOfToday);
+      maxFuture.setDate(maxFuture.getDate() + 365);
+      if (postDate < startOfToday || postDate > maxFuture) {
+        return res.status(400).json({ error: 'Noto\'g\'ri sana' });
+      }
+
+      postDate.setDate(postDate.getDate() + 1);
+      expires_at = postDate.toISOString().split('T')[0];
+    }
 
     // Clamp numerics to sane bounds so an out-of-range value can't overflow the
     // DB column (NUMERIC(6,2) / SMALLINT) and throw a 500.
