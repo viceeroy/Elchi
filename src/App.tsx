@@ -8,6 +8,7 @@ import { RouteSelector } from "./components/RouteSelector";
 import { PostFormModal } from "./components/PostFormModal";
 import { LoginModal } from "./components/LoginModal";
 import { ProfileSheet } from "./components/ProfileSheet";
+import { NotesCarousel, NoteSheet, type Note } from "./notes";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
 import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
@@ -50,12 +51,14 @@ export default function App() {
   const [route, setRoute] = useState<{ from: string; to: string }>({ from: "KR", to: "UZ" });
   const [formOpen, setFormOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  // Board notes are static editorial cards, not feed content — kept here only so
+  // the open sheet shares the same body scroll lock as the other modals.
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [contactCopied, setContactCopied] = useState(false);
   const [createdToastOpen, setCreatedToastOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [totalPosts, setTotalPosts] = useState(0);
   // Contact handles for the open post. Never part of the feed payload — fetched
   // on demand, and only for logged-in viewers.
   const [revealedContact, setRevealedContact] = useState<PostContact | null>(null);
@@ -147,7 +150,7 @@ export default function App() {
   // behind the overlay (the cause of the "shaking" background), and restores the
   // exact prior scroll position on close so the user doesn't jump.
   useEffect(() => {
-    const isModalOpen = selectedPost !== null || formOpen;
+    const isModalOpen = selectedPost !== null || selectedNote !== null || formOpen;
     if (!isModalOpen) return;
 
     const scrollY = window.scrollY;
@@ -170,7 +173,7 @@ export default function App() {
       body.style.paddingRight = "";
       window.scrollTo(0, scrollY);
     };
-  }, [selectedPost, formOpen]);
+  }, [selectedPost, selectedNote, formOpen]);
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -278,7 +281,6 @@ export default function App() {
         const page: Post[] = Array.isArray(data.posts) ? data.posts : [];
         setPosts((prev) => (append ? [...prev, ...page] : page));
         setHasMore(Boolean(data.hasMore));
-        setTotalPosts(typeof data.total === "number" ? data.total : page.length);
       }
     } catch (err) {
       console.error("Error fetching posts:", err);
@@ -493,17 +495,18 @@ export default function App() {
           </h1>
         </section>
 
-        {/* Posts Filter and Feed */}
-        <section className="pt-6">
-          <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-xl font-extrabold tracking-tight text-[#1B2A4A]">{t.activeAds}</h2>
-            <span className="font-mono text-[11px] text-[#8A8F98] tracking-wider">
-              {totalPosts} {t.activeCount}
-            </span>
-          </div>
+        {/* Board notes — static intro/example cards, above and separate from the
+            live feed. Not posts: no author, no contact, unaffected by the route
+            filter. */}
+        <div className="pt-6">
+          <NotesCarousel locale={locale} onOpenNote={setSelectedNote} />
+        </div>
 
-          {/* Route selector card — picking any pair of countries filters the feed */}
-          <div className="mb-6">
+        {/* Posts Filter and Feed */}
+        <section className="pt-2">
+          {/* Route line — the only heading the feed gets. Picking either country
+              filters the feed; the plane between them swaps the direction. */}
+          <div className="mb-5">
             <RouteSelector
               locale={locale}
               fromCode={route.from}
@@ -622,6 +625,15 @@ export default function App() {
           session={session}
           onClose={() => setProfileOpen(false)}
           onSignOut={() => setProfileOpen(false)}
+        />
+      )}
+
+      {/* Board note expanded view */}
+      {selectedNote && (
+        <NoteSheet
+          note={selectedNote}
+          locale={locale}
+          onClose={() => setSelectedNote(null)}
         />
       )}
 

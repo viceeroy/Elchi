@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Locale } from "../types";
 import { COUNTRIES, Country } from "../constants";
 import { Plane, ArrowLeftRight } from "lucide-react";
+import { FlagIcon } from "./FlagIcon";
 
 // Country options come from the COUNTRIES registry in constants.ts — adding a
 // country there makes it appear in both dropdowns automatically. Any pair of
@@ -87,8 +88,11 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           align === "left" ? "items-start text-left" : "items-end text-right"
         }`}
       >
-        <span className="font-bold text-[13px] sm:text-[17px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors flex items-center gap-1 max-w-full min-w-0">
+        <span className="font-bold text-[13px] sm:text-[17px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors flex items-center gap-1.5 max-w-full min-w-0">
+          {/* Flags sit on the outer edges of the line: origin flag leads, destination flag trails */}
+          {align === "left" && <FlagIcon iso={info.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />}
           <span className="truncate">{info.country}</span>
+          {align === "right" && <FlagIcon iso={info.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />}
           <svg
             width="10"
             height="10"
@@ -141,15 +145,18 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
   );
 
   return (
+    // No card: the route reads as a line of text on the page itself, so the
+    // dashed flight path is what carries the boarding-pass feel.
     <div
       ref={rootRef}
-      className="relative bg-[#FCFBF6] border border-[#E9E5D8] rounded-2xl px-5 py-4 sm:px-7 sm:py-5 flex items-center justify-between gap-3 shadow-sm"
-      style={{ boxShadow: "0 1px 2px rgba(27,42,74,0.04), 0 10px 28px -18px rgba(27,42,74,0.18)" }}
+      className="relative flex items-center justify-between gap-2 sm:gap-3 py-1.5"
     >
       {renderSide("from", from, "left")}
 
       {/* Dashed flight path with plane — clicking the plane swaps the direction */}
-      <div className="flex-1 flex items-center gap-2 min-w-0 px-1">
+      {/* Fixed-width middle: the country names now carry a flag and a chevron,
+          so an equal three-way split truncated them on narrow screens. */}
+      <div className="shrink-0 grow-0 basis-[68px] sm:basis-[160px] flex items-center gap-1.5 sm:gap-2">
         <div className="flex-1 border-t-2 border-dashed" style={{ borderColor: "#CFCAB8" }}></div>
         <button
           type="button"
