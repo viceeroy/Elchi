@@ -185,7 +185,10 @@ ALTER TABLE posts ADD  CONSTRAINT posts_shape_by_type_check CHECK (
           AND weight = ''
           AND weight_kg = 0 AND luggage_count = 0
           AND categories = '{}'::TEXT[] AND category_other IS NULL
-          AND from_country IS NOT NULL AND to_country IS NOT NULL
+          -- An announcement sits in ONE country: it is a standing service, not
+          -- a delivery in a direction.
+          AND from_country IS NOT NULL
+          AND to_country IS NULL
       ELSE
               headline IS NULL
           AND from_city IS NOT NULL AND btrim(from_city) <> ''

@@ -184,15 +184,6 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit); // one extra row to detect a next page
 
-  const from = typeof req.query.from === 'string' ? req.query.from.toUpperCase() : null;
-  const to = typeof req.query.to === 'string' ? req.query.to.toUpperCase() : null;
-  if (from && to) {
-    if (!ALLOWED_COUNTRIES.has(from) || !ALLOWED_COUNTRIES.has(to) || from === to) {
-      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
-    }
-    query = query.eq('from_country', from).eq('to_country', to);
-  }
-
   // Which kind of ad the feed wants. The count is on the same query, so `total`
   // and the fetch-one-extra `hasMore` above both stay correct per filter.
   const rawType = typeof req.query.type === 'string' ? req.query.type : 'parcel';
@@ -202,6 +193,32 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
   const typeFilter = TYPE_FILTERS[rawType];
   if (typeFilter) {
     query = query.in('type', typeFilter);
+  }
+
+  // The country filter reads differently per type, so it can't be one pair of
+  // .eq() calls any more: a parcel post travels FROM one country TO another,
+  // while an announcement simply sits in one. Both are keyed off `from_country`
+  // — for a parcel that's the origin, for an announcement it's the location —
+  // so the country the viewer has selected matches the same column either way.
+  const from = typeof req.query.from === 'string' ? req.query.from.toUpperCase() : null;
+  const to = typeof req.query.to === 'string' ? req.query.to.toUpperCase() : null;
+  if (from && to) {
+    if (!ALLOWED_COUNTRIES.has(from) || !ALLOWED_COUNTRIES.has(to) || from === to) {
+      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+    }
+    if (rawType === 'announcement') {
+      query = query.eq('from_country', from);
+    } else if (rawType === 'parcel') {
+      query = query.eq('from_country', from).eq('to_country', to);
+    } else {
+      // Mixed feed: each type keeps its own rule. Interpolation is safe here
+      // because both codes have just been checked against ALLOWED_COUNTRIES,
+      // so they can only ever be one of the literals in that set.
+      query = query.or(
+        `and(type.in.(traveler,request),from_country.eq.${from},to_country.eq.${to}),` +
+        `and(type.eq.announcement,from_country.eq.${from})`
+      );
+    }
   }
 
   const { data, error, count } = await query;
@@ -353,22 +370,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // between two different supported countries.
     let fromCountry = typeof from_country === 'string' ? from_country.toUpperCase() : null;
     let toCountry = typeof to_country === 'string' ? to_country.toUpperCase() : null;
-    if (!fromCountry && direction) {
-      fromCountry = direction === 'k2u' ? 'KR' : 'UZ';
-      toCountry = direction === 'k2u' ? 'UZ' : 'KR';
-    }
-    if (
-      !fromCountry || !toCountry ||
-      !ALLOWED_COUNTRIES.has(fromCountry) || !ALLOWED_COUNTRIES.has(toCountry) ||
-      fromCountry === toCountry
-    ) {
-      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+
+    if (isAnnouncement) {
+      // An announcement sits in one country — it is a standing service, not a
+      // delivery in a direction. The single country is stored in from_country
+      // (which is what the feed's country filter reads) and to_country is left
+      // null; anything the caller sent for it is discarded rather than trusted.
+      toCountry = null;
+      if (!fromCountry || !ALLOWED_COUNTRIES.has(fromCountry)) {
+        return res.status(400).json({ error: 'Noto\'g\'ri davlat' });
+      }
+    } else {
+      if (!fromCountry && direction) {
+        fromCountry = direction === 'k2u' ? 'KR' : 'UZ';
+        toCountry = direction === 'k2u' ? 'UZ' : 'KR';
+      }
+      if (
+        !fromCountry || !toCountry ||
+        !ALLOWED_COUNTRIES.has(fromCountry) || !ALLOWED_COUNTRIES.has(toCountry) ||
+        fromCountry === toCountry
+      ) {
+        return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+      }
     }
 
     // Keep the legacy direction column coherent for old readers while both
-    // exist. Only meaningful for the KR↔UZ pair; other routes store null.
+    // exist. Only meaningful for the KR↔UZ pair; other routes store null, and
+    // an announcement has no direction at all.
     const legacyDirection =
-      fromCountry === 'KR' && toCountry === 'UZ' ? 'k2u'
+      isAnnouncement ? null
+      : fromCountry === 'KR' && toCountry === 'UZ' ? 'k2u'
       : fromCountry === 'UZ' && toCountry === 'KR' ? 'u2k'
       : null;
 
@@ -442,7 +473,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           type,
           direction: legacyDirection,
           from_country: fromCountry,
-          to_country: toCountry,
+          to_country: null,
           from_city: null,
           to_city: null,
           date: null,

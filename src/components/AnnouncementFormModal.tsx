@@ -58,20 +58,10 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
 
-  // Route countries (ISO codes). Picking on one side the country already on
-  // the other side swaps them, so from ≠ to always holds.
-  const [fromCountry, setFromCountry] = useState("KR");
-  const [toCountry, setToCountry] = useState("UZ");
-
-  const pickCountry = (side: "from" | "to", code: string) => {
-    if (side === "from") {
-      if (code === toCountry) setToCountry(fromCountry);
-      setFromCountry(code);
-    } else {
-      if (code === fromCountry) setFromCountry(toCountry);
-      setToCountry(code);
-    }
-  };
+  // Where the service is, as an ISO code — not a route. An announcement is a
+  // standing offer sitting in one country, so asking for a destination would be
+  // asking a question the author has no honest answer to.
+  const [country, setCountry] = useState("KR");
 
   const [contactMethod, setContactMethod] = useState<ContactMethod>("telegram");
   const [contact, setContact] = useState("");
@@ -156,8 +146,9 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
         // The body travels as `note` — announcements and parcel posts share
         // that column, since it is the same thing: the free text of an ad.
         note: body.trim(),
-        from_country: fromCountry,
-        to_country: toCountry,
+        // The single country travels as from_country — the column the feed's
+        // country filter reads. The API leaves to_country null.
+        from_country: country,
         contact: contact.trim(),
         contact_type: contactMethod,
         contact2: normalizedContact2,
@@ -192,11 +183,6 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
       setSubmitting(false);
     }
   };
-
-  const countryLabel = (side: "from" | "to") =>
-    side === "from"
-      ? locale === "uz" ? "Qaysi davlatdan" : locale === "ru" ? "Из какой страны" : "From country"
-      : locale === "uz" ? "Qaysi davlatga" : locale === "ru" ? "В какую страну" : "To country";
 
   return (
     <div
@@ -257,7 +243,6 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
               ref={(el) => { fieldRefs.current.headline = el; }}
               value={headline}
               onChange={(e) => { setHeadline(e.target.value); clearError("headline"); }}
-              placeholder={t.announcementHeadlinePlaceholder}
               maxLength={HEADLINE_MAX}
               className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm font-semibold bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
                 errors.headline ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#C79A3E]"
@@ -280,7 +265,6 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
               ref={(el) => { fieldRefs.current.body = el; }}
               value={body}
               onChange={(e) => { setBody(e.target.value); clearError("body"); }}
-              placeholder={t.announcementBodyPlaceholder}
               maxLength={BODY_MAX}
               rows={5}
               className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none resize-y leading-relaxed ${
@@ -290,49 +274,24 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
             <FieldError message={errors.body} />
           </div>
 
-          {/* Route — countries only. A note has no cities and no date, but it
-              still belongs to a corridor, so the feed filter can reach it. */}
+          {/* Where the service is. One country, not a route: an announcement is
+              a standing offer that sits somewhere, and it surfaces for viewers
+              browsing that country. */}
           <div>
             <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
-              {t.announcementRouteLabel}
+              {t.announcementCountryLabel}
             </label>
-            <div className="flex flex-row items-end gap-2 sm:gap-3">
-              <div className="flex-1 min-w-0">
-                <span className="block font-mono text-[10px] text-[#8A8F98] mb-1">
-                  {countryLabel("from")}
-                </span>
-                <select
-                  value={fromCountry}
-                  onChange={(e) => pickCountry("from", e.target.value)}
-                  className="w-full p-3 border border-[#D8D3C4] focus:border-[#C79A3E] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none font-semibold"
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.names[locale]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <span className="flex items-center justify-center text-[#C79A3E] font-bold text-lg pb-2.5 flex-shrink-0">➔</span>
-
-              <div className="flex-1 min-w-0">
-                <span className="block font-mono text-[10px] text-[#8A8F98] mb-1">
-                  {countryLabel("to")}
-                </span>
-                <select
-                  value={toCountry}
-                  onChange={(e) => pickCountry("to", e.target.value)}
-                  className="w-full p-3 border border-[#D8D3C4] focus:border-[#C79A3E] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none font-semibold"
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.names[locale]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="w-full p-3 border border-[#D8D3C4] focus:border-[#C79A3E] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none font-semibold"
+            >
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.names[locale]}
+                </option>
+              ))}
+            </select>
           </div>
 
           <ContactFields

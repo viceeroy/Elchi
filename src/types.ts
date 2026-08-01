@@ -187,10 +187,8 @@ export interface Translations {
   announcementTitle?: string;
   announcementSubtitle?: string;
   announcementHeadlineLabel?: string;
-  announcementHeadlinePlaceholder?: string;
   announcementBodyLabel?: string;
-  announcementBodyPlaceholder?: string;
-  announcementRouteLabel?: string;
+  announcementCountryLabel?: string;
   announcementSubmitBtn?: string;
   announcementAutoDeleteLabel?: string;
   errorFieldHeadline?: string;

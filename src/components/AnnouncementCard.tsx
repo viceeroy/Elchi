@@ -24,11 +24,9 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   locale,
   onOpen,
 }) => {
-  // Same fallback as BoardingPass: the registry defaults so a malformed row
-  // can't crash the card.
-  const fromCountry = getCountry(post.from_country) ?? COUNTRIES[0];
-  const toCountry =
-    getCountry(post.to_country) ?? COUNTRIES.find((c) => c.code !== fromCountry.code)!;
+  // Where the service is. One country, not a route — the registry default
+  // keeps a malformed row from crashing the card.
+  const country = getCountry(post.from_country) ?? COUNTRIES[0];
 
   const tagLabel = t.announcementTag || "E'lon";
 
@@ -86,7 +84,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
               {post.headline}
             </div>
             <div className="font-mono text-[11px] text-[#8A8F98] tracking-wide mt-0.5">
-              {fromCountry.names[locale]} → {toCountry.names[locale]}
+              {country.names[locale]}
             </div>
           </div>
 
@@ -110,9 +108,8 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
           <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] md:tracking-[1.5px] text-[#1B2A4A]/60">
             {tagLabel}
           </span>
-          <span className="font-sans text-[10px] md:text-[11px] font-semibold text-[#1B2A4A] mt-1 flex items-center justify-center gap-1">
-            <span className="text-[9px]">➔</span>
-            <span className="truncate">{toCountry.names[locale]}</span>
+          <span className="font-sans text-[10px] md:text-[11px] font-semibold text-[#1B2A4A] mt-1 flex items-center justify-center">
+            <span className="truncate">{country.names[locale]}</span>
           </span>
         </div>
 

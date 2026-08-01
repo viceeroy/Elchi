@@ -767,34 +767,40 @@ export default function App() {
                   : selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
               </div>
 
-              {/* Destinations (country route from the stored ISO codes; cities shown as detail) */}
-              {(() => {
-                const { hubFrom, hubTo } = getHubRoute(selectedPost);
-                // Cities are absent on an announcement, so the null check comes
-                // first — otherwise "undefined → undefined" renders here.
-                const showActualCities =
-                  Boolean(selectedPost.from_city && selectedPost.to_city) &&
-                  (selectedPost.from_city !== hubFrom || selectedPost.to_city !== hubTo);
-                return (
-                  <>
-                    <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">
-                      <span>{hubFrom}</span>
-                      <span className="text-[#C79A3E] flex items-center">
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="22" y1="2" x2="11" y2="13" />
-                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                        </svg>
-                      </span>
-                      <span>{hubTo}</span>
-                    </div>
-                    {showActualCities && (
-                      <div className="font-mono text-xs opacity-70 mt-1 tracking-wider">
-                        {selectedPost.from_city} → {selectedPost.to_city}
+              {/* An announcement sits in one country, so it shows that country
+                  alone — no arrow, which would imply a delivery direction it
+                  doesn't have. Parcel posts keep the full route. */}
+              {selectedPost.type === "announcement" ? (
+                <div className="font-black text-2xl tracking-tight mt-3">
+                  {(getCountry(selectedPost.from_country) ?? COUNTRIES[0]).names[locale]}
+                </div>
+              ) : (
+                (() => {
+                  const { hubFrom, hubTo } = getHubRoute(selectedPost);
+                  const showActualCities =
+                    Boolean(selectedPost.from_city && selectedPost.to_city) &&
+                    (selectedPost.from_city !== hubFrom || selectedPost.to_city !== hubTo);
+                  return (
+                    <>
+                      <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">
+                        <span>{hubFrom}</span>
+                        <span className="text-[#C79A3E] flex items-center">
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13" />
+                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                          </svg>
+                        </span>
+                        <span>{hubTo}</span>
                       </div>
-                    )}
-                  </>
-                );
-              })()}
+                      {showActualCities && (
+                        <div className="font-mono text-xs opacity-70 mt-1 tracking-wider">
+                          {selectedPost.from_city} → {selectedPost.to_city}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()
+              )}
               {/* An announcement has no travel date; it leads with its headline. */}
               {selectedPost.type === "announcement" ? (
                 <div className="font-bold text-[15px] mt-2 [overflow-wrap:anywhere]">
