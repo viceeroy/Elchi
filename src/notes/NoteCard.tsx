@@ -1,4 +1,5 @@
 import React from "react";
+import { X } from "lucide-react";
 import { Locale } from "../types";
 import { Note } from "./data";
 
@@ -6,6 +7,7 @@ interface NoteCardProps {
   note: Note;
   locale: Locale;
   onOpen: () => void;
+  onDismiss?: () => void;
 }
 
 /**
@@ -13,7 +15,7 @@ interface NoteCardProps {
  * opens the expanded sheet on tap. Only one kind of note is left (see
  * NoteKind in ./data), so this component no longer branches.
  */
-export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen }) => {
+export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDismiss }) => {
   const c = note.content[locale];
 
   return (
@@ -33,6 +35,20 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen }) => {
     >
       {/* Airmail stripe along the top edge, matching the page header */}
       <div className="h-2 bg-[repeating-linear-gradient(-45deg,#C23B3B_0_12px,#FCFBF6_12px_17px,#2A4B8D_17px_29px,#FCFBF6_29px_34px)]" />
+
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss();
+          }}
+          aria-label="Dismiss"
+          className="absolute right-3 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-full border-none bg-white/15 text-[#F6EFE2] transition-colors hover:bg-white/25"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
 
       {/* Right padding keeps the copy clear of the postmark, which sits in
           the bottom-right corner at every width. */}

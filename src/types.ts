@@ -71,9 +71,6 @@ export interface Translations {
   title: string;
   titleAccent: string;
   activeCount: string;
-  allPosts: string;
-  koreaToUzbekistan: string;
-  uzbekistanToKorea: string;
   korea: string;
   uzbekistan: string;
   travelerTag: string;
@@ -169,10 +166,12 @@ export interface Translations {
   contactLockedText: string;
   contactLockedBtn: string;
 
-  // Composer speed dial — the floating "+" and the two things it can open.
+  // Composer speed dial — the floating "+" and the three things it opens: the
+  // two sides of a parcel ad, and a note.
   fabOpenLabel?: string;
   fabCloseLabel?: string;
-  fabParcelLabel?: string;
+  fabTravelerLabel?: string;
+  fabRequestLabel?: string;
   fabNoteLabel?: string;
 
   // Feed tab switcher — Pochta (parcel posts) vs E'lonlar (board notes /
@@ -182,16 +181,21 @@ export interface Translations {
   // Sticker label on an announcement card, alongside travelerTag/requestTag.
   announcementTag?: string;
 
-  // Announcement sheet ("E'lon" / "Заметка" / "Note") — a free-text ad with a
-  // route and a contact, and none of the parcel fields.
-  announcementTitle?: string;
-  announcementSubtitle?: string;
-  announcementHeadlineLabel?: string;
+  // Body label on an announcement in the detail sheet.
   announcementBodyLabel?: string;
-  announcementCountryLabel?: string;
-  announcementSubmitBtn?: string;
-  announcementAutoDeleteLabel?: string;
-  errorFieldHeadline?: string;
-  errorFieldBody?: string;
-  toastAnnouncementCreated?: string;
+
+  // Note sheet ("E'lon" / "Заметка" / "Note") — one free-text field and a
+  // contact, and none of the parcel fields.
+  noteTitle?: string;
+  noteSubtitle?: string;
+  noteThemeLabel?: string;
+  noteThemePlaceholder?: string;
+  noteTextLabel?: string;
+  noteTextPlaceholder?: string;
+  // Contact is optional on a note, so its label differs from the parcel form's.
+  noteContactLabel?: string;
+  noteSubmitBtn?: string;
+  noteAutoDeleteLabel?: string;
+  errorFieldNoteText?: string;
+  toastNoteCreated?: string;
 }

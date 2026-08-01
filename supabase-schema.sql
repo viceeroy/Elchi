@@ -178,8 +178,9 @@ ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_shape_by_type_check;
 ALTER TABLE posts ADD  CONSTRAINT posts_shape_by_type_check CHECK (
     CASE type
       WHEN 'announcement' THEN
-              headline IS NOT NULL AND btrim(headline) <> ''
-          AND note     IS NOT NULL AND btrim(note)     <> ''
+          -- The headline is optional: the composer is a single text box, so
+          -- only older two-field rows carry one.
+              note     IS NOT NULL AND btrim(note)     <> ''
           AND date IS NULL
           AND from_city IS NULL AND to_city IS NULL
           AND weight = ''

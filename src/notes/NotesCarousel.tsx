@@ -11,6 +11,17 @@ interface NotesCarouselProps {
   notes?: Note[];
 }
 
+const DISMISSED_KEY = "elchi_dismissed_notes";
+
+function readDismissed(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DISMISSED_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
 /**
  * Horizontally scrollable row of board notes.
  *
@@ -23,11 +34,28 @@ interface NotesCarouselProps {
 export const NotesCarousel: React.FC<NotesCarouselProps> = ({
   locale,
   onOpenNote,
-  notes = NOTES,
+  notes: allNotes = NOTES,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [active, setActive] = useState(0);
+  // Dismissing a card is local and permanent — it's editorial chrome, not
+  // content the user would ever want back, so there's no undo.
+  const [dismissed, setDismissed] = useState<Set<string>>(() => readDismissed());
+  const notes = allNotes.filter((n) => !dismissed.has(n.id));
+
+  const dismiss = (id: string) => {
+    setDismissed((prev) => {
+      const next = new Set(prev).add(id);
+      try {
+        localStorage.setItem(DISMISSED_KEY, JSON.stringify([...next]));
+      } catch {
+        // Storage unavailable (private mode, quota) — dismissal still holds
+        // for this session via state.
+      }
+      return next;
+    });
+  };
 
   // Nearest card to the track's left edge wins — same rule scroll-snap uses,
   // so the dots never disagree with where the snap lands.
@@ -89,7 +117,12 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
             // cards it now sits above.
             className="min-w-0 flex-[0_0_100%] snap-start"
           >
-            <NoteCard note={note} locale={locale} onOpen={() => onOpenNote(note)} />
+            <NoteCard
+              note={note}
+              locale={locale}
+              onOpen={() => onOpenNote(note)}
+              onDismiss={() => dismiss(note.id)}
+            />
           </div>
         ))}
       </div>

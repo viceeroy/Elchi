@@ -1,21 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, StickyNote, AlertCircle } from "lucide-react";
 import { ContactMethod, Locale, Translations } from "../types";
-import { COUNTRIES } from "../constants";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
 import { ContactFields } from "./ContactFields";
 
-// Caps mirror what the announcement columns will hold. Business ads attract
-// wall-of-text spam, so the body is deliberately short — a note is a pointer to
-// a conversation, not the conversation.
-export const HEADLINE_MAX = 80;
-export const BODY_MAX = 500;
+// Matches the server's cap on an announcement body (api/posts.ts). Long enough
+// to describe a service properly; still short enough that a note stays a
+// pointer to a conversation rather than the conversation.
+export const NOTE_MAX = 500;
 
-type FieldName = "headline" | "body" | "contact";
+type FieldName = "text" | "contact";
 type FieldErrors = Partial<Record<FieldName, string | undefined>>;
 
-const FIELD_ORDER: FieldName[] = ["headline", "body", "contact"];
+const FIELD_ORDER: FieldName[] = ["text", "contact"];
 
 const ERROR_INPUT_CLASS =
   "border-[#C23B3B] focus:border-[#C23B3B] ring-1 ring-[#C23B3B]/30";
@@ -28,40 +26,46 @@ const FieldError: React.FC<{ message?: string }> = ({ message }) =>
     </p>
   ) : null;
 
-interface AnnouncementFormModalProps {
+interface NoteFormModalProps {
   t: Translations;
   locale: Locale;
+  // The corridor the viewer is browsing. A note sits in one country, and this
+  // is the one it will surface under — asked implicitly rather than as a field,
+  // because the composer has no structured inputs.
+  country: string;
   onClose: () => void;
   onSubmitSuccess: () => void;
 }
 
+// Matches the server's cap on an announcement headline (api/posts.ts).
+const THEME_MAX = 80;
+
 /**
- * The announcement sheet — "E'lon" / "Заметка" / "Note".
+ * The note sheet — "E'lon" / "Заметка" / "Note".
  *
- * A plain ad: a headline, a body, the route it applies to, and a contact.
- * Deliberately none of the parcel fields (date, weight, luggage, categories),
- * because the things people post here — a cargo service, an agency, a shop —
- * are standing offers rather than one trip.
+ * The whole form is an optional theme, one text box and a contact. No date, no
+ * cargo, no route:
+ * the things people post here — a cargo service, an agency, a shop — are
+ * standing offers, and every structured field the parcel form asks for would be
+ * a question the author has no honest answer to.
  *
- * The route is still required so the same country filter that drives the feed
- * applies here too: "cargo Korea → Uzbekistan" is as directional as a flight.
+ * Posts as an `announcement` row, which is the same thing under its stored
+ * name. The text travels as `note` and the theme as `headline`. The theme is
+ * optional — left blank it stores null, and the card and the detail sheet
+ * render the text on its own.
  *
  * Not to be confused with src/notes/, which holds the static editorial board
  * cards. Those never touch the API; these are user content.
  */
-export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
+export const NoteFormModal: React.FC<NoteFormModalProps> = ({
   t,
   locale,
+  country,
   onClose,
   onSubmitSuccess,
 }) => {
-  const [headline, setHeadline] = useState("");
-  const [body, setBody] = useState("");
-
-  // Where the service is, as an ISO code — not a route. An announcement is a
-  // standing offer sitting in one country, so asking for a destination would be
-  // asking a question the author has no honest answer to.
-  const [country, setCountry] = useState("KR");
+  const [theme, setTheme] = useState("");
+  const [text, setText] = useState("");
 
   const [contactMethod, setContactMethod] = useState<ContactMethod>("telegram");
   const [contact, setContact] = useState("");
@@ -91,12 +95,10 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
 
     const next: FieldErrors = {};
 
-    if (!headline.trim()) {
-      next.headline = t.errorFieldHeadline || t.errorRequiredFields;
+    if (!text.trim()) {
+      next.text = t.errorFieldNoteText || t.errorRequiredFields;
     }
-    if (!body.trim()) {
-      next.body = t.errorFieldBody || t.errorRequiredFields;
-    }
+
     // The secondary handle is always the opposite channel of the primary.
     const contact2Method: ContactMethod = contactMethod === "telegram" ? "phone" : "telegram";
     // ContactFields keeps the primary Telegram handle with its "@" in state but
@@ -110,8 +112,13 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
       return trimmed.startsWith("@") ? trimmed.substring(1) : trimmed;
     })();
 
-    if (!contact.trim()) {
+    // Optional on a note — it is a notice, not a transaction. Given one, it
+    // still has to be a real handle; an optional field is not an unchecked one.
+    if (!contact.trim() && normalizedContact2) {
+      // The second handle is an addition to the first, never a replacement.
       next.contact = t.errorFieldContact || t.errorRequiredFields;
+    } else if (!contact.trim()) {
+      // No contact at all is fine.
     } else if (!isValidContact(contact.trim(), contactMethod)) {
       next.contact =
         contactMethod === "telegram" ? t.errorContactTelegram : t.errorContactPhone;
@@ -142,15 +149,18 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
     try {
       const payload = {
         type: "announcement" as const,
-        headline: headline.trim(),
-        // The body travels as `note` — announcements and parcel posts share
-        // that column, since it is the same thing: the free text of an ad.
-        note: body.trim(),
+        // The text travels as `note` — notes and parcel posts share that
+        // column, since it is the same thing: the free text of an ad. No
+        // headline is sent; the API stores null and the card reads the text.
+        headline: theme.trim() || null,
+        note: text.trim(),
         // The single country travels as from_country — the column the feed's
         // country filter reads. The API leaves to_country null.
         from_country: country,
+        // Both empty when the author left the field blank. The API stores
+        // contact_type NULL then, which is what the detail sheet branches on.
         contact: contact.trim(),
-        contact_type: contactMethod,
+        contact_type: contact.trim() ? contactMethod : null,
         contact2: normalizedContact2,
         contact2_type: normalizedContact2 ? contact2Method : null,
         honeypot, // re-checked server-side
@@ -171,13 +181,13 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
       if (res.ok) {
         onSubmitSuccess();
       } else {
-        // 409 is the one-active-announcement cap. It is a normal outcome with
-        // its own message from the API, so it flows through the same banner
-        // rather than being flattened into a generic error.
+        // 409 is the one-active-note cap. It is a normal outcome with its own
+        // message from the API, so it flows through the same banner rather than
+        // being flattened into a generic error.
         setSubmitError(result.error || t.errorGeneral);
       }
     } catch (err) {
-      console.error("Error creating announcement:", err);
+      console.error("Error creating note:", err);
       setSubmitError(t.errorGeneral);
     } finally {
       setSubmitting(false);
@@ -208,10 +218,10 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
           </span>
           <div>
             <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight m-0">
-              {t.announcementTitle}
+              {t.noteTitle}
             </h2>
             <p className="text-[13px] text-[#6B7280] m-0 mt-1 leading-snug">
-              {t.announcementSubtitle}
+              {t.noteSubtitle}
             </p>
           </div>
         </div>
@@ -228,75 +238,54 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
             autoComplete="off"
           />
 
-          {/* Headline */}
+          {/* Optional theme — shows bold and bigger on the card when given, same
+              as the older headline field. Left blank, the body text alone
+              carries the ad. */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase">
-                {t.announcementHeadlineLabel}
-              </label>
-              <span className="font-mono text-[10px] text-[#8A8F98]">
-                {headline.length}/{HEADLINE_MAX}
-              </span>
-            </div>
+            <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+              {t.noteThemeLabel || "Theme"}
+            </label>
             <input
               type="text"
-              ref={(el) => { fieldRefs.current.headline = el; }}
-              value={headline}
-              onChange={(e) => { setHeadline(e.target.value); clearError("headline"); }}
-              maxLength={HEADLINE_MAX}
-              className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm font-semibold bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
-                errors.headline ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#C79A3E]"
-              }`}
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              maxLength={THEME_MAX}
+              placeholder={t.noteThemePlaceholder}
+              className="w-full box-sizing-border-box p-3 border rounded-lg text-base font-bold bg-[#FCFBF6] text-[#1B2A4A] outline-none border-[#D8D3C4] focus:border-[#C79A3E] placeholder:font-normal placeholder:text-[#8A8F98]"
             />
-            <FieldError message={errors.headline} />
           </div>
 
-          {/* Body */}
+          {/* The whole ad. One box, no structure. */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase">
-                {t.announcementBodyLabel}
+                {t.noteTextLabel}
               </label>
               <span className="font-mono text-[10px] text-[#8A8F98]">
-                {body.length}/{BODY_MAX}
+                {text.length}/{NOTE_MAX}
               </span>
             </div>
             <textarea
-              ref={(el) => { fieldRefs.current.body = el; }}
-              value={body}
-              onChange={(e) => { setBody(e.target.value); clearError("body"); }}
-              maxLength={BODY_MAX}
-              rows={5}
+              ref={(el) => { fieldRefs.current.text = el; }}
+              value={text}
+              onChange={(e) => { setText(e.target.value); clearError("text"); }}
+              maxLength={NOTE_MAX}
+              rows={6}
+              placeholder={t.noteTextPlaceholder}
               className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none resize-y leading-relaxed ${
-                errors.body ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#C79A3E]"
+                errors.text ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#C79A3E]"
               }`}
             />
-            <FieldError message={errors.body} />
+            <FieldError message={errors.text} />
           </div>
 
-          {/* Where the service is. One country, not a route: an announcement is
-              a standing offer that sits somewhere, and it surfaces for viewers
-              browsing that country. */}
-          <div>
-            <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
-              {t.announcementCountryLabel}
-            </label>
-            <select
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="w-full p-3 border border-[#D8D3C4] focus:border-[#C79A3E] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none font-semibold"
-            >
-              {COUNTRIES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.names[locale]}
-                </option>
-              ))}
-            </select>
-          </div>
-
+          {/* Optional, and kept off the feed card by design — a handle that is
+              given shows in the detail sheet, behind the same login gate as
+              every other ad. */}
           <ContactFields
             t={t}
             locale={locale}
+            label={t.noteContactLabel || t.contactLabel}
             method={contactMethod}
             onMethodChange={setContactMethod}
             contact={contact}
@@ -324,11 +313,11 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
             disabled={submitting}
             className="w-full py-3.5 bg-[#C79A3E] hover:bg-[#D6AA4E] text-[#1B2A4A] border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors disabled:opacity-60"
           >
-            {submitting ? t.submittingBtn : t.announcementSubmitBtn}
+            {submitting ? t.submittingBtn : t.noteSubmitBtn}
           </button>
 
           <div className="text-center font-mono text-[10.5px] text-[#8A8F98]">
-            {t.announcementAutoDeleteLabel}
+            {t.noteAutoDeleteLabel}
           </div>
         </form>
       </div>
@@ -336,4 +325,4 @@ export const AnnouncementFormModal: React.FC<AnnouncementFormModalProps> = ({
   );
 };
 
-export default AnnouncementFormModal;
+export default NoteFormModal;

@@ -1,7 +1,13 @@
 import React from "react";
-import { X, Briefcase, Package, Info } from "lucide-react";
+import { X, Briefcase, Package, Info, StickyNote } from "lucide-react";
 import { Locale } from "../types";
 import { Note } from "./data";
+
+const TYPE_ICON = {
+  traveler: { Icon: Briefcase, bg: "#C79A3E" },
+  request: { Icon: Package, bg: "#C23B3B" },
+  note: { Icon: StickyNote, bg: "#C79A3E" },
+} as const;
 
 interface NoteSheetProps {
   note: Note;
@@ -69,7 +75,33 @@ export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) =
         </div>
 
         <div className="flex flex-col gap-3.5 px-6 pt-6">
-          {body.map((paragraph, i) => (
+          {body[0] && (
+            <p className="m-0 text-[14.5px] leading-relaxed text-[#3A4256]">{body[0]}</p>
+          )}
+
+          {c.typesList && c.typesList.length > 0 && (
+            <div className="flex flex-col gap-2.5">
+              {c.typesList.map(({ icon, text }, i) => {
+                const { Icon, bg } = TYPE_ICON[icon];
+                return (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 rounded-lg bg-[#F2EFE6] p-3"
+                  >
+                    <span
+                      className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[#1B2A4A]"
+                      style={{ background: bg }}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <p className="m-0 text-[13.5px] leading-relaxed text-[#3A4256]">{text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {body.slice(1).map((paragraph, i) => (
             <p key={i} className="m-0 text-[14.5px] leading-relaxed text-[#3A4256]">
               {paragraph}
             </p>

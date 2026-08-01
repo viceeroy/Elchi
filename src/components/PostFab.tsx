@@ -1,30 +1,34 @@
 import React, { useEffect } from "react";
-import { Plus, Package, StickyNote } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Translations } from "../types";
 
 interface PostFabProps {
   t: Translations;
   open: boolean;
   onToggle: (open: boolean) => void;
-  onPickParcel: () => void;
+  onPickTraveler: () => void;
+  onPickRequest: () => void;
   onPickNote: () => void;
 }
 
 /**
  * The composer speed dial — a single "+" pinned to the bottom-right corner
- * that fans out into the two things a user can post: a parcel ad (the
- * traveler/request form) and a plain note.
+ * that fans out into the three things a user can post: the two sides of a
+ * parcel ad (a traveler offering free luggage space, a sender who needs
+ * something carried), and a note.
  *
- * The two options are deliberately different objects, not two tabs of one
- * form: a parcel ad carries a date and cargo, a note carries neither. The
- * choice is therefore made here, before either form opens, rather than inside
- * a form the user would have to back out of.
+ * The two parcel sides open the same form and the dial only preselects which
+ * side of it; the note opens its own, far shorter sheet. Asking here rather
+ * than inside the form means the user states their intent once, with the same
+ * blue/red/gold colour coding the feed already uses for the three stamps, so
+ * the choice reads the same while composing as when browsing.
  */
 export const PostFab: React.FC<PostFabProps> = ({
   t,
   open,
   onToggle,
-  onPickParcel,
+  onPickTraveler,
+  onPickRequest,
   onPickNote,
 }) => {
   // Escape closes the dial. The options are focusable buttons, so a keyboard
@@ -41,19 +45,35 @@ export const PostFab: React.FC<PostFabProps> = ({
 
   const options = [
     {
-      key: "parcel",
-      icon: <Package className="w-5 h-5" />,
-      label: t.fabParcelLabel || "Parcel",
-      // Navy — the same family as the traveler stamp on the post cards.
-      swatch: "bg-[#1B2A4A] text-[#FCFBF6]",
-      onPick: onPickParcel,
+      key: "traveler",
+      emoji: "✈️",
+      label: t.fabTravelerLabel || "Uchaman",
+      // Blue, red and gold exactly as the traveler/request/note stamps on the
+      // cards (see BoardingPass, AnnouncementCard), so the dial is
+      // colour-readable before the label is, and tilted alternating ways.
+      color: "#2A4B8D",
+      textColor: "#FCFBF6",
+      tilt: "rotate(-2.5deg)",
+      onPick: onPickTraveler,
+    },
+    {
+      key: "request",
+      emoji: "🧳",
+      label: t.fabRequestLabel || "Pochta",
+      color: "#C23B3B",
+      textColor: "#FCFBF6",
+      tilt: "rotate(2deg)",
+      onPick: onPickRequest,
     },
     {
       key: "note",
-      icon: <StickyNote className="w-5 h-5" />,
-      label: t.fabNoteLabel || "Note",
-      // Gold — distinct from both post stamps, since a note is neither.
-      swatch: "bg-[#C79A3E] text-[#1B2A4A]",
+      emoji: "📢",
+      // Gold carries dark text — the stamp colour is light enough that the
+      // cream used on the other two would not hold contrast.
+      label: t.fabNoteLabel || "E'lon",
+      color: "#C79A3E",
+      textColor: "#1B2A4A",
+      tilt: "rotate(-2deg)",
       onPick: onPickNote,
     },
   ];
@@ -86,13 +106,24 @@ export const PostFab: React.FC<PostFabProps> = ({
               style={{ animationDelay: `${i * 45}ms`, animationFillMode: "backwards" }}
               className="flex items-center gap-3 animate-[fabin_0.22s_cubic-bezier(0.2,0.8,0.2,1)] group"
             >
-              <span className="rounded-lg bg-[#FCFBF6] px-3.5 py-2 shadow-lg border border-[#E9E5D8] font-bold text-sm text-[#1B2A4A] leading-tight">
+              {/* Label wears the post-card sticker: mono caps on the stamp
+                  colour, dashed airmail edge, tilted off-square. */}
+              <span
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  background: opt.color,
+                  color: opt.textColor,
+                  transform: opt.tilt,
+                }}
+                className="rounded px-3 py-1.5 shadow-lg border border-dashed border-white/40 text-[10.5px] font-bold uppercase tracking-[1px] leading-tight"
+              >
                 {opt.label}
               </span>
               <span
-                className={`w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center shadow-lg transition-transform group-hover:scale-105 ${opt.swatch}`}
+                style={{ borderColor: opt.color }}
+                className="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center text-[22px] leading-none bg-[#FCFBF6] border-2 border-dashed shadow-lg transition-transform group-hover:scale-105"
               >
-                {opt.icon}
+                <span aria-hidden="true">{opt.emoji}</span>
               </span>
             </button>
           ))}

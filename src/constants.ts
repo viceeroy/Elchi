@@ -54,6 +54,17 @@ export const COUNTRIES: Country[] = [
 export const getCountry = (code: string | null | undefined): Country | undefined =>
   COUNTRIES.find((c) => c.code === code);
 
+// Every corridor the board serves has Uzbekistan on one side, so the Uzbek side
+// is never a choice — it is implied by whichever other country is picked.
+export const HOME_COUNTRY = "UZ";
+
+// What the feed's country picker offers: the far side of the corridor. Picking
+// one shows that corridor in both directions, so listing Uzbekistan too would
+// only produce a duplicate of the entry the viewer already chose.
+export const SELECTABLE_COUNTRIES: Country[] = COUNTRIES.filter(
+  (c) => c.code !== HOME_COUNTRY
+);
+
 // Full list of South Korean cities (Seoul, Sejong, 6 metropolitan cities, and all "si" cities per province)
 export const KOREA_CITIES = [
   "Seoul", "Busan", "Daegu", "Incheon", "Gwangju", "Daejeon", "Ulsan", "Sejong",

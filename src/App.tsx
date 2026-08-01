@@ -7,7 +7,7 @@ import { BoardingPass } from "./components/BoardingPass";
 import { AnnouncementCard } from "./components/AnnouncementCard";
 import { RouteSelector } from "./components/RouteSelector";
 import { PostFormModal } from "./components/PostFormModal";
-import { AnnouncementFormModal } from "./components/AnnouncementFormModal";
+import { NoteFormModal } from "./components/NoteFormModal";
 import { PostFab } from "./components/PostFab";
 import { LoginModal } from "./components/LoginModal";
 import { ProfileSheet } from "./components/ProfileSheet";
@@ -49,11 +49,16 @@ export default function App() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  // Route filter — an exact ISO country pair chosen in the RouteSelector card.
-  // Defaults to the main corridor, Korea → Uzbekistan.
-  const [route, setRoute] = useState<{ from: string; to: string }>({ from: "KR", to: "UZ" });
+  // Corridor filter — the ISO code of the far country, picked in the
+  // RouteSelector. Uzbekistan is the other side of every corridor, so it is
+  // implied. Both directions of the corridor are shown; which way a parcel
+  // travels is content on the post, not something the feed filters by.
+  // Defaults to the main corridor, Korea ↔ Uzbekistan.
+  const [country, setCountry] = useState<string>("KR");
   const [formOpen, setFormOpen] = useState(false);
-  const [announcementOpen, setAnnouncementOpen] = useState(false);
+  // Which tab the composer opens on, set by the speed dial before the sheet
+  // mounts. The user can still switch inside the form.
+  const [composeType, setComposeType] = useState<PostType>("traveler");
   // Feed filter — null means no filter, so the feed shows everything (notes and
   // parcel posts together). Picking one narrows to it; picking it again clears
   // back to null, which is what the "×" on the active chip does.
@@ -84,9 +89,9 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  // Which composer to open once login completes — both kinds of ad are gated
+  // Which side of the form to open once login completes — posting is gated
   // behind auth, so the choice made at the speed dial has to survive the modal.
-  const pendingComposeRef = React.useRef<"parcel" | "announcement" | null>(null);
+  const pendingComposeRef = React.useRef<PostType | null>(null);
 
   // Track auth session so add-post can be gated behind Telegram login
   useEffect(() => {
@@ -101,13 +106,18 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const openComposer = (kind: "parcel" | "announcement") => {
-    if (kind === "parcel") setFormOpen(true);
-    else setAnnouncementOpen(true);
+  const openComposer = (kind: PostType) => {
+    setComposeType(kind);
+    setFormOpen(true);
   };
 
-  const handleComposeClick = (kind: "parcel" | "announcement") => {
-    if (session) {
+  // DEV: the login gate on posting is off while the note composer is being
+  // tested. Restore by deleting REQUIRE_LOGIN_TO_POST and its use below — the
+  // login path underneath is untouched and still works.
+  const REQUIRE_LOGIN_TO_POST = false;
+
+  const handleComposeClick = (kind: PostType) => {
+    if (session || !REQUIRE_LOGIN_TO_POST) {
       openComposer(kind);
     } else {
       pendingComposeRef.current = kind;
@@ -173,7 +183,7 @@ export default function App() {
   // exact prior scroll position on close so the user doesn't jump.
   useEffect(() => {
     const isModalOpen =
-      selectedPost !== null || selectedNote !== null || formOpen || announcementOpen;
+      selectedPost !== null || selectedNote !== null || formOpen;
     if (!isModalOpen) return;
 
     const scrollY = window.scrollY;
@@ -196,7 +206,7 @@ export default function App() {
       body.style.paddingRight = "";
       window.scrollTo(0, scrollY);
     };
-  }, [selectedPost, selectedNote, formOpen, announcementOpen]);
+  }, [selectedPost, selectedNote, formOpen]);
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -224,10 +234,12 @@ export default function App() {
     // republish someone's phone number into whatever app the link is sent to.
     // The recipient opens the post and reveals it themselves.
     //
-    // An announcement has no cities and no cargo, so it shares its headline
-    // rather than the parcel sentence, which would render as "undefined → …".
+    // A note has no cities and no cargo, so it shares its own text rather than
+    // the parcel sentence, which would render as "undefined → …". Its theme is
+    // optional, so the body is the fallback — and the only text at all on a
+    // note whose author skipped it.
     const shareText = selectedPost.type === "announcement"
-      ? `Elchi: ${selectedPost.headline}`
+      ? `Elchi: ${selectedPost.headline || selectedPost.note || ""}`.trim()
       : selectedPost.type === "traveler"
         ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman.`
         : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak.`;
@@ -295,8 +307,7 @@ export default function App() {
 
     try {
       const params = new URLSearchParams({
-        from: route.from,
-        to: route.to,
+        country,
         // Filtering happens in SQL so paging stays correct — a client-side
         // filter would leave the offsets counting rows the user can't see.
         // "all" has to be explicit: the API defaults to parcels so that older
@@ -323,12 +334,12 @@ export default function App() {
     }
   };
 
-  // Refetch from page 1 whenever the route or the feed filter changes, and when
-  // the session changes so is_mine is recomputed for the new viewer.
+  // Refetch from page 1 whenever the corridor or the feed filter changes, and
+  // when the session changes so is_mine is recomputed for the new viewer.
   useEffect(() => {
     fetchPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route.from, route.to, feedFilter, session?.user?.id]);
+  }, [country, feedFilter, session?.user?.id]);
 
   // Pull the open post's contact handles. Logged-out viewers get nothing to
   // fetch — the reveal is gated server-side too, so this is UI only.
@@ -383,10 +394,12 @@ export default function App() {
     setToast(t.toastPostCreated);
   };
 
-  const handleAnnouncementSubmitSuccess = () => {
-    setAnnouncementOpen(false);
-    fetchPosts(); // Refresh feed with the new announcement
-    setToast(t.toastAnnouncementCreated || t.toastPostCreated);
+  // Same refresh, its own confirmation — "your ad is up" reads wrong for
+  // something the author thinks of as a note.
+  const handleNoteSubmitSuccess = () => {
+    setFormOpen(false);
+    fetchPosts();
+    setToast(t.toastNoteCreated || t.toastPostCreated);
   };
 
   const [deleting, setDeleting] = useState(false);
@@ -564,26 +577,12 @@ export default function App() {
                 {t.feedTabParcelLabel || "Pochta"}
                 {feedFilter === "parcel" && <X className="w-3 h-3" />}
               </button>
-              <button
-                type="button"
-                onClick={() => toggleFeedFilter("notes")}
-                aria-pressed={feedFilter === "notes"}
-                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
-                  feedFilter === "notes"
-                    ? "bg-[#C79A3E] text-[#1B2A4A] shadow-sm"
-                    : "text-[#5A6272] hover:text-[#1B2A4A]"
-                }`}
-              >
-                {t.feedTabNotesLabel || "E'lonlar"}
-                {feedFilter === "notes" && <X className="w-3 h-3" />}
-              </button>
             </div>
 
             <RouteSelector
               locale={locale}
-              fromCode={route.from}
-              toCode={route.to}
-              onChange={(from, to) => setRoute({ from, to })}
+              countryCode={country}
+              onChange={setCountry}
             />
           </div>
 
@@ -622,7 +621,6 @@ export default function App() {
                     key={post.id}
                     post={post}
                     t={t}
-                    locale={locale}
                     onOpen={() => setSelectedPost(post)}
                   />
                 ) : (
@@ -663,33 +661,38 @@ export default function App() {
         </section>
       </main>
 
-      {/* Floating composer — the "+" fans out into the two kinds of ad */}
+      {/* Floating composer — the "+" fans out into the two sides of a parcel ad
+          and the note */}
       <PostFab
         t={t}
         open={fabOpen}
         onToggle={setFabOpen}
-        onPickParcel={() => handleComposeClick("parcel")}
+        onPickTraveler={() => handleComposeClick("traveler")}
+        onPickRequest={() => handleComposeClick("request")}
         onPickNote={() => handleComposeClick("announcement")}
       />
 
-      {/* Post Creation Bottom Sheet Modal */}
+      {/* Post Creation Bottom Sheet Modal. A note has almost none of a parcel
+          ad's fields, so it gets its own sheet rather than a third tab that
+          would hide most of the form it sits in. */}
       {formOpen && (
-        <PostFormModal
-          t={t}
-          locale={locale}
-          onClose={() => setFormOpen(false)}
-          onSubmitSuccess={handlePostSubmitSuccess}
-        />
-      )}
-
-      {/* Announcement Bottom Sheet Modal — the plain "note" ad */}
-      {announcementOpen && (
-        <AnnouncementFormModal
-          t={t}
-          locale={locale}
-          onClose={() => setAnnouncementOpen(false)}
-          onSubmitSuccess={handleAnnouncementSubmitSuccess}
-        />
+        composeType === "announcement" ? (
+          <NoteFormModal
+            t={t}
+            locale={locale}
+            country={country}
+            onClose={() => setFormOpen(false)}
+            onSubmitSuccess={handleNoteSubmitSuccess}
+          />
+        ) : (
+          <PostFormModal
+            t={t}
+            locale={locale}
+            initialType={composeType}
+            onClose={() => setFormOpen(false)}
+            onSubmitSuccess={handlePostSubmitSuccess}
+          />
+        )
       )}
 
       {/* Login Modal — Telegram only, required to add a post */}
@@ -801,11 +804,15 @@ export default function App() {
                   );
                 })()
               )}
-              {/* An announcement has no travel date; it leads with its headline. */}
+              {/* A note has no travel date. It leads with its theme when the
+                  author gave one; the rest carry their whole text in the body
+                  below. */}
               {selectedPost.type === "announcement" ? (
-                <div className="font-bold text-[15px] mt-2 [overflow-wrap:anywhere]">
-                  {selectedPost.headline}
-                </div>
+                selectedPost.headline ? (
+                  <div className="font-bold text-[15px] mt-2 [overflow-wrap:anywhere]">
+                    {selectedPost.headline}
+                  </div>
+                ) : null
               ) : (
                 <div className="font-mono text-xs opacity-70 mt-1.5 tracking-wider">
                   {selectedPost.type === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest} · {formatDetailDate(selectedPost.date)}
@@ -874,6 +881,11 @@ export default function App() {
 
               {/* Action and Contact segment — single unified section */}
               {(() => {
+                // A note may carry no contact at all. contact_type is NULL then
+                // (it travels in the feed payload, the handle never does), so
+                // there is nothing to reveal and no login worth prompting for.
+                if (!selectedPost.contact_type) return null;
+
                 const sectionLabel = (
                   <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98]">
                     {t.contactLabel}

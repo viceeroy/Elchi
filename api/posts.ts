@@ -17,6 +17,25 @@ const ALLOWED_CATEGORIES = new Set(['docs', 'clothes', 'meds', 'food', 'phone', 
 // src/constants.ts COUNTRIES.
 const ALLOWED_COUNTRIES = new Set(['KR', 'UZ']);
 
+// Every corridor the board serves has Uzbekistan on one side, so the Uzbek side
+// is implied rather than requested. Mirrors HOME_COUNTRY in src/constants.ts.
+const HOME_COUNTRY = 'UZ';
+
+// DEV ONLY — lets an unregistered visitor post while the composer is being
+// tested locally. Off unless ELCHI_DEV_NO_AUTH=1 AND a service-role key is
+// present, because bypassing the 401 alone achieves nothing: the RLS insert
+// policy still demands a real auth.uid(). Must never be set in production.
+const DEV_NO_AUTH =
+  process.env.ELCHI_DEV_NO_AUTH === '1' && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// The service-role client bypasses row-level security. Only reachable from the
+// DEV_NO_AUTH path above; every real request still inserts as its author.
+function serviceClient() {
+  return createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY || '', {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
 // A Supabase client that acts AS the logged-in user, so row-level security sees
 // their auth.uid() on insert. Built per-request from their bearer token.
 function userScopedClient(token: string) {
@@ -195,28 +214,42 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     query = query.in('type', typeFilter);
   }
 
-  // The country filter reads differently per type, so it can't be one pair of
-  // .eq() calls any more: a parcel post travels FROM one country TO another,
-  // while an announcement simply sits in one. Both are keyed off `from_country`
-  // — for a parcel that's the origin, for an announcement it's the location —
-  // so the country the viewer has selected matches the same column either way.
-  const from = typeof req.query.from === 'string' ? req.query.from.toUpperCase() : null;
-  const to = typeof req.query.to === 'string' ? req.query.to.toUpperCase() : null;
-  if (from && to) {
-    if (!ALLOWED_COUNTRIES.has(from) || !ALLOWED_COUNTRIES.has(to) || from === to) {
+  // The country filter selects a CORRIDOR, not a direction: `?country=KR` means
+  // the KR↔UZ corridor, so a Korea→Uzbekistan parcel and an Uzbekistan→Korea
+  // one both match. Direction is content on each individual post, never a filter.
+  //
+  // The two post types still read differently: a parcel travels FROM one country
+  // TO the other, while an announcement simply sits in one. So an announcement
+  // matches when it sits on either end of the corridor.
+  //
+  // `from`/`to` are the legacy directional parameters, still accepted so a
+  // browser holding an older bundle keeps getting a filtered feed. Either side
+  // of the pair identifies the same corridor, so the non-Uzbek one is used.
+  const rawCountry = typeof req.query.country === 'string' ? req.query.country : null;
+  const legacyFrom = typeof req.query.from === 'string' ? req.query.from : null;
+  const legacyTo = typeof req.query.to === 'string' ? req.query.to : null;
+  const country = (rawCountry
+    ?? [legacyFrom, legacyTo].find((c) => c && c.toUpperCase() !== HOME_COUNTRY)
+    ?? legacyFrom
+  )?.toUpperCase() ?? null;
+  if (country) {
+    if (!ALLOWED_COUNTRIES.has(country) || country === HOME_COUNTRY) {
       return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
     }
+    // Interpolation is safe here because the code has just been checked against
+    // ALLOWED_COUNTRIES, so it can only ever be one of the literals in that set.
+    const parcelPair =
+      `and(from_country.eq.${country},to_country.eq.${HOME_COUNTRY}),` +
+      `and(from_country.eq.${HOME_COUNTRY},to_country.eq.${country})`;
     if (rawType === 'announcement') {
-      query = query.eq('from_country', from);
+      query = query.in('from_country', [country, HOME_COUNTRY]);
     } else if (rawType === 'parcel') {
-      query = query.eq('from_country', from).eq('to_country', to);
+      query = query.or(parcelPair);
     } else {
-      // Mixed feed: each type keeps its own rule. Interpolation is safe here
-      // because both codes have just been checked against ALLOWED_COUNTRIES,
-      // so they can only ever be one of the literals in that set.
+      // Mixed feed: each type keeps its own rule.
       query = query.or(
-        `and(type.in.(traveler,request),from_country.eq.${from},to_country.eq.${to}),` +
-        `and(type.eq.announcement,from_country.eq.${from})`
+        `and(type.in.(traveler,request),or(${parcelPair})),` +
+        `and(type.eq.announcement,from_country.in.(${country},${HOME_COUNTRY}))`
       );
     }
   }
@@ -251,17 +284,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Posting requires a logged-in user. The author is taken from the verified
     // bearer token, never a body field, so it can't be spoofed.
+    //
+    // DEV_NO_AUTH lifts that for local testing only. It needs the service-role
+    // key, because the RLS insert policy is `auth.uid() IS NOT NULL AND
+    // user_id = auth.uid()` — with the anon key there is no way to insert
+    // without a real session, whatever this handler does. Rows written this way
+    // carry user_id NULL: nobody owns them, so they cannot be deleted from the
+    // UI. Never set this on a deployed environment.
     const user = await resolveUser(req);
-    if (!user) {
+    if (!user && !DEV_NO_AUTH) {
       return res.status(401).json({ error: 'Avval tizimga kiring' });
     }
-    const { id: user_id, token } = user;
+    const user_id = user?.id ?? null;
+    const token = user?.token ?? null;
 
     // The real cap is per author, not per address. Keying this on the IP made
     // sense only while the IP was forgeable and the limit therefore toothless;
     // now that clientIp() returns the true peer, a per-IP cap of 5 would lock
-    // out everyone sharing a carrier-grade NAT address.
-    const allowed = await checkRateLimit('post', `user:${user_id}`, 5, 600);
+    // out everyone sharing a carrier-grade NAT address. An unattributed dev
+    // post has no author to key on, so it falls back to the address.
+    const allowed = await checkRateLimit('post', user_id ? `user:${user_id}` : `ip:${clientIp(req)}`, 5, 600);
     if (!allowed) {
       return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
     }
@@ -313,16 +355,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const isAnnouncement = type === 'announcement';
 
-    // Shared by both shapes — every ad needs a way to reach its author.
-    if (!contactVal) {
+    // A parcel ad is a transaction — it is useless without a way to reach its
+    // author, so the contact stays required there. A note is just a notice, and
+    // may carry none at all.
+    if (!contactVal && !isAnnouncement) {
       return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
     }
 
     if (isAnnouncement) {
-      // A standing ad: headline + body + route + contact, nothing else. The
-      // parcel fields are not read, so a caller can't smuggle a date or cargo
-      // onto one — the row literal below hard-codes them.
-      if (!headlineVal || !noteVal) {
+      // A standing ad: body + country + contact, nothing else. The parcel
+      // fields are not read, so a caller can't smuggle a date or cargo onto one
+      // — the row literal below hard-codes them.
+      //
+      // The headline is optional. The composer is a single text box, so what
+      // the author writes is the body; a headline only exists on rows created
+      // by the older two-field form, and the card falls back to the body when
+      // there isn't one.
+      if (!noteVal) {
         return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
       }
       if (
@@ -403,7 +452,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : fromCountry === 'UZ' && toCountry === 'KR' ? 'u2k'
       : null;
 
-    if (!isContactKind(contact_type) || (contact2Val && !isContactKind(contact2_type))) {
+    // A note may carry no contact at all; everything else must. When one IS
+    // given the checks below apply in full, whatever the type — an optional
+    // field is not an unvalidated one.
+    const hasContact = !!contactVal;
+
+    if ((hasContact && !isContactKind(contact_type)) || (contact2Val && !isContactKind(contact2_type))) {
       return res.status(400).json({ error: 'Noto\'g\'ri aloqa turi' });
     }
 
@@ -411,7 +465,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // length was checked, so `contact_type` and `contact` could disagree — and
     // the UI, which decided tel: vs t.me by sniffing a leading "@", would then
     // build a link that contradicted the stored type.
-    if (!isValidContact(contactVal, contact_type)) {
+    if (hasContact && !isValidContact(contactVal, contact_type)) {
+      return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
+    }
+    // A second handle with no first one would be reachable only through a
+    // column the UI never reads. Reject it rather than store an orphan.
+    if (!hasContact && contact2Val) {
       return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
     }
     if (contact2Val && !isValidContact(contact2Val, contact2_type as ContactKind)) {
@@ -482,10 +541,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           categories: [],
           category_other: null,
           weight: '',
-          headline: headlineVal,
+          headline: headlineVal || null,
           note: noteVal,
+          // `contact` is NOT NULL in the schema, so a note with no contact
+          // stores the empty string. `contact_type` is what the UI actually
+          // branches on — NULL there means "there is nobody to reach", and the
+          // reveal section is hidden rather than offered and then empty.
           contact: contactVal,
-          contact_type,
+          contact_type: hasContact ? contact_type : null,
           contact2: contact2Val || null,
           contact2_type: contact2Val ? contact2_type : null,
           user_id,
@@ -517,7 +580,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Insert AS the authenticated user so the RLS insert policy
     // (user_id = auth.uid()) is satisfied and the author is provably theirs.
-    const db = userScopedClient(token);
+    // Without a token this is the DEV_NO_AUTH path, which has to go around RLS
+    // entirely — see the note above the 401.
+    const db = token ? userScopedClient(token) : serviceClient();
     const { data, error } = await db
       .from('posts')
       .insert([row])

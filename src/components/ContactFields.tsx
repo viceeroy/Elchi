@@ -22,6 +22,9 @@ interface ContactFieldsProps {
   onShowContact2Change: (show: boolean) => void;
   error?: string;
   inputRef?: (el: HTMLInputElement | null) => void;
+  // Overrides the section label. Used by the note sheet, where the contact is
+  // optional and the label has to say so.
+  label?: string;
 }
 
 /**
@@ -49,6 +52,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
   onShowContact2Change,
   error,
   inputRef,
+  label,
 }) => {
   const handle = contact.trim().replace("@", "");
 
@@ -57,7 +61,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold">
-            {t.contactLabel}
+            {label || t.contactLabel}
           </label>
 
           <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-lg p-0.5 gap-0.5">

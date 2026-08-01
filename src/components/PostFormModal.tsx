@@ -30,6 +30,10 @@ const ERROR_INPUT_CLASS = "border-[#C23B3B] focus:border-[#C23B3B] ring-1 ring-[
 interface PostFormModalProps {
   t: Translations;
   locale: Locale;
+  // Which side of the ad the composer opened on — the speed dial asks before
+  // the sheet opens, so the form starts on the tab the user already picked.
+  // The tab toggle stays: switching sides shouldn't cost a close-and-reopen.
+  initialType?: PostType;
   onClose: () => void;
   onSubmitSuccess: () => void;
 }
@@ -37,10 +41,11 @@ interface PostFormModalProps {
 export const PostFormModal: React.FC<PostFormModalProps> = ({
   t,
   locale,
+  initialType = "traveler",
   onClose,
   onSubmitSuccess,
 }) => {
-  const [postType, setPostType] = useState<PostType>("traveler");
+  const [postType, setPostType] = useState<PostType>(initialType);
   // Route countries (ISO codes). Picking on one side the country already on
   // the other side swaps them, so from ≠ to always holds.
   const [fromCountry, setFromCountry] = useState<string>("KR");

@@ -1,18 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Locale } from "../types";
-import { COUNTRIES, Country } from "../constants";
+import { SELECTABLE_COUNTRIES, Country } from "../constants";
 import { FlagIcon } from "./FlagIcon";
 
 // Country options come from the COUNTRIES registry in constants.ts — adding a
 // country there makes it appear in the dropdown automatically.
 //
-// The feed still filters on a from/to pair, but with exactly two active
-// corridors (KR, UZ) showing both sides was redundant: picking one implies
-// the other. So the control shows a single, changeable country — the one the
-// viewer is browsing from — and "to" is whichever other country is active.
-// If a third corridor is ever enabled, "to" resolves to the first other
-// country in the registry; this control would need a second side again to
-// stay unambiguous at that point.
+// The control picks a CORRIDOR, not a direction. Uzbekistan is on one side of
+// every corridor the board serves, so it is never listed here: the viewer picks
+// the far country, and the feed then shows that corridor in both directions.
+// Which way a given parcel travels is content on the post card, not a filter.
 
 interface CountryInfo {
   code: string; // IATA airport code shown big
@@ -23,15 +20,13 @@ interface CountryInfo {
 
 interface RouteSelectorProps {
   locale: Locale;
-  fromCode: string; // ISO code of the origin country
-  toCode: string; // ISO code of the destination country
-  onChange: (fromCode: string, toCode: string) => void;
+  countryCode: string; // ISO code of the far side of the corridor
+  onChange: (countryCode: string) => void;
 }
 
 export const RouteSelector: React.FC<RouteSelectorProps> = ({
   locale,
-  fromCode,
-  toCode,
+  countryCode,
   onChange,
 }) => {
   const [open, setOpen] = useState(false);
@@ -54,17 +49,13 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
     country: c.names[locale],
     iso: c.code,
   });
-  const options = COUNTRIES.map(toInfo);
-  const from = options.find((o) => o.iso === fromCode) ?? options[0];
-  const currentTo = options.find((o) => o.iso === toCode) ?? options[1];
+  const options = SELECTABLE_COUNTRIES.map(toInfo);
+  const selected = options.find((o) => o.iso === countryCode) ?? options[0];
 
   const selectCountry = (picked: CountryInfo) => {
     setOpen(false);
-    if (picked.iso === from.iso) return;
-    // "to" becomes the first other active country. With exactly two active
-    // corridors this is just the one the viewer didn't pick.
-    const other = options.find((o) => o.iso !== picked.iso) ?? currentTo;
-    onChange(picked.iso, other.iso);
+    if (picked.iso === selected.iso) return;
+    onChange(picked.iso);
   };
 
   return (
@@ -72,13 +63,13 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={`${locale === "ru" ? "Страна" : locale === "en" ? "Country" : "Davlat"}: ${from.country}`}
+        aria-label={`${locale === "ru" ? "Страна" : locale === "en" ? "Country" : "Davlat"}: ${selected.country}`}
         aria-expanded={open}
         className="group/side flex items-center gap-1.5 bg-transparent border-none p-0 cursor-pointer max-w-full min-w-0"
       >
-        <FlagIcon iso={from.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />
+        <FlagIcon iso={selected.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />
         <span className="font-bold text-[13px] sm:text-[17px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors truncate">
-          {from.country}
+          {selected.country}
         </span>
         <svg
           width="10"
@@ -99,7 +90,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
       {open && (
         <div className="absolute top-[calc(100%+8px)] right-0 z-30 bg-[#FCFBF6] border border-[#E4E0D2] rounded-xl shadow-lg py-1.5 min-w-[180px]">
           {options.map((c) => {
-            const active = c.iso === from.iso;
+            const active = c.iso === selected.iso;
             return (
               <button
                 key={c.code}
