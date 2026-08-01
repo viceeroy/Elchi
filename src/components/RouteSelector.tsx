@@ -1,13 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Locale } from "../types";
 import { COUNTRIES, Country } from "../constants";
-import { Plane, ArrowLeftRight } from "lucide-react";
 import { FlagIcon } from "./FlagIcon";
 
 // Country options come from the COUNTRIES registry in constants.ts — adding a
-// country there makes it appear in both dropdowns automatically. Any pair of
-// two different countries is a valid route; picking on one side the country
-// already shown on the other side swaps them.
+// country there makes it appear in the dropdown automatically.
+//
+// The feed still filters on a from/to pair, but with exactly two active
+// corridors (KR, UZ) showing both sides was redundant: picking one implies
+// the other. So the control shows a single, changeable country — the one the
+// viewer is browsing from — and "to" is whichever other country is active.
+// If a third corridor is ever enabled, "to" resolves to the first other
+// country in the registry; this control would need a second side again to
+// stay unambiguous at that point.
 
 interface CountryInfo {
   code: string; // IATA airport code shown big
@@ -29,20 +34,19 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
   toCode,
   onChange,
 }) => {
-  // Which side's dropdown is open (null = closed)
-  const [openSide, setOpenSide] = useState<"from" | "to" | null>(null);
+  const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!openSide) return;
+    if (!open) return;
     const handleClick = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpenSide(null);
+        setOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [openSide]);
+  }, [open]);
 
   const toInfo = (c: Country): CountryInfo => ({
     code: c.airport,
@@ -52,86 +56,67 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
   });
   const options = COUNTRIES.map(toInfo);
   const from = options.find((o) => o.iso === fromCode) ?? options[0];
-  const to = options.find((o) => o.iso === toCode) ?? options[1];
+  const currentTo = options.find((o) => o.iso === toCode) ?? options[1];
 
-  // Selecting a country for a side: picking the country already on the other
-  // side swaps the route; picking the same country again is a no-op.
-  const selectCountry = (side: "from" | "to", picked: CountryInfo) => {
-    setOpenSide(null);
-    const current = side === "from" ? from : to;
-    const other = side === "from" ? to : from;
-    if (picked.iso === current.iso) return;
-    if (picked.iso === other.iso) {
-      onChange(to.iso, from.iso);
-      return;
-    }
-    if (side === "from") onChange(picked.iso, to.iso);
-    else onChange(from.iso, picked.iso);
+  const selectCountry = (picked: CountryInfo) => {
+    setOpen(false);
+    if (picked.iso === from.iso) return;
+    // "to" becomes the first other active country. With exactly two active
+    // corridors this is just the one the viewer didn't pick.
+    const other = options.find((o) => o.iso !== picked.iso) ?? currentTo;
+    onChange(picked.iso, other.iso);
   };
 
-  const swap = () => onChange(to.iso, from.iso);
-
-  const renderSide = (side: "from" | "to", info: CountryInfo, align: "left" | "right") => (
-    // basis-0 + flex-1 keeps both sides the same width whatever the country
-    // name length is, so the plane stays dead centre; long names truncate.
-    <div
-      className={`relative flex flex-col flex-1 basis-0 min-w-0 ${
-        align === "left" ? "items-start" : "items-end"
-      }`}
-    >
+  return (
+    <div ref={rootRef} className="relative flex items-center justify-end py-1.5">
       <button
         type="button"
-        onClick={() => setOpenSide(openSide === side ? null : side)}
-        aria-label={`${side === "from" ? "From" : "To"}: ${info.country}`}
-        aria-expanded={openSide === side}
-        className={`group/side flex flex-col max-w-full min-w-0 bg-transparent border-none p-0 cursor-pointer ${
-          align === "left" ? "items-start text-left" : "items-end text-right"
-        }`}
+        onClick={() => setOpen((v) => !v)}
+        aria-label={`${locale === "ru" ? "Страна" : locale === "en" ? "Country" : "Davlat"}: ${from.country}`}
+        aria-expanded={open}
+        className="group/side flex items-center gap-1.5 bg-transparent border-none p-0 cursor-pointer max-w-full min-w-0"
       >
-        <span className="font-bold text-[13px] sm:text-[17px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors flex items-center gap-1.5 max-w-full min-w-0">
-          {/* Flags sit on the outer edges of the line: origin flag leads, destination flag trails */}
-          {align === "left" && <FlagIcon iso={info.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />}
-          <span className="truncate">{info.country}</span>
-          {align === "right" && <FlagIcon iso={info.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />}
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={`shrink-0 text-[#B9B4A5] group-hover/side:text-[#2A4B8D] transition-transform ${openSide === side ? "rotate-180" : ""}`}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+        <FlagIcon iso={from.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />
+        <span className="font-bold text-[13px] sm:text-[17px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors truncate">
+          {from.country}
         </span>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`shrink-0 text-[#B9B4A5] group-hover/side:text-[#2A4B8D] transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </button>
 
       {/* Country dropdown */}
-      {openSide === side && (
-        <div
-          className={`absolute top-[calc(100%+8px)] z-30 bg-[#FCFBF6] border border-[#E4E0D2] rounded-xl shadow-lg py-1.5 min-w-[180px] ${
-            align === "left" ? "left-0" : "right-0"
-          }`}
-        >
+      {open && (
+        <div className="absolute top-[calc(100%+8px)] right-0 z-30 bg-[#FCFBF6] border border-[#E4E0D2] rounded-xl shadow-lg py-1.5 min-w-[180px]">
           {options.map((c) => {
-            const active = c.iso === info.iso;
+            const active = c.iso === from.iso;
             return (
               <button
                 key={c.code}
                 type="button"
-                onClick={() => selectCountry(side, c)}
+                onClick={() => selectCountry(c)}
                 className={`w-full flex items-center justify-between gap-3 px-3.5 py-2 text-left transition-colors ${
                   active ? "bg-[#F2EFE6]" : "hover:bg-[#F2EFE6]"
                 }`}
               >
-                <span className="flex flex-col">
-                  <span className={`text-[13px] ${active ? "font-bold" : "font-semibold"} text-[#1B2A4A]`}>
-                    {c.country}
+                <span className="flex items-center gap-2">
+                  <FlagIcon iso={c.iso} className="w-[18px] h-[13px]" />
+                  <span className="flex flex-col">
+                    <span className={`text-[13px] ${active ? "font-bold" : "font-semibold"} text-[#1B2A4A]`}>
+                      {c.country}
+                    </span>
+                    <span className="text-[11px] text-[#8A8F98]">{c.city}</span>
                   </span>
-                  <span className="text-[11px] text-[#8A8F98]">{c.city}</span>
                 </span>
                 <span className="font-mono text-[11px] font-bold tracking-[1px] text-[#C79A3E]">
                   {c.code}
@@ -141,38 +126,6 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           })}
         </div>
       )}
-    </div>
-  );
-
-  return (
-    // No card: the route reads as a line of text on the page itself, so the
-    // dashed flight path is what carries the boarding-pass feel.
-    <div
-      ref={rootRef}
-      className="relative flex items-center justify-between gap-2 sm:gap-3 py-1.5"
-    >
-      {renderSide("from", from, "left")}
-
-      {/* Dashed flight path with plane — clicking the plane swaps the direction */}
-      {/* Fixed-width middle: the country names now carry a flag and a chevron,
-          so an equal three-way split truncated them on narrow screens. */}
-      <div className="shrink-0 grow-0 basis-[68px] sm:basis-[160px] flex items-center gap-1.5 sm:gap-2">
-        <div className="flex-1 border-t-2 border-dashed" style={{ borderColor: "#CFCAB8" }}></div>
-        <button
-          type="button"
-          onClick={swap}
-          aria-label="Swap direction"
-          title={locale === "ru" ? "Поменять направление" : locale === "en" ? "Swap direction" : "Yo'nalishni almashtirish"}
-          className="bg-transparent border-none p-1 cursor-pointer text-[#C79A3E] hover:text-[#A8801F] hover:scale-110 active:scale-95 transition-transform flex flex-col items-center gap-0.5"
-        >
-          <Plane className="w-5 h-5 rotate-45" />
-          {/* Tiny swap hint so users know the plane flips the route direction */}
-          <ArrowLeftRight className="w-2.5 h-2.5 text-[#8A8F98]" />
-        </button>
-        <div className="flex-1 border-t-2 border-dashed" style={{ borderColor: "#CFCAB8" }}></div>
-      </div>
-
-      {renderSide("to", to, "right")}
     </div>
   );
 };

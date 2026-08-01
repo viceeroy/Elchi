@@ -15,22 +15,34 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- categories are the source of truth and are what queries and filters use.
 CREATE TABLE IF NOT EXISTS posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    type VARCHAR(20) NOT NULL CHECK (type IN ('traveler', 'request')),
+    -- 'announcement' is a standing ad (a cargo service, an agency) rather than
+    -- one trip: it carries a headline, a body, a route and a contact, and none
+    -- of the cities/date/cargo columns. See posts_shape_by_type_check below.
+    type VARCHAR(20) NOT NULL CHECK (type IN ('traveler', 'request', 'announcement')),
 
-    -- Route
+    -- Route. Cities are NULL on announcements.
     direction VARCHAR(3) CHECK (direction IN ('k2u', 'u2k')),
-    from_city VARCHAR(100) NOT NULL,
-    to_city VARCHAR(100) NOT NULL,
-    date DATE NOT NULL,
+    from_city VARCHAR(100),
+    to_city VARCHAR(100),
+    -- NULL means "no fixed date" — an announcement, or a request whose date is
+    -- negotiated directly with the traveler.
+    date DATE,
 
-    -- Capacity / cargo (structured)
+    -- Capacity / cargo (structured). All zero/empty on announcements.
     weight_kg NUMERIC(6,2) NOT NULL DEFAULT 0,
     luggage_count SMALLINT NOT NULL DEFAULT 0,
     categories TEXT[] NOT NULL DEFAULT '{}',
     category_other TEXT,
-    -- Display cache, e.g. "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon"
+    -- Display cache, e.g. "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon".
+    -- Stays NOT NULL: the feed card matches on it without a guard, so an
+    -- announcement stores '' rather than NULL.
     weight TEXT NOT NULL,
 
+    -- Announcement headline. NULL on parcel posts.
+    headline VARCHAR(120),
+
+    -- The free-text body of an ad: an optional remark on a parcel post, the
+    -- required body copy on an announcement.
     note TEXT,
 
     -- Contacts. *_type records which channel the handle belongs to, so the UI
@@ -50,6 +62,12 @@ CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(type);
 -- ---------------------------------------------------------------------------
 -- Migrations for existing databases
 -- ---------------------------------------------------------------------------
+
+-- Drop the view before touching column types. `ALTER COLUMN ... TYPE` runs its
+-- dependency scan whether or not the type actually changes, so on any re-run of
+-- this file the `weight` statement below would fail with "cannot alter type of
+-- a column used by a view or rule". The view is recreated further down.
+DROP VIEW IF EXISTS public_posts;
 
 -- Widen `weight` so multi-category requests don't overflow the old VARCHAR(50)
 -- limit, which caused inserts to fail with SQLSTATE 22001.
@@ -108,6 +126,76 @@ ALTER TABLE posts DROP COLUMN IF EXISTS price;
 
 -- The report button was removed from the UI, so the table has no writer left.
 DROP TABLE IF EXISTS reports;
+
+-- Columns this file's policies, view and indexes reference but never created:
+-- they arrived via migrations/2026-07-22-posts-user-id.sql and
+-- migrations/2026-07-23-post-countries.sql, so a fresh run of this file alone
+-- used to fail on the first policy that mentions them.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS from_country VARCHAR(2);
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS to_country VARCHAR(2);
+CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_posts_route ON posts(from_country, to_country);
+
+DO $$
+BEGIN
+    -- Shape only, not a fixed country list: adding a corridor is an API change
+    -- (ALLOWED_COUNTRIES in api/posts.ts), never a migration.
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'posts_from_country_check') THEN
+        ALTER TABLE posts ADD CONSTRAINT posts_from_country_check
+            CHECK (from_country IS NULL OR from_country ~ '^[A-Z]{2}$');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'posts_to_country_check') THEN
+        ALTER TABLE posts ADD CONSTRAINT posts_to_country_check
+            CHECK (to_country IS NULL OR to_country ~ '^[A-Z]{2}$');
+    END IF;
+END $$;
+
+-- Announcements — see migrations/2026-08-01-announcements.sql for the reasoning
+-- behind each statement in this block.
+--
+-- The type CHECK is NOT wrapped in the pg_constraint guard used above: it was
+-- declared inline on the column in CREATE TABLE, so it already exists under the
+-- name `posts_type_check` in every deployed database. The guard would find it
+-- and skip, silently leaving the old two-value list in place.
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_type_check;
+ALTER TABLE posts ADD  CONSTRAINT posts_type_check
+    CHECK (type IN ('traveler', 'request', 'announcement'));
+
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS headline VARCHAR(120);
+
+-- An announcement has no cities and no date; `date` additionally covers a
+-- parcel request whose date is negotiable, which previously tried to store the
+-- string "flexible" in a DATE column and failed.
+ALTER TABLE posts ALTER COLUMN from_city DROP NOT NULL;
+ALTER TABLE posts ALTER COLUMN to_city   DROP NOT NULL;
+ALTER TABLE posts ALTER COLUMN date      DROP NOT NULL;
+
+-- Keeps the relaxation above from weakening parcel posts: cities and weight
+-- stay mandatory for traveler/request, enforced in the database rather than
+-- only in api/posts.ts. NOT VALID so it cannot fail on a legacy row.
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_shape_by_type_check;
+ALTER TABLE posts ADD  CONSTRAINT posts_shape_by_type_check CHECK (
+    CASE type
+      WHEN 'announcement' THEN
+              headline IS NOT NULL AND btrim(headline) <> ''
+          AND note     IS NOT NULL AND btrim(note)     <> ''
+          AND date IS NULL
+          AND from_city IS NULL AND to_city IS NULL
+          AND weight = ''
+          AND weight_kg = 0 AND luggage_count = 0
+          AND categories = '{}'::TEXT[] AND category_other IS NULL
+          AND from_country IS NOT NULL AND to_country IS NOT NULL
+      ELSE
+              headline IS NULL
+          AND from_city IS NOT NULL AND btrim(from_city) <> ''
+          AND to_city   IS NOT NULL AND btrim(to_city)   <> ''
+          AND btrim(weight) <> ''
+    END
+) NOT VALID;
+
+CREATE INDEX IF NOT EXISTS idx_posts_user_announcement
+    ON posts (user_id) WHERE type = 'announcement';
 
 -- TODO: Add images column for v2 (e.g. image_url TEXT)
 -- ALTER TABLE posts ADD COLUMN image_url TEXT;
@@ -187,6 +275,7 @@ SELECT
     p.categories,
     p.category_other,
     p.weight,
+    p.headline,
     p.note,
     p.contact_type,
     p.contact2_type,
@@ -227,6 +316,71 @@ $$;
 
 REVOKE ALL ON FUNCTION get_post_contact(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION get_post_contact(UUID) TO authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
+-- One active announcement per author
+-- ---------------------------------------------------------------------------
+-- Parcel ads are one-off; a standing service ad is not, so without a cap one
+-- agency can paper the board with the same offer.
+--
+-- This cannot be a partial unique index: the predicate would need
+-- `expires_at >= CURRENT_DATE`, and CURRENT_DATE is STABLE while index
+-- predicates must be IMMUTABLE (Postgres rejects it with 42P17). Nor can it
+-- live in api/posts.ts alone — `authenticated` can INSERT through PostgREST
+-- with the bundled anon key, so the API is not in every writer's path.
+-- A BEFORE INSERT trigger has neither problem.
+CREATE OR REPLACE FUNCTION has_active_announcement(p_user UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+STABLE
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM posts p
+        WHERE p.user_id = p_user
+          AND p.type = 'announcement'
+          AND p.expires_at >= CURRENT_DATE
+    );
+$$;
+
+-- Not granted to `authenticated`: it takes an arbitrary user id, so exposing it
+-- would let any logged-in caller probe another user. The trigger calls it as
+-- the definer and needs no grant.
+REVOKE ALL ON FUNCTION has_active_announcement(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION has_active_announcement(UUID) TO service_role;
+
+-- SECURITY DEFINER is mandatory here, not stylistic. A trigger function runs
+-- with the privileges of whoever fired it — `authenticated`, which holds only
+-- GRANT SELECT (id, user_id) ON posts. Postgres requires SELECT on every column
+-- a statement references, so an invoker-rights version reading `type` and
+-- `expires_at` would fail with "permission denied for table posts" and turn
+-- every announcement insert into a 500.
+--
+-- ERRCODE 23505 so supabase-js surfaces error.code and the API can answer 409
+-- rather than 500; `posts` has no unique constraint besides the primary key.
+CREATE OR REPLACE FUNCTION enforce_one_active_announcement()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF NEW.type = 'announcement'
+       AND NEW.user_id IS NOT NULL
+       AND has_active_announcement(NEW.user_id)
+    THEN
+        RAISE EXCEPTION 'user already has an active announcement'
+            USING ERRCODE = '23505';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS one_active_announcement ON posts;
+CREATE TRIGGER one_active_announcement
+    BEFORE INSERT ON posts
+    FOR EACH ROW EXECUTE FUNCTION enforce_one_active_announcement();
 
 -- ---------------------------------------------------------------------------
 -- profiles (Supabase Auth)

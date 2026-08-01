@@ -1,6 +1,9 @@
 // Common TypeScript interfaces and types for Elchi
 
-export type PostType = "traveler" | "request";
+// "announcement" is a standing ad — a cargo service, an agency — rather than
+// one trip. It carries a headline, a body, a route and a contact, and none of
+// the cities/date/cargo fields the parcel types use.
+export type PostType = "traveler" | "request" | "announcement";
 
 export type Direction = "k2u" | "u2k";
 
@@ -14,18 +17,26 @@ export interface Post {
   // Nullable only for rows created before the countries migration.
   from_country: string | null;
   to_country: string | null;
-  // Free-text cities — display only, never used for filtering
-  from_city: string;
-  to_city: string;
-  date: string; // YYYY-MM-DD
+  // Free-text cities — display only, never used for filtering. Null on
+  // announcements, which apply to a corridor rather than a city pair.
+  from_city: string | null;
+  to_city: string | null;
+  // YYYY-MM-DD, or null when there is no fixed date: an announcement, or a
+  // request whose date is negotiated directly with the traveler.
+  date: string | null;
   // Structured cargo data — the source of truth for filtering and display logic.
   weight_kg: number;
   luggage_count: number;
   categories: string[];
   category_other: string | null;
   // Pre-rendered display string built from the fields above, e.g.
-  // "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon".
+  // "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon". Empty on
+  // announcements, which carry no cargo.
   weight: string;
+  // Announcement headline; null on parcel posts.
+  headline: string | null;
+  // The free-text body of the ad: an optional remark on a parcel post, the
+  // required body copy on an announcement.
   note: string | null;
   // Contact VALUES are deliberately absent from this shape. The feed reads the
   // `public_posts` view, which omits them, so a scraper cannot pull every
@@ -157,4 +168,32 @@ export interface Translations {
   methodGoogle?: string;
   contactLockedText: string;
   contactLockedBtn: string;
+
+  // Composer speed dial — the floating "+" and the two things it can open.
+  fabOpenLabel?: string;
+  fabCloseLabel?: string;
+  fabParcelLabel?: string;
+  fabNoteLabel?: string;
+
+  // Feed tab switcher — Pochta (parcel posts) vs E'lonlar (board notes /
+  // announcements). Exclusive: only one of the two shows at a time.
+  feedTabParcelLabel?: string;
+  feedTabNotesLabel?: string;
+  // Sticker label on an announcement card, alongside travelerTag/requestTag.
+  announcementTag?: string;
+
+  // Announcement sheet ("E'lon" / "Заметка" / "Note") — a free-text ad with a
+  // route and a contact, and none of the parcel fields.
+  announcementTitle?: string;
+  announcementSubtitle?: string;
+  announcementHeadlineLabel?: string;
+  announcementHeadlinePlaceholder?: string;
+  announcementBodyLabel?: string;
+  announcementBodyPlaceholder?: string;
+  announcementRouteLabel?: string;
+  announcementSubmitBtn?: string;
+  announcementAutoDeleteLabel?: string;
+  errorFieldHeadline?: string;
+  errorFieldBody?: string;
+  toastAnnouncementCreated?: string;
 }

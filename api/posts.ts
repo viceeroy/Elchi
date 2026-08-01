@@ -30,8 +30,18 @@ function userScopedClient(token: string) {
 // contact values and user_id entirely — those never travel in a list response.
 const PUBLIC_COLUMNS =
   'id,type,direction,from_country,to_country,from_city,to_city,date,' +
-  'weight_kg,luggage_count,categories,category_other,weight,note,' +
+  'weight_kg,luggage_count,categories,category_other,weight,headline,note,' +
   'contact_type,contact2_type,has_contact2,created_at,expires_at';
+
+// What `?type=` narrows the list to. The default is deliberately `parcel`
+// rather than `all`: a browser holding an older bundle sends no type parameter
+// and has no card component for an announcement, so it must keep seeing exactly
+// what it saw before. The current client asks for `all` explicitly.
+const TYPE_FILTERS: Record<string, string[] | null> = {
+  parcel: ['traveler', 'request'],
+  announcement: ['announcement'],
+  all: null,
+};
 
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
@@ -183,6 +193,17 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     query = query.eq('from_country', from).eq('to_country', to);
   }
 
+  // Which kind of ad the feed wants. The count is on the same query, so `total`
+  // and the fetch-one-extra `hasMore` above both stay correct per filter.
+  const rawType = typeof req.query.type === 'string' ? req.query.type : 'parcel';
+  if (!(rawType in TYPE_FILTERS)) {
+    return res.status(400).json({ error: 'Noto\'g\'ri e\'lon turi' });
+  }
+  const typeFilter = TYPE_FILTERS[rawType];
+  if (typeFilter) {
+    query = query.in('type', typeFilter);
+  }
+
   const { data, error, count } = await query;
   if (error) {
     console.error('Error fetching posts:', error);
@@ -241,6 +262,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       categories,
       category_other,
       weight,
+      headline,
       note,
       contact,
       contact_type,
@@ -262,42 +284,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const toCity = str(to_city);
     const contactVal = str(contact);
     const contact2Val = str(contact2);
+    const headlineVal = str(headline);
     const noteVal = str(note);
     const categoryOtherVal = str(category_other);
     const weightVal = str(weight);
 
-    if (!type || !fromCity || !toCity || !date || !weightVal || !contactVal) {
+    // The type gate runs before the required-field gate, because what counts as
+    // required depends on it: an announcement carries no city, date or cargo.
+    if (type !== 'traveler' && type !== 'request' && type !== 'announcement') {
+      return res.status(400).json({ error: 'Noto\'g\'ri e\'lon turi' });
+    }
+    const isAnnouncement = type === 'announcement';
+
+    // Shared by both shapes — every ad needs a way to reach its author.
+    if (!contactVal) {
       return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
     }
 
-    // Length caps — mirror the DB column widths and keep free-text fields sane
-    // so a direct API caller can't store multi-MB blobs.
-    const tooLong =
-      fromCity.length > 100 ||
-      toCity.length > 100 ||
-      contactVal.length > 100 ||
-      contact2Val.length > 100 ||
-      noteVal.length > 1000 ||
-      categoryOtherVal.length > 100 ||
-      weightVal.length > 200;
-    if (tooLong) {
-      return res.status(400).json({ error: 'Maydon juda uzun' });
-    }
-
-    // Categories must be a short array of known ids (the request-parcel chips).
-    if (categories !== undefined && categories !== null) {
-      if (!Array.isArray(categories) || categories.length > 10 ||
-          !categories.every((c) => typeof c === 'string' && ALLOWED_CATEGORIES.has(c))) {
-        return res.status(400).json({ error: 'Noto\'g\'ri toifa' });
+    if (isAnnouncement) {
+      // A standing ad: headline + body + route + contact, nothing else. The
+      // parcel fields are not read, so a caller can't smuggle a date or cargo
+      // onto one — the row literal below hard-codes them.
+      if (!headlineVal || !noteVal) {
+        return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
       }
-    }
+      if (
+        headlineVal.length > 80 ||
+        noteVal.length > 500 ||
+        contactVal.length > 100 ||
+        contact2Val.length > 100
+      ) {
+        return res.status(400).json({ error: 'Maydon juda uzun' });
+      }
+    } else {
+      if (!fromCity || !toCity || !date || !weightVal) {
+        return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
+      }
 
-    if (type !== 'traveler' && type !== 'request') {
-      return res.status(400).json({ error: 'Noto\'g\'ri e\'lon turi' });
-    }
+      // Length caps — mirror the DB column widths and keep free-text fields sane
+      // so a direct API caller can't store multi-MB blobs.
+      const tooLong =
+        fromCity.length > 100 ||
+        toCity.length > 100 ||
+        contactVal.length > 100 ||
+        contact2Val.length > 100 ||
+        noteVal.length > 1000 ||
+        categoryOtherVal.length > 100 ||
+        weightVal.length > 200;
+      if (tooLong) {
+        return res.status(400).json({ error: 'Maydon juda uzun' });
+      }
 
-    if (direction && direction !== 'k2u' && direction !== 'u2k') {
-      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+      // Categories must be a short array of known ids (the request-parcel chips).
+      if (categories !== undefined && categories !== null) {
+        if (!Array.isArray(categories) || categories.length > 10 ||
+            !categories.every((c) => typeof c === 'string' && ALLOWED_CATEGORIES.has(c))) {
+          return res.status(400).json({ error: 'Noto\'g\'ri toifa' });
+        }
+      }
+
+      if (direction && direction !== 'k2u' && direction !== 'u2k') {
+        return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+      }
     }
 
     // Route countries. New clients send them; older cached clients send only
@@ -339,13 +387,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
     }
 
-    // "flexible" means the requester has no fixed date — it's negotiated
-    // directly with the traveler — so it skips date parsing/range checks and
-    // gets a flat 30-day expiry instead of one derived from the post date.
-    const isFlexibleDate = date === 'flexible';
+    // Two shapes have no fixed date: an announcement never has one, and
+    // "flexible" means the requester negotiates it directly with the traveler.
+    // Both store NULL — the string "flexible" used to be passed straight into
+    // the DATE column, which failed the insert — and both get a flat 30-day
+    // expiry instead of one derived from a travel date.
+    const noFixedDate = isAnnouncement || date === 'flexible';
+    let dateValue: string | null;
     let expires_at: string;
 
-    if (isFlexibleDate) {
+    if (noFixedDate) {
+      dateValue = null;
       const flexibleExpiry = new Date();
       flexibleExpiry.setHours(0, 0, 0, 0);
       flexibleExpiry.setDate(flexibleExpiry.getDate() + 30);
@@ -377,27 +429,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const safeWeightKg = clamp(weight_kg, 0, 100);
     const safeLuggage = clamp(luggage_count, 0, 20);
 
-    // Insert AS the authenticated user so the RLS insert policy
-    // (user_id = auth.uid()) is satisfied and the author is provably theirs.
-    const db = userScopedClient(token);
-    const { data, error } = await db
-      .from('posts')
-      .insert([
-        {
+    // Both shapes share the route and contact columns; they differ in whether
+    // the cargo half is populated at all. The announcement literal hard-codes
+    // the parcel fields rather than passing anything through, so the values
+    // match posts_shape_by_type_check no matter what the caller sent.
+    //
+    // `weight: ''` rather than null — the feed card matches on that string
+    // without a guard, so an older bundle that deep-links an announcement must
+    // not meet a null there.
+    const row = isAnnouncement
+      ? {
           type,
           direction: legacyDirection,
           from_country: fromCountry,
           to_country: toCountry,
-          // The normalised values, so what was validated is what gets stored.
-          from_city: fromCity,
-          to_city: toCity,
-          date,
-          weight_kg: safeWeightKg,
-          luggage_count: safeLuggage,
-          categories: Array.isArray(categories) ? categories : [],
-          category_other: categoryOtherVal || null,
-          weight: weightVal,
-          note: noteVal || null,
+          from_city: null,
+          to_city: null,
+          date: null,
+          weight_kg: 0,
+          luggage_count: 0,
+          categories: [],
+          category_other: null,
+          weight: '',
+          headline: headlineVal,
+          note: noteVal,
           contact: contactVal,
           contact_type,
           contact2: contact2Val || null,
@@ -405,7 +460,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           user_id,
           expires_at
         }
-      ])
+      : {
+          type,
+          direction: legacyDirection,
+          from_country: fromCountry,
+          to_country: toCountry,
+          // The normalised values, so what was validated is what gets stored.
+          from_city: fromCity,
+          to_city: toCity,
+          date: dateValue,
+          weight_kg: safeWeightKg,
+          luggage_count: safeLuggage,
+          categories: Array.isArray(categories) ? categories : [],
+          category_other: categoryOtherVal || null,
+          weight: weightVal,
+          headline: null,
+          note: noteVal || null,
+          contact: contactVal,
+          contact_type,
+          contact2: contact2Val || null,
+          contact2_type: contact2Val ? contact2_type : null,
+          user_id,
+          expires_at
+        };
+
+    // Insert AS the authenticated user so the RLS insert policy
+    // (user_id = auth.uid()) is satisfied and the author is provably theirs.
+    const db = userScopedClient(token);
+    const { data, error } = await db
+      .from('posts')
+      .insert([row])
       // Only the id comes back: `authenticated` holds a column-level SELECT
       // grant on (id, user_id) and nothing more, so `.select()` with no
       // argument would now fail on the contact columns.
@@ -413,6 +497,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single();
 
     if (error) {
+      // 23505 is raised by the one_active_announcement trigger, not by a real
+      // unique constraint — `posts` has none besides the primary key. Hitting
+      // the per-author cap is a normal outcome, so it gets its own status and
+      // a message the form can show, rather than a generic failure.
+      if (error.code === '23505') {
+        return res.status(409).json({
+          error: 'Sizda allaqachon faol e\'lon bor. Avval eskisini o\'chiring.'
+        });
+      }
       console.error('Error creating post:', error);
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }

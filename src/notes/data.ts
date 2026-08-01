@@ -4,9 +4,14 @@ import { Locale } from "../types";
 //
 // These are deliberately kept apart from `Post`: they are not user content,
 // never touch the API or the database, and are not filtered by the route
-// selector. Everything here is authored in this file, so the copy lives with
-// the component instead of in the shared translations dictionary.
-export type NoteKind = "intro" | "traveler" | "request";
+// selector or the feed chips. Everything here is authored in this file, so the
+// copy lives with the component instead of in the shared translations
+// dictionary.
+//
+// Only the intro card remains. The two worked examples ("this is what a
+// traveler ad looks like") were scaffolding for an empty board; real posts and
+// announcements now fill that role.
+export type NoteKind = "intro";
 
 export interface NoteContent {
   /** Small monospace label on the card shoulder. */
@@ -72,90 +77,6 @@ export const NOTES: Note[] = [
           "Request — someone is looking for a person to bring something back.",
           "Found a match? Open it and reach the author on Telegram or by phone. Terms, price and handover are agreed directly between you.",
           "Elchi does not hold payment and does not inspect parcels. Take the usual care with strangers.",
-        ],
-      },
-    },
-  },
-  {
-    id: "example-traveler",
-    kind: "traveler",
-    content: {
-      uz: {
-        tag: "Yo'lovchi",
-        meta: "Namuna",
-        title: "Koreya → O'zbekiston",
-        summary:
-          "Toshkentga uchyapman, kichik narsalarni olib keta olaman — hujjat, sovg'a, dori.",
-        detail: [
-          "Yo'lovchi e'loni shunday ko'rinadi.",
-          "Yaxshi e'londa bor: aniq sana, qancha joy qolgani (kg yoki chamadon) va nimani olib keta olmasligingiz.",
-          "Uchayotgan bo'lsangiz, pastdagi «+» tugmasi orqali o'z e'loningizni joylang.",
-        ],
-      },
-      ru: {
-        tag: "Попутчик",
-        meta: "Пример",
-        title: "Корея → Узбекистан",
-        summary:
-          "Лечу в Ташкент, могу взять мелочи — документы, подарки, лекарства.",
-        detail: [
-          "Так выглядит объявление попутчика.",
-          "В хорошем объявлении есть: точная дата, сколько места осталось (кг или чемоданы) и что вы взять не сможете.",
-          "Если вы летите — разместите своё объявление кнопкой «+» внизу.",
-        ],
-      },
-      en: {
-        tag: "Traveler",
-        meta: "Example",
-        title: "Korea → Uzbekistan",
-        summary:
-          "Flying to Tashkent, can carry small items — documents, gifts, medicine.",
-        detail: [
-          "This is what a traveler ad looks like.",
-          "A good one states: the exact date, how much room is left (kg or bags), and what you will not carry.",
-          "Flying yourself? Post your own with the «+» button below.",
-        ],
-      },
-    },
-  },
-  {
-    id: "example-request",
-    kind: "request",
-    content: {
-      uz: {
-        tag: "So'rov",
-        meta: "Namuna",
-        title: "O'zbekiston → Koreya",
-        summary:
-          "Chorsu bozoridan qurut va quritilgan o'rik olib keladigan odam kerak.",
-        detail: [
-          "So'rov e'loni shunday ko'rinadi.",
-          "Nima kerakligini, taxminiy og'irligini va qachongacha kerakligini yozing — sana kelishiladigan bo'lsa, buni ham belgilash mumkin.",
-          "Yo'lovchilar shu e'lonlarni ko'rib, sizga o'zlari yozadi.",
-        ],
-      },
-      ru: {
-        tag: "Запрос",
-        meta: "Пример",
-        title: "Узбекистан → Корея",
-        summary:
-          "Ищу, кто привезёт курт и сушёный урюк с базара Чорсу.",
-        detail: [
-          "Так выглядит объявление-запрос.",
-          "Напишите, что именно нужно, примерный вес и к какому сроку — дату можно указать и как «по договорённости».",
-          "Попутчики видят такие объявления и пишут вам сами.",
-        ],
-      },
-      en: {
-        tag: "Request",
-        meta: "Example",
-        title: "Uzbekistan → Korea",
-        summary:
-          "Looking for someone to bring qurut and dried apricots from Chorsu bazaar.",
-        detail: [
-          "This is what a request ad looks like.",
-          "Say what you need, the rough weight, and by when — the date can also be left flexible.",
-          "Travelers browse these and reach out to you.",
         ],
       },
     },

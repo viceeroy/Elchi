@@ -4,14 +4,17 @@ import { telegramUsername, phoneDialString } from "../lib/contact";
 import { translations, defaultLocale } from "./translations";
 import { COUNTRIES, getCountry } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
+import { AnnouncementCard } from "./components/AnnouncementCard";
 import { RouteSelector } from "./components/RouteSelector";
 import { PostFormModal } from "./components/PostFormModal";
+import { AnnouncementFormModal } from "./components/AnnouncementFormModal";
+import { PostFab } from "./components/PostFab";
 import { LoginModal } from "./components/LoginModal";
 import { ProfileSheet } from "./components/ProfileSheet";
 import { NotesCarousel, NoteSheet, type Note } from "./notes";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
-import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
+import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, StickyNote, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -50,13 +53,25 @@ export default function App() {
   // Defaults to the main corridor, Korea → Uzbekistan.
   const [route, setRoute] = useState<{ from: string; to: string }>({ from: "KR", to: "UZ" });
   const [formOpen, setFormOpen] = useState(false);
+  const [announcementOpen, setAnnouncementOpen] = useState(false);
+  // Feed filter — null means no filter, so the feed shows everything (notes and
+  // parcel posts together). Picking one narrows to it; picking it again clears
+  // back to null, which is what the "×" on the active chip does.
+  const [feedFilter, setFeedFilter] = useState<"parcel" | "notes" | null>(null);
+  const toggleFeedFilter = (next: "parcel" | "notes") =>
+    setFeedFilter((prev) => (prev === next ? null : next));
+  // Speed-dial state for the floating "+"
+  const [fabOpen, setFabOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   // Board notes are static editorial cards, not feed content — kept here only so
   // the open sheet shares the same body scroll lock as the other modals.
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [contactCopied, setContactCopied] = useState(false);
-  const [createdToastOpen, setCreatedToastOpen] = useState(false);
+  // Confirmation toast. Holds the message rather than a flag, because the two
+  // composers confirm with different copy.
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   // Contact handles for the open post. Never part of the feed payload — fetched
@@ -69,7 +84,9 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const pendingAddPostRef = React.useRef(false);
+  // Which composer to open once login completes — both kinds of ad are gated
+  // behind auth, so the choice made at the speed dial has to survive the modal.
+  const pendingComposeRef = React.useRef<"parcel" | "announcement" | null>(null);
 
   // Track auth session so add-post can be gated behind Telegram login
   useEffect(() => {
@@ -84,11 +101,16 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const handleAddPostClick = () => {
+  const openComposer = (kind: "parcel" | "announcement") => {
+    if (kind === "parcel") setFormOpen(true);
+    else setAnnouncementOpen(true);
+  };
+
+  const handleComposeClick = (kind: "parcel" | "announcement") => {
     if (session) {
-      setFormOpen(true);
+      openComposer(kind);
     } else {
-      pendingAddPostRef.current = true;
+      pendingComposeRef.current = kind;
       setLoginOpen(true);
     }
   };
@@ -150,7 +172,8 @@ export default function App() {
   // behind the overlay (the cause of the "shaking" background), and restores the
   // exact prior scroll position on close so the user doesn't jump.
   useEffect(() => {
-    const isModalOpen = selectedPost !== null || selectedNote !== null || formOpen;
+    const isModalOpen =
+      selectedPost !== null || selectedNote !== null || formOpen || announcementOpen;
     if (!isModalOpen) return;
 
     const scrollY = window.scrollY;
@@ -173,7 +196,7 @@ export default function App() {
       body.style.paddingRight = "";
       window.scrollTo(0, scrollY);
     };
-  }, [selectedPost, selectedNote, formOpen]);
+  }, [selectedPost, selectedNote, formOpen, announcementOpen]);
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -200,9 +223,14 @@ export default function App() {
     // The contact handle is deliberately left out of the share text: it would
     // republish someone's phone number into whatever app the link is sent to.
     // The recipient opens the post and reveals it themselves.
-    const shareText = selectedPost.type === "traveler"
-      ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman.`
-      : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak.`;
+    //
+    // An announcement has no cities and no cargo, so it shares its headline
+    // rather than the parcel sentence, which would render as "undefined → …".
+    const shareText = selectedPost.type === "announcement"
+      ? `Elchi: ${selectedPost.headline}`
+      : selectedPost.type === "traveler"
+        ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman.`
+        : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak.`;
 
     const shareTitle = t.shareTitle || "Elchi e'lon taxtasi";
 
@@ -269,6 +297,11 @@ export default function App() {
       const params = new URLSearchParams({
         from: route.from,
         to: route.to,
+        // Filtering happens in SQL so paging stays correct — a client-side
+        // filter would leave the offsets counting rows the user can't see.
+        // "all" has to be explicit: the API defaults to parcels so that older
+        // bundles, which have no card for an announcement, never receive one.
+        type: feedFilter === "parcel" ? "parcel" : feedFilter === "notes" ? "announcement" : "all",
         limit: String(PAGE_SIZE),
         offset: String(append ? posts.length : 0),
       });
@@ -290,12 +323,12 @@ export default function App() {
     }
   };
 
-  // Refetch from page 1 whenever the route changes, and when the session
-  // changes so is_mine is recomputed for the new viewer.
+  // Refetch from page 1 whenever the route or the feed filter changes, and when
+  // the session changes so is_mine is recomputed for the new viewer.
   useEffect(() => {
     fetchPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route.from, route.to, session?.user?.id]);
+  }, [route.from, route.to, feedFilter, session?.user?.id]);
 
   // Pull the open post's contact handles. Logged-out viewers get nothing to
   // fetch — the reveal is gated server-side too, so this is UI only.
@@ -333,13 +366,27 @@ export default function App() {
     localStorage.setItem("elchi_locale", newLocale);
   };
 
+  const setToast = (message: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Drop a pending dismissal if the app unmounts while a toast is up.
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
   const handlePostSubmitSuccess = () => {
     setFormOpen(false);
     fetchPosts(); // Refresh feed with the new post
-    setCreatedToastOpen(true);
-    setTimeout(() => {
-      setCreatedToastOpen(false);
-    }, 4000);
+    setToast(t.toastPostCreated);
+  };
+
+  const handleAnnouncementSubmitSuccess = () => {
+    setAnnouncementOpen(false);
+    fetchPosts(); // Refresh feed with the new announcement
+    setToast(t.toastAnnouncementCreated || t.toastPostCreated);
   };
 
   const [deleting, setDeleting] = useState(false);
@@ -390,8 +437,10 @@ export default function App() {
   };
 
   // Human-friendly date inside detail modal
-  const formatDetailDate = (dateStr: string) => {
-    if (dateStr === "flexible") {
+  const formatDetailDate = (dateStr: string | null) => {
+    // Null is how "no fixed date" is stored. The "flexible" string is the older
+    // wire form, kept so rows written before that changed still read correctly.
+    if (!dateStr || dateStr === "flexible") {
       return locale === "uz" ? "Kelishiladi" : locale === "ru" ? "По договорённости" : "Flexible";
     }
     try {
@@ -471,7 +520,7 @@ export default function App() {
                 if (session) {
                   setProfileOpen(true);
                 } else {
-                  pendingAddPostRef.current = false;
+                  pendingComposeRef.current = null;
                   setLoginOpen(true);
                 }
               }}
@@ -495,18 +544,41 @@ export default function App() {
           </h1>
         </section>
 
-        {/* Board notes — static intro/example cards, above and separate from the
-            live feed. Not posts: no author, no contact, unaffected by the route
-            filter. */}
-        <div className="pt-6">
-          <NotesCarousel locale={locale} onOpenNote={setSelectedNote} />
-        </div>
-
         {/* Posts Filter and Feed */}
         <section className="pt-2">
-          {/* Route line — the only heading the feed gets. Picking either country
-              filters the feed; the plane between them swaps the direction. */}
-          <div className="mb-5">
+          {/* Route line + feed filter chips. Picking a country filters the feed;
+              the chips narrow it to one kind of ad, and the "×" on an active
+              chip clears back to the mixed feed. */}
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-lg p-0.5 gap-0.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => toggleFeedFilter("parcel")}
+                aria-pressed={feedFilter === "parcel"}
+                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
+                  feedFilter === "parcel"
+                    ? "bg-[#1B2A4A] text-[#FCFBF6] shadow-sm"
+                    : "text-[#5A6272] hover:text-[#1B2A4A]"
+                }`}
+              >
+                {t.feedTabParcelLabel || "Pochta"}
+                {feedFilter === "parcel" && <X className="w-3 h-3" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleFeedFilter("notes")}
+                aria-pressed={feedFilter === "notes"}
+                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
+                  feedFilter === "notes"
+                    ? "bg-[#C79A3E] text-[#1B2A4A] shadow-sm"
+                    : "text-[#5A6272] hover:text-[#1B2A4A]"
+                }`}
+              >
+                {t.feedTabNotesLabel || "E'lonlar"}
+                {feedFilter === "notes" && <X className="w-3 h-3" />}
+              </button>
+            </div>
+
             <RouteSelector
               locale={locale}
               fromCode={route.from}
@@ -515,7 +587,11 @@ export default function App() {
             />
           </div>
 
-          {/* Posts Feed */}
+          {/* The board's own explainer. Not a post: no author, no contact, and
+              unaffected by both the route filter and the feed chips — a new
+              visitor should meet it whichever view they land on. */}
+          <NotesCarousel locale={locale} onOpenNote={setSelectedNote} />
+
           {loading ? (
             <div className="flex flex-col gap-4">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -538,15 +614,27 @@ export default function App() {
             </div>
           ) : posts.length > 0 ? (
             <div className="flex flex-col gap-4">
-              {posts.map((post) => (
-                <BoardingPass
-                  key={post.id}
-                  post={post}
-                  t={t}
-                  locale={locale}
-                  onOpen={() => setSelectedPost(post)}
-                />
-              ))}
+              {/* Both kinds of ad share the feed and the same card geometry;
+                  only the type decides which component renders. */}
+              {posts.map((post) =>
+                post.type === "announcement" ? (
+                  <AnnouncementCard
+                    key={post.id}
+                    post={post}
+                    t={t}
+                    locale={locale}
+                    onOpen={() => setSelectedPost(post)}
+                  />
+                ) : (
+                  <BoardingPass
+                    key={post.id}
+                    post={post}
+                    t={t}
+                    locale={locale}
+                    onOpen={() => setSelectedPost(post)}
+                  />
+                ),
+              )}
 
               {hasMore ? (
                 <div className="mt-2 flex justify-center">
@@ -565,13 +653,7 @@ export default function App() {
                 </div>
               ) : null}
             </div>
-          ) : (
-            <div className="text-center py-16 bg-[#FCFBF6] rounded-xl border border-[#E9E5D8] px-6">
-              <Package className="w-12 h-12 text-[#8A8F98] mx-auto mb-3" />
-              <p className="text-[15px] font-bold text-[#1B2A4A] m-0 mb-1">{t.emptyStateTitle || "E'lonlar topilmadi"}</p>
-              <p className="text-sm text-[#8A8F98] m-0">{t.emptyStateText || "Hozircha ushbu yo'nalishda faol e'lonlar mavjud emas."}</p>
-            </div>
-          )}
+          ) : null}
 
           {/* Disclaimer Banner */}
           <div className="mt-6 p-3 bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] rounded-r-xl text-[13px] text-[#6B7280] leading-snug shadow-sm">
@@ -581,16 +663,14 @@ export default function App() {
         </section>
       </main>
 
-      {/* Floating Action Button */}
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center z-30 pointer-events-none">
-        <button
-          onClick={handleAddPostClick}
-          className="pointer-events-auto bg-[#1B2A4A] text-[#FCFBF6] border-none py-3.5 pl-4 pr-6 rounded-full font-bold text-[15px] flex items-center gap-3 cursor-pointer shadow-lg hover:-translate-y-0.5 hover:shadow-xl transition-all"
-        >
-          <span className="w-6 h-6 bg-[#C79A3E] text-[#1B2A4A] rounded-full flex items-center justify-center text-lg font-black">+</span>
-          {t.postAdBtn}
-        </button>
-      </div>
+      {/* Floating composer — the "+" fans out into the two kinds of ad */}
+      <PostFab
+        t={t}
+        open={fabOpen}
+        onToggle={setFabOpen}
+        onPickParcel={() => handleComposeClick("parcel")}
+        onPickNote={() => handleComposeClick("announcement")}
+      />
 
       {/* Post Creation Bottom Sheet Modal */}
       {formOpen && (
@@ -602,6 +682,16 @@ export default function App() {
         />
       )}
 
+      {/* Announcement Bottom Sheet Modal — the plain "note" ad */}
+      {announcementOpen && (
+        <AnnouncementFormModal
+          t={t}
+          locale={locale}
+          onClose={() => setAnnouncementOpen(false)}
+          onSubmitSuccess={handleAnnouncementSubmitSuccess}
+        />
+      )}
+
       {/* Login Modal — Telegram only, required to add a post */}
       {loginOpen && (
         <LoginModal
@@ -610,9 +700,10 @@ export default function App() {
           onClose={() => setLoginOpen(false)}
           onLoginSuccess={() => {
             setLoginOpen(false);
-            if (pendingAddPostRef.current) {
-              pendingAddPostRef.current = false;
-              setFormOpen(true);
+            const pending = pendingComposeRef.current;
+            if (pending) {
+              pendingComposeRef.current = null;
+              openComposer(pending);
             }
           }}
         />
@@ -655,26 +746,35 @@ export default function App() {
                 <X className="w-4 h-4" />
               </button>
 
-              <div 
+              <div
                 className="font-mono text-[10.5px] uppercase px-3 py-1.5 rounded inline-flex items-center gap-1.5"
                 style={{
-                  background: selectedPost.type === "traveler" ? "#C79A3E" : "#C23B3B",
+                  background:
+                    selectedPost.type === "request" ? "#C23B3B" : "#C79A3E",
                   color: "#1B2A4A",
                   fontWeight: 700
                 }}
               >
-                {selectedPost.type === "traveler" ? (
+                {selectedPost.type === "announcement" ? (
+                  <StickyNote className="w-3.5 h-3.5 text-[#1B2A4A]" />
+                ) : selectedPost.type === "traveler" ? (
                   <Briefcase className="w-3.5 h-3.5 text-[#1B2A4A]" />
                 ) : (
                   <Package className="w-3.5 h-3.5 text-[#1B2A4A]" />
                 )}
-                {selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
+                {selectedPost.type === "announcement"
+                  ? (t.announcementTag || "E'lon")
+                  : selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
               </div>
 
               {/* Destinations (country route from the stored ISO codes; cities shown as detail) */}
               {(() => {
                 const { hubFrom, hubTo } = getHubRoute(selectedPost);
-                const showActualCities = selectedPost.from_city !== hubFrom || selectedPost.to_city !== hubTo;
+                // Cities are absent on an announcement, so the null check comes
+                // first — otherwise "undefined → undefined" renders here.
+                const showActualCities =
+                  Boolean(selectedPost.from_city && selectedPost.to_city) &&
+                  (selectedPost.from_city !== hubFrom || selectedPost.to_city !== hubTo);
                 return (
                   <>
                     <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">
@@ -695,23 +795,43 @@ export default function App() {
                   </>
                 );
               })()}
-              <div className="font-mono text-xs opacity-70 mt-1.5 tracking-wider">
-                {selectedPost.type === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest} · {formatDetailDate(selectedPost.date)}
-              </div>
+              {/* An announcement has no travel date; it leads with its headline. */}
+              {selectedPost.type === "announcement" ? (
+                <div className="font-bold text-[15px] mt-2 [overflow-wrap:anywhere]">
+                  {selectedPost.headline}
+                </div>
+              ) : (
+                <div className="font-mono text-xs opacity-70 mt-1.5 tracking-wider">
+                  {selectedPost.type === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest} · {formatDetailDate(selectedPost.date)}
+                </div>
+              )}
             </div>
 
             {/* Body of details */}
             <div className="px-6 pt-6">
-              <div className="bg-[#F2EFE6] rounded-xl p-3.5 mb-5">
-                <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
-                <div className="font-bold text-base text-[#1B2A4A]">{localizeWeight(selectedPost.weight, locale)}</div>
-              </div>
+              {/* Cargo box is parcel-only — an announcement carries none. */}
+              {selectedPost.type !== "announcement" && (
+                <div className="bg-[#F2EFE6] rounded-xl p-3.5 mb-5">
+                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
+                  <div className="font-bold text-base text-[#1B2A4A]">{localizeWeight(selectedPost.weight, locale)}</div>
+                </div>
+              )}
 
               {selectedPost.note && (
                 <div className="mb-5">
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-2">{t.noteLabel.replace(" (ixtiyoriy)", "")}</div>
-                  <div className="text-[14px] text-[#3A4256] leading-relaxed bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] p-4 rounded-r-lg italic [overflow-wrap:anywhere] whitespace-pre-wrap max-h-[40vh] overflow-y-auto">
-                    "{selectedPost.note}"
+                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-2">
+                    {selectedPost.type === "announcement"
+                      ? (t.announcementBodyLabel || t.noteLabel.replace(" (ixtiyoriy)", ""))
+                      : t.noteLabel.replace(" (ixtiyoriy)", "")}
+                  </div>
+                  {/* On an announcement this is the ad's body copy, not a remark
+                      on someone else's trip, so it drops the quotes and italics. */}
+                  <div
+                    className={`text-[14px] text-[#3A4256] leading-relaxed bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] p-4 rounded-r-lg [overflow-wrap:anywhere] whitespace-pre-wrap max-h-[40vh] overflow-y-auto ${
+                      selectedPost.type === "announcement" ? "" : "italic"
+                    }`}
+                  >
+                    {selectedPost.type === "announcement" ? selectedPost.note : `"${selectedPost.note}"`}
                   </div>
                 </div>
               )}
@@ -901,7 +1021,7 @@ export default function App() {
       )}
 
       {/* Toast Notification for successful post creation */}
-      {createdToastOpen && (
+      {toastMessage && (
         <div 
           id="post-created-toast"
           className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-[#1B2A4A] text-white px-5 py-3.5 rounded-xl shadow-2xl border border-white/10 flex items-center gap-3.5 animate-popin transition-all"
@@ -911,11 +1031,11 @@ export default function App() {
             <Sparkles className="w-4 h-4 text-[#C79A3E]" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold m-0">{t.toastPostCreated}</p>
+            <p className="text-sm font-semibold m-0">{toastMessage}</p>
           </div>
-          <button 
+          <button
             type="button"
-            onClick={() => setCreatedToastOpen(false)}
+            onClick={() => setToastMessage(null)}
             className="text-white/60 hover:text-white bg-transparent border-none p-1 rounded-full cursor-pointer hover:bg-white/10 transition-colors flex-shrink-0"
           >
             <X className="w-4 h-4" />

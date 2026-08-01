@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Locale } from "../types";
 import { Note, NOTES } from "./data";
 import { NoteCard } from "./NoteCard";
@@ -13,10 +14,11 @@ interface NotesCarouselProps {
 /**
  * Horizontally scrollable row of board notes.
  *
- * Layout is CSS scroll-snap: one card per viewport on mobile, and 80% of the
- * track from `sm` up so the next card peeks in at ~20% and the row reads as
- * scrollable without a visible scrollbar. The dots below are driven by, and
- * drive, the same scroll position.
+ * Layout is CSS scroll-snap, one full-width card at a time. Small chevrons on
+ * the card's edges are the only "there's more" affordance — purely visual, no
+ * click handler — and appear on whichever side still has a card to swipe to
+ * (right chevron while not on the last note, left chevron once scrolled past
+ * the first).
  */
 export const NotesCarousel: React.FC<NotesCarouselProps> = ({
   locale,
@@ -69,21 +71,13 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
     };
   }, [syncActive, notes.length]);
 
-  const scrollToIndex = (i: number) => {
-    const track = trackRef.current;
-    const el = itemRefs.current[i];
-    if (!track || !el) return;
-    track.scrollTo({ left: el.offsetLeft, behavior: "smooth" });
-    setActive(i);
-  };
-
   if (notes.length === 0) return null;
 
   return (
-    <section aria-label="Board notes" className="mb-6">
+    <section aria-label="Board notes" className="relative mb-4">
       <div
         ref={trackRef}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {notes.map((note, i) => (
           <div
@@ -91,30 +85,27 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
             ref={(el) => {
               itemRefs.current[i] = el;
             }}
-            // Full width on mobile; 80% of the track from `sm` up, which leaves
-            // the following card visible as a ~20% sliver.
-            className="min-w-0 flex-[0_0_100%] snap-start sm:flex-[0_0_80%]"
+            // Full width at every breakpoint so a note lines up with the post
+            // cards it now sits above.
+            className="min-w-0 flex-[0_0_100%] snap-start"
           >
             <NoteCard note={note} locale={locale} onOpen={() => onOpenNote(note)} />
           </div>
         ))}
       </div>
 
-      {notes.length > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-2">
-          {notes.map((note, i) => (
-            <button
-              key={note.id}
-              type="button"
-              onClick={() => scrollToIndex(i)}
-              aria-label={`${note.content[locale].title}`}
-              aria-current={i === active}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === active ? "w-5 bg-[#C23B3B]" : "w-2 bg-[#D8D3C4] hover:bg-[#B9B3A3]"
-              }`}
-            />
-          ))}
-        </div>
+      {notes.length > 1 && active > 0 && (
+        <ChevronLeft
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B2A4A]/40"
+        />
+      )}
+
+      {notes.length > 1 && active < notes.length - 1 && (
+        <ChevronRight
+          aria-hidden="true"
+          className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B2A4A]/40"
+        />
       )}
     </section>
   );

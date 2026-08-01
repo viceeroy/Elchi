@@ -26,8 +26,11 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     getCountry(post.to_country) ?? COUNTRIES.find((c) => c.code !== fromCountry.code)!;
   const hubFrom = fromCountry.names[locale];
   const hubTo = toCountry.names[locale];
-  // Free-text cities are display-only detail under the country route
-  const showActualCities = post.from_city !== hubFrom || post.to_city !== hubTo;
+  // Free-text cities are display-only detail under the country route. Absent
+  // entirely on an announcement, which is why the null check comes first.
+  const showActualCities =
+    Boolean(post.from_city && post.to_city) &&
+    (post.from_city !== hubFrom || post.to_city !== hubTo);
 
   // Render sticker styles with distinct airmail tilt angle
   const stickerStyle = {
@@ -60,8 +63,10 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   // author's, regardless of which locale the post was created in.
   const physicalWeight = (() => {
     const parts: string[] = [];
-    const kg = post.weight.match(/(\d+)\s*kg/i);
-    const lug = post.weight.match(/(\d+)\s*chamadon/i);
+    // Optional chaining because a deep link can put an announcement — which has
+    // no cargo — in front of this component.
+    const kg = post.weight?.match(/(\d+)\s*kg/i);
+    const lug = post.weight?.match(/(\d+)\s*chamadon/i);
     if (kg && parseInt(kg[1], 10) > 0) parts.push(`${kg[1]} kg`);
     if (lug) {
       const n = parseInt(lug[1], 10);
@@ -76,8 +81,10 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   })();
 
   // Human friendly date helper
-  const formatDate = (dateStr: string) => {
-    if (dateStr === "flexible") {
+  const formatDate = (dateStr: string | null) => {
+    // Null is how "no fixed date" is stored. The "flexible" string is the older
+    // wire form, kept so rows written before that changed still read correctly.
+    if (!dateStr || dateStr === "flexible") {
       return locale === "uz" ? "Kelishiladi" : locale === "ru" ? "По договорённости" : "Flexible";
     }
     try {
