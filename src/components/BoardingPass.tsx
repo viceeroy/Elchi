@@ -1,6 +1,6 @@
 import React from "react";
 import { Post, Locale, Translations } from "../types";
-import { Briefcase, Package } from "lucide-react";
+import { Briefcase, Package, ArrowRight } from "lucide-react";
 import { COUNTRIES, getCountry } from "../constants";
 
 interface BoardingPassProps {
@@ -193,7 +193,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
             {formatDate(post.date)}
           </span>
           <span className="font-sans text-[10px] md:text-[11px] font-semibold text-[#C79A3E] mt-1 flex items-center justify-center gap-1">
-            <span className="text-[9px]">➔</span> <span className="truncate">{post.to_city}</span>
+            <ArrowRight className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{post.to_city}</span>
           </span>
         </div>
 

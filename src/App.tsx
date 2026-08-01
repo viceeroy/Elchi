@@ -646,8 +646,9 @@ export default function App() {
                   </button>
                 </div>
               ) : posts.length > PAGE_SIZE ? (
-                <div className="mt-4 text-center text-xs font-mono text-[#8A8F98] tracking-wider py-2">
-                  ✓ {t.allLoaded || "Barcha e'lonlar yuklandi"}
+                <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs font-mono text-[#8A8F98] tracking-wider py-2">
+                  <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                  {t.allLoaded || "Barcha e'lonlar yuklandi"}
                 </div>
               ) : null}
             </div>
@@ -942,9 +943,12 @@ export default function App() {
                 const contact2Info = revealedContact.contact2
                   ? getContactLinkAndLabel(revealedContact.contact2, revealedContact.contact2_type)
                   : null;
+                // No trailing ↗/✆ glyph: each button already renders the Send
+                // or Phone icon beside the label, so the glyph only said the
+                // same thing twice in a second visual language.
                 const actionLabel = (isTg: boolean) => isTg
-                  ? (locale === "uz" ? "Telegramda ochish ↗" : locale === "ru" ? "Открыть в Telegram ↗" : "Open in Telegram ↗")
-                  : (locale === "uz" ? "Qo'ng'iroq qilish ✆" : locale === "ru" ? "Позвонить ✆" : "Call ✆");
+                  ? (locale === "uz" ? "Telegramda ochish" : locale === "ru" ? "Открыть в Telegram" : "Open in Telegram")
+                  : (locale === "uz" ? "Qo'ng'iroq qilish" : locale === "ru" ? "Позвонить" : "Call");
 
                 return (
                   <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">

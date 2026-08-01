@@ -3,7 +3,7 @@ import { Locale, Translations, PostType } from "../types";
 import { COUNTRIES } from "../constants";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
-import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle } from "lucide-react";
+import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle, ArrowRight } from "lucide-react";
 
 // Phone fields keep digits and the punctuation used by the +998/+82 formats
 // in the placeholder; letters and everything else are dropped as the user types.
@@ -412,7 +412,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 </select>
               </div>
 
-              <span className="flex items-center justify-center text-[#C79A3E] font-bold text-lg pb-2.5 flex-shrink-0">➔</span>
+              <ArrowRight className="w-5 h-5 text-[#C79A3E] pb-0.5 mb-2 flex-shrink-0 self-center" />
 
               <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
@@ -451,7 +451,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 />
               </div>
 
-              <span className="flex items-center justify-center text-[#C79A3E] font-bold text-lg pb-2.5 flex-shrink-0">➔</span>
+              <ArrowRight className="w-5 h-5 text-[#C79A3E] pb-0.5 mb-2 flex-shrink-0 self-center" />
 
               <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
@@ -584,7 +584,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                         onClick={() => setWeightLuggage(0)}
                         className="text-gray-300 hover:text-white"
                       >
-                        ✕
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
@@ -830,9 +830,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   <button
                     type="button"
                     onClick={() => { setShowContact2(false); setContact2(""); }}
-                    className="text-[#8A8F98] hover:text-[#C23B3B] text-[11px] font-mono font-bold"
+                    className="text-[#8A8F98] hover:text-[#C23B3B]"
                   >
-                    ✕
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 <div className="relative">

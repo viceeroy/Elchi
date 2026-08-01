@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Briefcase, Package, StickyNote } from "lucide-react";
 import { Translations } from "../types";
 
 interface PostFabProps {
@@ -46,7 +46,9 @@ export const PostFab: React.FC<PostFabProps> = ({
   const options = [
     {
       key: "traveler",
-      emoji: "✈️",
+      // The same three lucide marks the feed and the detail sheet use for the
+      // three post types, so an icon means one thing across the whole board.
+      Icon: Briefcase,
       label: t.fabTravelerLabel || "Uchaman",
       // Blue, red and gold exactly as the traveler/request/note stamps on the
       // cards (see BoardingPass, AnnouncementCard), so the dial is
@@ -58,7 +60,7 @@ export const PostFab: React.FC<PostFabProps> = ({
     },
     {
       key: "request",
-      emoji: "🧳",
+      Icon: Package,
       label: t.fabRequestLabel || "Pochta",
       color: "#C23B3B",
       textColor: "#FCFBF6",
@@ -67,7 +69,7 @@ export const PostFab: React.FC<PostFabProps> = ({
     },
     {
       key: "note",
-      emoji: "📢",
+      Icon: StickyNote,
       // Gold carries dark text — the stamp colour is light enough that the
       // cream used on the other two would not hold contrast.
       label: t.fabNoteLabel || "E'lon",
@@ -119,11 +121,14 @@ export const PostFab: React.FC<PostFabProps> = ({
               >
                 {opt.label}
               </span>
+              {/* Solid disc in the type's stamp colour, carrying the type's
+                  icon — the same badge the board note's explainer uses, so the
+                  three kinds look identical wherever they are listed. */}
               <span
-                style={{ borderColor: opt.color }}
-                className="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center text-[22px] leading-none bg-[#FCFBF6] border-2 border-dashed shadow-lg transition-transform group-hover:scale-105"
+                style={{ background: opt.color, color: opt.textColor }}
+                className="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center shadow-lg transition-transform group-hover:scale-105"
               >
-                <span aria-hidden="true">{opt.emoji}</span>
+                <opt.Icon className="w-5 h-5" aria-hidden="true" />
               </span>
             </button>
           ))}

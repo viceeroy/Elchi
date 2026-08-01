@@ -1,5 +1,5 @@
 import React from "react";
-import { Phone, Send, AlertCircle } from "lucide-react";
+import { Phone, Send, AlertCircle, X } from "lucide-react";
 import { ContactMethod, Locale, Translations } from "../types";
 
 // Phone fields keep digits and the punctuation used by the +998/+82 formats
@@ -205,9 +205,9 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                   onShowContact2Change(false);
                   onContact2Change("");
                 }}
-                className="text-[#8A8F98] hover:text-[#C23B3B] text-[11px] font-mono font-bold"
+                className="text-[#8A8F98] hover:text-[#C23B3B]"
               >
-                ✕
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="relative">
