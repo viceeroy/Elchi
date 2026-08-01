@@ -577,6 +577,19 @@ export default function App() {
                 {t.feedTabParcelLabel || "Pochta"}
                 {feedFilter === "parcel" && <X className="w-3 h-3" />}
               </button>
+              <button
+                type="button"
+                onClick={() => toggleFeedFilter("notes")}
+                aria-pressed={feedFilter === "notes"}
+                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
+                  feedFilter === "notes"
+                    ? "bg-[#C79A3E] text-[#1B2A4A] shadow-sm"
+                    : "text-[#5A6272] hover:text-[#1B2A4A]"
+                }`}
+              >
+                {t.feedTabNotesLabel || "E'lonlar"}
+                {feedFilter === "notes" && <X className="w-3 h-3" />}
+              </button>
             </div>
 
             <RouteSelector
