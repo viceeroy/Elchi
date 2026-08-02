@@ -154,9 +154,14 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
         // headline is sent; the API stores null and the card reads the text.
         headline: theme.trim() || null,
         note: text.trim(),
-        // The single country travels as from_country — the column the feed's
-        // country filter reads. The API leaves to_country null.
+        // Two facts, not one. from_country is where the service sits; the API
+        // leaves to_country null. corridor_country is which board it is listed
+        // on — the corridor the author was browsing when they hit "+". They are
+        // the same code today because the composer asks neither question, but
+        // the feed matches on the corridor, so a note never leaks onto a
+        // corridor that opens later.
         from_country: country,
+        corridor_country: country,
         // Both empty when the author left the field blank. The API stores
         // contact_type NULL then, which is what the detail sheet branches on.
         contact: contact.trim(),

@@ -54,6 +54,23 @@ export const COUNTRIES: Country[] = [
 export const getCountry = (code: string | null | undefined): Country | undefined =>
   COUNTRIES.find((c) => c.code === code);
 
+// True when a typed city is nothing more than the country's own hub — "Incheon"
+// under Koreya, "Toshkent" under O'zbekiston. A card shows its cities beneath
+// the country route to add detail; when both cities are just the hubs there is
+// no detail to add, and the line repeats the route in smaller type.
+//
+// Every locale's spelling counts, not the viewer's: the author picked the
+// wording when they wrote the post, and a Russian-language row saying "Инчхон"
+// is the same hub to an English-language reader.
+export const isHubCity = (
+  country: Country,
+  city: string | null | undefined,
+): boolean => {
+  const typed = city?.trim().toLowerCase();
+  if (!typed) return false;
+  return Object.values(country.cityNames).some((name) => name.toLowerCase() === typed);
+};
+
 // Every corridor the board serves has Uzbekistan on one side, so the Uzbek side
 // is never a choice — it is implied by whichever other country is picked.
 export const HOME_COUNTRY = "UZ";

@@ -1,7 +1,7 @@
 import React from "react";
 import { Post, Locale, Translations } from "../types";
 import { Briefcase, Package, ArrowRight } from "lucide-react";
-import { COUNTRIES, getCountry } from "../constants";
+import { COUNTRIES, getCountry, isHubCity } from "../constants";
 
 interface BoardingPassProps {
   post: Post;
@@ -28,9 +28,15 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   const hubTo = toCountry.names[locale];
   // Free-text cities are display-only detail under the country route. Absent
   // entirely on an announcement, which is why the null check comes first.
+  //
+  // The second half hides the line when both cities are just the hubs the
+  // country names already imply (Incheon → Toshkent under Koreya ✈
+  // O'zbekiston). It compares against the registry's hub CITY names — the
+  // earlier version compared them against hubFrom/hubTo, which are country
+  // names, so a city could never equal one and the line always showed.
   const showActualCities =
     Boolean(post.from_city && post.to_city) &&
-    (post.from_city !== hubFrom || post.to_city !== hubTo);
+    (!isHubCity(fromCountry, post.from_city) || !isHubCity(toCountry, post.to_city));
 
   // Render sticker styles with distinct airmail tilt angle
   const stickerStyle = {

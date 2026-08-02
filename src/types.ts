@@ -17,6 +17,12 @@ export interface Post {
   // Nullable only for rows created before the countries migration.
   from_country: string | null;
   to_country: string | null;
+  // Which corridor an announcement is listed under — the far country of the
+  // corridor its author was browsing. Distinct from from_country (where the
+  // service sits), because every corridor has Uzbekistan on the near side and
+  // a note sitting there would otherwise belong to all of them. Null on parcel
+  // posts, whose corridor is their route.
+  corridor_country: string | null;
   // Free-text cities — display only, never used for filtering. Null on
   // announcements, which apply to a corridor rather than a city pair.
   from_city: string | null;

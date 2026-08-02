@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Post, PostContact, Locale, PostType, ContactMethod } from "./types";
 import { telegramUsername, phoneDialString } from "../lib/contact";
 import { translations, defaultLocale } from "./translations";
-import { COUNTRIES, getCountry } from "./constants";
+import { COUNTRIES, getCountry, isHubCity } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
 import { AnnouncementCard } from "./components/AnnouncementCard";
 import { RouteSelector } from "./components/RouteSelector";
@@ -14,19 +14,13 @@ import { ProfileSheet } from "./components/ProfileSheet";
 import { NotesCarousel, NoteSheet, type Note } from "./notes";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
-import { Send, Globe, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, StickyNote, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
+import { Send, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, StickyNote, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
-
-const LOCALE_LABELS: Record<Locale, string> = {
-  uz: "O'zbekcha",
-  ru: "Русский",
-  en: "English",
-};
 
 // Traveler posts store the luggage count as a neutral "chamadon" token
 // regardless of the author's locale (see PostFormModal). Re-localize it here
-// from the count so it matches the viewer's current locale rather than
-// freezing to whichever language the post was created in.
+// from the count so it reads as a proper Uzbek phrase rather than the raw
+// token the composer wrote.
 // The feed is paged server-side, so a bounded response can't be turned into a
 // full dump of the board.
 const PAGE_SIZE = 24;
@@ -42,10 +36,10 @@ function localizeWeight(weight: string, locale: Locale): string {
 }
 
 export default function App() {
-  const [locale, setLocale] = useState<Locale>(() => {
-    const saved = localStorage.getItem("elchi_locale");
-    return (saved as Locale) || defaultLocale;
-  });
+  // The site serves an Uzbek-speaking audience only, so the language is fixed.
+  // The translations table keeps its per-locale shape (and the child components
+  // keep their `locale` prop) — there is simply nothing that switches it.
+  const locale: Locale = defaultLocale;
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,8 +78,6 @@ export default function App() {
   const [revealedContact, setRevealedContact] = useState<PostContact | null>(null);
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const langMenuRef = React.useRef<HTMLDivElement>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -125,30 +117,12 @@ export default function App() {
     }
   };
 
-  // Close language dropdown on outside click
-  useEffect(() => {
-    if (!langMenuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
-        setLangMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [langMenuOpen]);
-
   // Active translation dictionary
   const t = translations[locale];
 
-  // Keep the document title, meta description and <html lang> in sync with the
-  // chosen locale — the static index.html ships Uzbek, so RU/EN users would
-  // otherwise see Uzbek metadata in the tab and in search/social previews.
-  useEffect(() => {
-    document.title = t.metaTitle;
-    document.documentElement.lang = locale;
-    const desc = document.querySelector('meta[name="description"]');
-    if (desc) desc.setAttribute("content", t.metaDescription);
-  }, [locale, t.metaTitle, t.metaDescription]);
+  // The document title, meta description and <html lang> are the Uzbek strings
+  // already shipped in the static index.html, so there is nothing to sync at
+  // runtime.
 
   // Handle URL deep linking. Resolved against the API directly rather than the
   // loaded feed: with server-side paging a shared post may sit past the first
@@ -372,11 +346,6 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPost?.id, session?.user?.id]);
 
-  const changeLocale = (newLocale: Locale) => {
-    setLocale(newLocale);
-    localStorage.setItem("elchi_locale", newLocale);
-  };
-
   const setToast = (message: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToastMessage(message);
@@ -476,11 +445,13 @@ export default function App() {
     }
   };
 
-  // Route headline = localized country names from the stored ISO codes
+  // Route headline = localized country names from the stored ISO codes. The
+  // registry entries come back alongside the names so the caller can also ask
+  // whether the post's cities are just those countries' hubs.
   const getHubRoute = (post: Post) => {
     const from = getCountry(post.from_country) ?? COUNTRIES[0];
     const to = getCountry(post.to_country) ?? COUNTRIES.find((c) => c.code !== from.code)!;
-    return { hubFrom: from.names[locale], hubTo: to.names[locale] };
+    return { from, to, hubFrom: from.names[locale], hubTo: to.names[locale] };
   };
 
   return (
@@ -497,37 +468,6 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Language Switcher */}
-            <div className="relative" ref={langMenuRef}>
-              <button
-                onClick={() => setLangMenuOpen((v) => !v)}
-                aria-label="Change language"
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E4E0D2] bg-[#F2EFE6] text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
-              >
-                <Globe size={16} />
-              </button>
-              {langMenuOpen && (
-                <div className="absolute right-0 top-[calc(100%+6px)] bg-[#FCFBF6] border border-[#E4E0D2] rounded-lg shadow-lg py-1 min-w-[140px] z-50">
-                  {(["uz", "ru", "en"] as Locale[]).map((loc) => (
-                    <button
-                      key={loc}
-                      onClick={() => {
-                        changeLocale(loc);
-                        setLangMenuOpen(false);
-                      }}
-                      className={`w-full text-left text-[13px] px-3 py-1.5 transition-all ${
-                        locale === loc
-                          ? "font-bold text-[#1B2A4A] bg-[#F2EFE6]"
-                          : "text-[#5A6272] hover:bg-[#F2EFE6]"
-                      }`}
-                    >
-                      {LOCALE_LABELS[loc]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             <button
               onClick={() => {
                 if (session) {
@@ -793,10 +733,14 @@ export default function App() {
                 </div>
               ) : (
                 (() => {
-                  const { hubFrom, hubTo } = getHubRoute(selectedPost);
+                  const { from, to, hubFrom, hubTo } = getHubRoute(selectedPost);
+                  // Same rule as the feed card: the city line is extra detail
+                  // under the country route, so it is hidden when both cities
+                  // are only the hubs those countries already imply.
                   const showActualCities =
                     Boolean(selectedPost.from_city && selectedPost.to_city) &&
-                    (selectedPost.from_city !== hubFrom || selectedPost.to_city !== hubTo);
+                    (!isHubCity(from, selectedPost.from_city) ||
+                     !isHubCity(to, selectedPost.to_city));
                   return (
                     <>
                       <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">

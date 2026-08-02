@@ -21,6 +21,10 @@ const ALLOWED_COUNTRIES = new Set(['KR', 'UZ']);
 // is implied rather than requested. Mirrors HOME_COUNTRY in src/constants.ts.
 const HOME_COUNTRY = 'UZ';
 
+// The far countries — one per corridor, and what a corridor is named by. The
+// home country is on the near side of every one of them, so it never names one.
+const CORRIDOR_COUNTRIES = [...ALLOWED_COUNTRIES].filter((c) => c !== HOME_COUNTRY);
+
 // DEV ONLY — lets an unregistered visitor post while the composer is being
 // tested locally. Off unless ELCHI_DEV_NO_AUTH=1 AND a service-role key is
 // present, because bypassing the 401 alone achieves nothing: the RLS insert
@@ -48,7 +52,7 @@ function userScopedClient(token: string) {
 // Columns the board renders. Read from the `public_posts` view, which omits the
 // contact values and user_id entirely — those never travel in a list response.
 const PUBLIC_COLUMNS =
-  'id,type,direction,from_country,to_country,from_city,to_city,date,' +
+  'id,type,direction,from_country,to_country,corridor_country,from_city,to_city,date,' +
   'weight_kg,luggage_count,categories,category_other,weight,headline,note,' +
   'contact_type,contact2_type,has_contact2,created_at,expires_at';
 
@@ -219,8 +223,11 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
   // one both match. Direction is content on each individual post, never a filter.
   //
   // The two post types still read differently: a parcel travels FROM one country
-  // TO the other, while an announcement simply sits in one. So an announcement
-  // matches when it sits on either end of the corridor.
+  // TO the other, so its route identifies its corridor. An announcement only
+  // sits somewhere, and where it sits cannot identify a corridor — every
+  // corridor has Uzbekistan on the near side, so a Tashkent note would match all
+  // of them. It therefore carries the corridor it was posted under
+  // (corridor_country) and matches on that alone.
   //
   // `from`/`to` are the legacy directional parameters, still accepted so a
   // browser holding an older bundle keeps getting a filtered feed. Either side
@@ -242,14 +249,14 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
       `and(from_country.eq.${country},to_country.eq.${HOME_COUNTRY}),` +
       `and(from_country.eq.${HOME_COUNTRY},to_country.eq.${country})`;
     if (rawType === 'announcement') {
-      query = query.in('from_country', [country, HOME_COUNTRY]);
+      query = query.eq('corridor_country', country);
     } else if (rawType === 'parcel') {
       query = query.or(parcelPair);
     } else {
       // Mixed feed: each type keeps its own rule.
       query = query.or(
         `and(type.in.(traveler,request),or(${parcelPair})),` +
-        `and(type.eq.announcement,from_country.in.(${country},${HOME_COUNTRY}))`
+        `and(type.eq.announcement,corridor_country.eq.${country})`
       );
     }
   }
@@ -313,6 +320,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       direction,
       from_country,
       to_country,
+      corridor_country,
       from_city,
       to_city,
       date,
@@ -419,17 +427,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // between two different supported countries.
     let fromCountry = typeof from_country === 'string' ? from_country.toUpperCase() : null;
     let toCountry = typeof to_country === 'string' ? to_country.toUpperCase() : null;
+    let corridorCountry =
+      typeof corridor_country === 'string' ? corridor_country.toUpperCase() : null;
 
     if (isAnnouncement) {
       // An announcement sits in one country — it is a standing service, not a
       // delivery in a direction. The single country is stored in from_country
-      // (which is what the feed's country filter reads) and to_country is left
-      // null; anything the caller sent for it is discarded rather than trusted.
+      // and to_country is left null; anything the caller sent for it is
+      // discarded rather than trusted.
       toCountry = null;
       if (!fromCountry || !ALLOWED_COUNTRIES.has(fromCountry)) {
         return res.status(400).json({ error: 'Noto\'g\'ri davlat' });
       }
+
+      // Where it sits is NOT where it is listed. The board lists corridors and
+      // every corridor has Uzbekistan on the near side, so from_country alone
+      // cannot place a Tashkent note — it would have to belong to all of them.
+      // The composer sends the corridor the author was browsing.
+      //
+      // An older bundle sends no corridor at all, so one is derived: a note in
+      // the far country names its own corridor, and one at home falls back to
+      // the single live corridor. The moment a second corridor opens that
+      // fallback is genuinely ambiguous, and this returns 400 rather than
+      // picking a board for the author.
+      if (!corridorCountry) {
+        corridorCountry =
+          fromCountry !== HOME_COUNTRY ? fromCountry
+          : CORRIDOR_COUNTRIES.length === 1 ? CORRIDOR_COUNTRIES[0]
+          : null;
+      }
+      // The corridor is named by its far country, and the note must sit on one
+      // of that corridor's two ends.
+      if (
+        !corridorCountry ||
+        !CORRIDOR_COUNTRIES.includes(corridorCountry) ||
+        (fromCountry !== corridorCountry && fromCountry !== HOME_COUNTRY)
+      ) {
+        return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
+      }
     } else {
+      // A parcel post's corridor is its route, so it stores no separate
+      // corridor — one fact, one column, and posts_shape_by_type_check requires
+      // the column to stay null here.
+      corridorCountry = null;
       if (!fromCountry && direction) {
         fromCountry = direction === 'k2u' ? 'KR' : 'UZ';
         toCountry = direction === 'k2u' ? 'UZ' : 'KR';
@@ -533,6 +573,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           direction: legacyDirection,
           from_country: fromCountry,
           to_country: null,
+          corridor_country: corridorCountry,
           from_city: null,
           to_city: null,
           date: null,
@@ -559,6 +600,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           direction: legacyDirection,
           from_country: fromCountry,
           to_country: toCountry,
+          corridor_country: null,
           // The normalised values, so what was validated is what gets stored.
           from_city: fromCity,
           to_city: toCity,

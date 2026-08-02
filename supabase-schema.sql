@@ -134,8 +134,20 @@ DROP TABLE IF EXISTS reports;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS from_country VARCHAR(2);
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS to_country VARCHAR(2);
+-- Which corridor an announcement is listed under: the FAR country of the
+-- corridor its author was browsing when they posted. An announcement sits in
+-- one country (from_country) and that alone cannot place it on the board,
+-- because every corridor has Uzbekistan on the near side — a Tashkent note
+-- would otherwise belong to all of them at once. NULL on parcel posts, whose
+-- corridor is already stated by from_country/to_country. See
+-- migrations/2026-08-01-announcement-corridor.sql.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS corridor_country VARCHAR(2);
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_posts_route ON posts(from_country, to_country);
+-- The announcement feed filters on corridor_country alone, which a lookup
+-- against idx_posts_route cannot use.
+CREATE INDEX IF NOT EXISTS idx_posts_corridor
+    ON posts (corridor_country) WHERE type = 'announcement';
 
 DO $$
 BEGIN
@@ -149,7 +161,19 @@ BEGIN
         ALTER TABLE posts ADD CONSTRAINT posts_to_country_check
             CHECK (to_country IS NULL OR to_country ~ '^[A-Z]{2}$');
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'posts_corridor_country_check') THEN
+        ALTER TABLE posts ADD CONSTRAINT posts_corridor_country_check
+            CHECK (corridor_country IS NULL OR corridor_country ~ '^[A-Z]{2}$');
+    END IF;
 END $$;
+
+-- Korea is the only corridor the board has ever served, so every announcement
+-- written before the column existed belongs to it — including the Uzbek-side
+-- ones, which is the point: they were written for the Korea board and must not
+-- follow the next corridor that opens.
+UPDATE posts
+SET corridor_country = COALESCE(NULLIF(from_country, 'UZ'), 'KR')
+WHERE type = 'announcement' AND corridor_country IS NULL;
 
 -- Announcements — see migrations/2026-08-01-announcements.sql for the reasoning
 -- behind each statement in this block.
@@ -190,11 +214,30 @@ ALTER TABLE posts ADD  CONSTRAINT posts_shape_by_type_check CHECK (
           -- a delivery in a direction.
           AND from_country IS NOT NULL
           AND to_country IS NULL
+          -- ...but the board lists corridors, not countries, and every corridor
+          -- has Uzbekistan on one side — so a note sitting at home cannot say
+          -- which corridor it is for. corridor_country records the answer
+          -- instead of the feed guessing it. See
+          -- migrations/2026-08-01-announcement-corridor.sql.
+          AND corridor_country IS NOT NULL
+          AND corridor_country <> 'UZ'
+          AND from_country IN (corridor_country, 'UZ')
       ELSE
               headline IS NULL
           AND from_city IS NOT NULL AND btrim(from_city) <> ''
           AND to_city   IS NOT NULL AND btrim(to_city)   <> ''
           AND btrim(weight) <> ''
+          -- The route countries are the direction of a parcel post, not just
+          -- its filter key, and `authenticated` can insert through PostgREST
+          -- without going past api/posts.ts. A row with neither one renders
+          -- backwards (the card falls back to KR → UZ) and is invisible to
+          -- every corridor filter. See
+          -- migrations/2026-08-01-parcel-route-required.sql.
+          AND from_country IS NOT NULL
+          AND to_country   IS NOT NULL
+          AND from_country <> to_country
+          -- A parcel post's corridor is its route. One fact, one column.
+          AND corridor_country IS NULL
     END
 ) NOT VALID;
 
@@ -271,6 +314,7 @@ SELECT
     p.direction,
     p.from_country,
     p.to_country,
+    p.corridor_country,
     p.from_city,
     p.to_city,
     p.date,
@@ -385,6 +429,37 @@ DROP TRIGGER IF EXISTS one_active_announcement ON posts;
 CREATE TRIGGER one_active_announcement
     BEFORE INSERT ON posts
     FOR EACH ROW EXECUTE FUNCTION enforce_one_active_announcement();
+
+-- ---------------------------------------------------------------------------
+-- An announcement's corridor, when the writer omits it
+-- ---------------------------------------------------------------------------
+-- corridor_country is mandatory on announcements, but api/posts.ts is not every
+-- writer: `authenticated` can INSERT through PostgREST with the bundled anon
+-- key, and a cached bundle outlives a deploy. A note sitting in the corridor's
+-- far country names its own corridor, so that case is derived rather than
+-- refused. A note sitting in the home country is NOT guessed — Uzbekistan is on
+-- the near side of every corridor, so there is no honest answer, and it fails
+-- posts_shape_by_type_check instead. See
+-- migrations/2026-08-02-announcement-corridor-default.sql.
+--
+-- Unlike the trigger above, this reads no table — it only edits the row being
+-- inserted — so it needs no SECURITY DEFINER.
+CREATE OR REPLACE FUNCTION default_announcement_corridor()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.type = 'announcement' AND NEW.corridor_country IS NULL THEN
+        NEW.corridor_country := NULLIF(NEW.from_country, 'UZ');
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS announcement_corridor_default ON posts;
+CREATE TRIGGER announcement_corridor_default
+    BEFORE INSERT ON posts
+    FOR EACH ROW EXECUTE FUNCTION default_announcement_corridor();
 
 -- ---------------------------------------------------------------------------
 -- profiles (Supabase Auth)
