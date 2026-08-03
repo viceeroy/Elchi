@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, StickyNote, AlertCircle } from "lucide-react";
-import { ContactMethod, Locale, Translations } from "../types";
+import { ContactMethod, Translations } from "../types";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
 import { ContactFields } from "./ContactFields";
@@ -28,7 +28,6 @@ const FieldError: React.FC<{ message?: string }> = ({ message }) =>
 
 interface NoteFormModalProps {
   t: Translations;
-  locale: Locale;
   // The corridor the viewer is browsing. A note sits in one country, and this
   // is the one it will surface under — asked implicitly rather than as a field,
   // because the composer has no structured inputs.
@@ -59,7 +58,6 @@ const THEME_MAX = 80;
  */
 export const NoteFormModal: React.FC<NoteFormModalProps> = ({
   t,
-  locale,
   country,
   onClose,
   onSubmitSuccess,
@@ -289,7 +287,6 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
               every other ad. */}
           <ContactFields
             t={t}
-            locale={locale}
             label={t.noteContactLabel || t.contactLabel}
             method={contactMethod}
             onMethodChange={setContactMethod}

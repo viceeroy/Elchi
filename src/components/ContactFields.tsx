@@ -1,6 +1,6 @@
 import React from "react";
 import { Phone, Send, AlertCircle, X } from "lucide-react";
-import { ContactMethod, Locale, Translations } from "../types";
+import { ContactMethod, Translations } from "../types";
 
 // Phone fields keep digits and the punctuation used by the +998/+82 formats
 // in the placeholder; letters and everything else are dropped as the user types.
@@ -11,7 +11,6 @@ const ERROR_INPUT_CLASS =
 
 interface ContactFieldsProps {
   t: Translations;
-  locale: Locale;
   method: ContactMethod;
   onMethodChange: (method: ContactMethod) => void;
   contact: string;
@@ -41,7 +40,6 @@ interface ContactFieldsProps {
  */
 export const ContactFields: React.FC<ContactFieldsProps> = ({
   t,
-  locale,
   method,
   onMethodChange,
   contact,
@@ -90,7 +88,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
               }`}
             >
               <Phone className="w-2.5 h-2.5" />
-              {locale === "uz" ? "Telefon" : locale === "ru" ? "Телефон" : "Phone"}
+              Telefon
             </button>
           </div>
         </div>
@@ -120,11 +118,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
             placeholder={
               method === "telegram"
                 ? "username"
-                : locale === "uz"
-                  ? "+998 90-123-4567 yoki +82 10-1234-5678"
-                  : locale === "ru"
-                    ? "+998 90-123-4567 или +82 10-1234-5678"
-                    : "+998 90-123-4567 or +82 10-1234-5678"
+                : "+998 90-123-4567 yoki +82 10-1234-5678"
             }
             maxLength={method === "telegram" ? 99 : 100}
             className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono transition-all ${
@@ -150,9 +144,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
           handle && (
             <div className="mt-1.5 font-mono text-[10.5px] text-[#2A4B8D] flex items-center gap-1.5 bg-[#E8EEF8]/60 px-2.5 py-1.5 rounded-md border border-[#D5E2F4] w-fit">
               <Send className="w-3 h-3" />
-              <span className="opacity-75">
-                {locale === "uz" ? "Telegram havola:" : locale === "ru" ? "Ссылка Telegram:" : "Telegram link:"}
-              </span>
+              <span className="opacity-75">Telegram havola:</span>
               <a
                 href={`https://t.me/${handle}`}
                 target="_blank"
@@ -228,11 +220,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                 }}
                 placeholder={
                   method === "telegram"
-                    ? locale === "uz"
-                      ? "+998 90-123-4567 yoki +82 10-1234-5678"
-                      : locale === "ru"
-                        ? "+998 90-123-4567 или +82 10-1234-5678"
-                        : "+998 90-123-4567 or +82 10-1234-5678"
+                    ? "+998 90-123-4567 yoki +82 10-1234-5678"
                     : "username"
                 }
                 maxLength={method === "telegram" ? 100 : 99}

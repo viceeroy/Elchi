@@ -110,12 +110,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   }, [submitError]);
 
   const itemTypes = [
-    { id: "docs", label: locale === "uz" ? "Hujjatlar" : locale === "ru" ? "Документы" : "Documents" },
-    { id: "clothes", label: locale === "uz" ? "Kiyim-kechak" : locale === "ru" ? "Одежда" : "Clothes" },
-    { id: "meds", label: locale === "uz" ? "Dori-darmon" : locale === "ru" ? "Лекарства" : "Medicines" },
-    { id: "food", label: locale === "uz" ? "Oziq-ovqat" : locale === "ru" ? "Продукты" : "Food" },
-    { id: "phone", label: locale === "uz" ? "Telefon/Texnika" : locale === "ru" ? "Телефон/Техника" : "Phone/Gadget" },
-    { id: "gift", label: locale === "uz" ? "Sovg'a" : locale === "ru" ? "Подарок" : "Gift" },
+    { id: "docs", label: "Hujjatlar" },
+    { id: "clothes", label: "Kiyim-kechak" },
+    { id: "meds", label: "Dori-darmon" },
+    { id: "food", label: "Oziq-ovqat" },
+    { id: "phone", label: "Telefon/Texnika" },
+    { id: "gift", label: "Sovg'a" },
   ];
 
   // Helper: Get list of days in selected month
@@ -133,8 +133,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const currentYear = today.getFullYear();
   const nextMonth = (today.getMonth() + 1) % 12;
   const monthOptions = [
-    { value: today.getMonth(), label: locale === "uz" ? "Ushbu oy" : locale === "ru" ? "Этот месяц" : "This Month" },
-    { value: nextMonth, label: locale === "uz" ? "Keyingi oy" : locale === "ru" ? "Следующий месяц" : "Next Month" },
+    { value: today.getMonth(), label: "Ushbu oy" },
+    { value: nextMonth, label: "Keyingi oy" },
   ];
 
   const daysList = getDaysInMonth(selectedMonth).filter(d => {
@@ -210,10 +210,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
       // Build Weight representation. 0 kg is valid: for a traveler it means
       // luggage-only (no per-kg space), for a request it drops the weight suffix.
-      // The luggage word is stored as a neutral "chamadon" token regardless of the
-      // author's locale — BoardingPass/App re-localize it at render time based on
-      // the viewer's current locale, so it doesn't freeze to whatever language the
-      // post was created in.
+      // The luggage word is stored as a neutral "chamadon" token — BoardingPass
+      // and App expand it to the right Uzbek form from the count at render time.
       let finalWeight: string;
       if (postType === "traveler") {
         const parts: string[] = [];
@@ -314,17 +312,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     style: selectedItems.includes(it.id) ? itemChipActive : itemChipBase,
   }));
 
-  const luggageWordLabel = weightLuggage === 1 
-    ? (locale === "uz" ? "chamadon" : locale === "ru" ? "чемодан" : "bag") 
-    : (locale === "uz" ? "ta chamadon" : locale === "ru" ? "чемодана" : "bags");
+  const luggageWordLabel = weightLuggage === 1 ? "chamadon" : "ta chamadon";
 
   const weekdays = ["Ya","Du","Se","Ch","Pa","Ju","Sh"];
-  const monthShortNames =
-    locale === "uz"
-      ? ["Yan","Fev","Mar","Apr","May","Iyun","Iyul","Avg","Sen","Okt","Noy","Dek"]
-      : locale === "ru"
-        ? ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"]
-        : ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthShortNames = ["Yan","Fev","Mar","Apr","May","Iyun","Iyul","Avg","Sen","Okt","Noy","Dek"];
 
   return (
     <div 
@@ -397,7 +388,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             <div className="flex flex-row items-end gap-2 sm:gap-3 mb-4">
               <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
-                  {locale === "uz" ? "Qaysi davlatdan" : locale === "ru" ? "Из какой страны" : "From country"}
+                  Qaysi davlatdan
                 </label>
                 <select
                   value={fromCountry}
@@ -416,7 +407,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
               <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
-                  {locale === "uz" ? "Qaysi davlatga" : locale === "ru" ? "В какую страну" : "To country"}
+                  Qaysi davlatga
                 </label>
                 <select
                   value={toCountry}
@@ -436,14 +427,14 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             <div className="flex flex-row items-end gap-2 sm:gap-3">
               <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
-                  {locale === "uz" ? "Qaysi shahardan" : locale === "ru" ? "Из какого города" : "From which city"}
+                  Qaysi shahardan
                 </label>
                 <input
                   type="text"
                   ref={(el) => { fieldRefs.current.fromCity = el; }}
                   value={fromCity}
                   onChange={(e) => { setFromCity(e.target.value); clearError("fromCity"); }}
-                  placeholder={locale === "uz" ? "Qayerdan (masalan: Seoul)" : locale === "ru" ? "Откуда (напр.: Сеул)" : "From (e.g. Seoul)"}
+                  placeholder="Qayerdan (masalan: Seoul)"
                   maxLength={100}
                   className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
                     errors.fromCity ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
@@ -455,14 +446,14 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
               <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
-                  {locale === "uz" ? "Qaysi shaharga" : locale === "ru" ? "В какой город" : "To which city"}
+                  Qaysi shaharga
                 </label>
                 <input
                   type="text"
                   ref={(el) => { fieldRefs.current.toCity = el; }}
                   value={toCity}
                   onChange={(e) => { setToCity(e.target.value); clearError("toCity"); }}
-                  placeholder={locale === "uz" ? "Qayerga (masalan: Toshkent)" : locale === "ru" ? "Куда (напр.: Ташкент)" : "To (e.g. Tashkent)"}
+                  placeholder="Qayerga (masalan: Toshkent)"
                   maxLength={100}
                   className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
                     errors.toCity ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
@@ -726,7 +717,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     }`}
                   >
                     <Phone className="w-2.5 h-2.5" />
-                    {locale === "uz" ? "Telefon" : locale === "ru" ? "Телефон" : "Phone"}
+                    Telefon
                   </button>
                 </div>
               </div>
@@ -759,7 +750,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   placeholder={
                     contactMethod === "telegram"
                       ? "username"
-                      : locale === "uz" ? "+998 90-123-4567 yoki +82 10-1234-5678" : locale === "ru" ? "+998 90-123-4567 или +82 10-1234-5678" : "+998 90-123-4567 or +82 10-1234-5678"
+                      : "+998 90-123-4567 yoki +82 10-1234-5678"
                   }
                   maxLength={contactMethod === "telegram" ? 99 : 100}
                   className={`w-full box-sizing-border-box p-3 pl-8.5 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono transition-all ${
@@ -780,7 +771,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 contact.trim().replace("@", "") && (
                   <div className="mt-1.5 font-mono text-[10.5px] text-[#2A4B8D] flex items-center gap-1.5 bg-[#E8EEF8]/60 px-2.5 py-1.5 rounded-md border border-[#D5E2F4] w-fit">
                     <Send className="w-3 h-3" />
-                    <span className="opacity-75">{locale === "uz" ? "Telegram havola:" : locale === "ru" ? "Ссылка Telegram:" : "Telegram link:"}</span>
+                    <span className="opacity-75">Telegram havola:</span>
                     <a
                       href={`https://t.me/${contact.trim().replace("@", "")}`}
                       target="_blank"
@@ -854,7 +845,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     }}
                     placeholder={
                       contactMethod === "telegram"
-                        ? (locale === "uz" ? "+998 90-123-4567 yoki +82 10-1234-5678" : locale === "ru" ? "+998 90-123-4567 или +82 10-1234-5678" : "+998 90-123-4567 or +82 10-1234-5678")
+                        ? "+998 90-123-4567 yoki +82 10-1234-5678"
                         : "username"
                     }
                     maxLength={contactMethod === "telegram" ? 100 : 99}

@@ -18,27 +18,24 @@ import { Send, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, StickyN
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 // Traveler posts store the luggage count as a neutral "chamadon" token
-// regardless of the author's locale (see PostFormModal). Re-localize it here
-// from the count so it reads as a proper Uzbek phrase rather than the raw
-// token the composer wrote.
+// (see PostFormModal). Expand it here from the count so it reads as a proper
+// Uzbek phrase rather than the raw token the composer wrote.
 // The feed is paged server-side, so a bounded response can't be turned into a
 // full dump of the board.
 const PAGE_SIZE = 24;
 
-function localizeWeight(weight: string, locale: Locale): string {
+function localizeWeight(weight: string): string {
   return weight.replace(/(\d+)\s*chamadon\b/gi, (_match, numStr: string) => {
     const n = parseInt(numStr, 10);
-    const word = n === 1
-      ? (locale === "uz" ? "chamadon" : locale === "ru" ? "чемодан" : "bag")
-      : (locale === "uz" ? "ta chamadon" : locale === "ru" ? "чемодана" : "bags");
-    return `${n} ${word}`;
+    return `${n} ${n === 1 ? "chamadon" : "ta chamadon"}`;
   });
 }
 
 export default function App() {
   // The site serves an Uzbek-speaking audience only, so the language is fixed.
-  // The translations table keeps its per-locale shape (and the child components
-  // keep their `locale` prop) — there is simply nothing that switches it.
+  // The translations table and the country registry keep their per-locale shape,
+  // so the components that look names up in them still take a `locale` — there
+  // is simply nothing that switches it.
   const locale: Locale = defaultLocale;
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -203,7 +200,7 @@ export default function App() {
     if (!selectedPost) return;
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?postId=${selectedPost.id}`;
-    const shareWeight = localizeWeight(selectedPost.weight, locale);
+    const shareWeight = localizeWeight(selectedPost.weight);
     // The contact handle is deliberately left out of the share text: it would
     // republish someone's phone number into whatever app the link is sent to.
     // The recipient opens the post and reveals it themselves.
@@ -423,23 +420,15 @@ export default function App() {
     // Null is how "no fixed date" is stored. The "flexible" string is the older
     // wire form, kept so rows written before that changed still read correctly.
     if (!dateStr || dateStr === "flexible") {
-      return locale === "uz" ? "Kelishiladi" : locale === "ru" ? "По договорённости" : "Flexible";
+      return "Kelishiladi";
     }
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
-      
-      const monthNamesUz = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
-      const monthNamesRu = ['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'];
-      const monthNamesEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-      
-      const day = d.getDate();
-      let month = "";
-      if (locale === "uz") month = monthNamesUz[d.getMonth()];
-      else if (locale === "ru") month = monthNamesRu[d.getMonth()];
-      else month = monthNamesEn[d.getMonth()];
 
-      return `${day}-${month}, ${d.getFullYear()}`;
+      const monthNames = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+
+      return `${d.getDate()}-${monthNames[d.getMonth()]}, ${d.getFullYear()}`;
     } catch {
       return dateStr;
     }
@@ -633,7 +622,6 @@ export default function App() {
         composeType === "announcement" ? (
           <NoteFormModal
             t={t}
-            locale={locale}
             country={country}
             onClose={() => setFormOpen(false)}
             onSubmitSuccess={handleNoteSubmitSuccess}
@@ -653,7 +641,6 @@ export default function App() {
       {loginOpen && (
         <LoginModal
           t={t}
-          locale={locale}
           onClose={() => setLoginOpen(false)}
           onLoginSuccess={() => {
             setLoginOpen(false);
@@ -784,7 +771,7 @@ export default function App() {
               {selectedPost.type !== "announcement" && (
                 <div className="bg-[#F2EFE6] rounded-xl p-3.5 mb-5">
                   <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
-                  <div className="font-bold text-base text-[#1B2A4A]">{localizeWeight(selectedPost.weight, locale)}</div>
+                  <div className="font-bold text-base text-[#1B2A4A]">{localizeWeight(selectedPost.weight)}</div>
                 </div>
               )}
 
@@ -903,9 +890,8 @@ export default function App() {
                 // No trailing ↗/✆ glyph: each button already renders the Send
                 // or Phone icon beside the label, so the glyph only said the
                 // same thing twice in a second visual language.
-                const actionLabel = (isTg: boolean) => isTg
-                  ? (locale === "uz" ? "Telegramda ochish" : locale === "ru" ? "Открыть в Telegram" : "Open in Telegram")
-                  : (locale === "uz" ? "Qo'ng'iroq qilish" : locale === "ru" ? "Позвонить" : "Call");
+                const actionLabel = (isTg: boolean) =>
+                  isTg ? "Telegramda ochish" : "Qo'ng'iroq qilish";
 
                 return (
                   <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">

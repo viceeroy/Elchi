@@ -63,7 +63,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={`${locale === "ru" ? "Страна" : locale === "en" ? "Country" : "Davlat"}: ${selected.country}`}
+        aria-label={`Davlat: ${selected.country}`}
         aria-expanded={open}
         className="group/side flex items-center gap-1.5 bg-transparent border-none p-0 cursor-pointer max-w-full min-w-0"
       >

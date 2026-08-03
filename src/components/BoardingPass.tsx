@@ -64,9 +64,8 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   // The card shows only the physical weight (kg + luggage), stripping any
   // category labels baked into the weight string — categories are shown only in
   // the detail modal. A 0-kg value is treated as "nothing" and hidden. The
-  // luggage word is stored as a neutral "chamadon" token and re-localized here
-  // from the count, so it matches the viewer's current locale, not the
-  // author's, regardless of which locale the post was created in.
+  // luggage word is stored as a neutral "chamadon" token, so the count decides
+  // which Uzbek form to render.
   const physicalWeight = (() => {
     const parts: string[] = [];
     // Optional chaining because a deep link can put an announcement — which has
@@ -77,9 +76,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     if (lug) {
       const n = parseInt(lug[1], 10);
       if (n > 0) {
-        const word = n === 1
-          ? (locale === "uz" ? "chamadon" : locale === "ru" ? "чемодан" : "bag")
-          : (locale === "uz" ? "ta chamadon" : locale === "ru" ? "чемодана" : "bags");
+        const word = n === 1 ? "chamadon" : "ta chamadon";
         parts.push(`${n} ${word}`);
       }
     }
@@ -91,23 +88,15 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     // Null is how "no fixed date" is stored. The "flexible" string is the older
     // wire form, kept so rows written before that changed still read correctly.
     if (!dateStr || dateStr === "flexible") {
-      return locale === "uz" ? "Kelishiladi" : locale === "ru" ? "По договорённости" : "Flexible";
+      return "Kelishiladi";
     }
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
-      
-      const monthsUz = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
-      const monthsRu = ['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'];
-      const monthsEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-      
-      const day = d.getDate();
-      let month = "";
-      if (locale === "uz") month = monthsUz[d.getMonth()];
-      else if (locale === "ru") month = monthsRu[d.getMonth()];
-      else month = monthsEn[d.getMonth()];
 
-      return `${day} ${month}`;
+      const months = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+
+      return `${d.getDate()} ${months[d.getMonth()]}`;
     } catch {
       return dateStr;
     }

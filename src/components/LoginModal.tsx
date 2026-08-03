@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Locale, Translations } from "../types";
+import { Translations } from "../types";
 import { X } from "lucide-react";
 import { supabaseBrowser } from "../supabaseClient";
 
 interface LoginModalProps {
   t: Translations;
-  locale: Locale;
   onClose: () => void;
   onLoginSuccess: () => void;
 }
