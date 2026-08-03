@@ -1,12 +1,12 @@
 import React from "react";
-import { X, Briefcase, Package, Info, StickyNote } from "lucide-react";
+import { X, Briefcase, Package, Info, Megaphone } from "lucide-react";
 import { Locale } from "../types";
 import { Note } from "./data";
 
 const TYPE_ICON = {
   traveler: { Icon: Briefcase, bg: "#C79A3E" },
   request: { Icon: Package, bg: "#C23B3B" },
-  note: { Icon: StickyNote, bg: "#C79A3E" },
+  note: { Icon: Megaphone, bg: "#C79A3E" },
 } as const;
 
 interface NoteSheetProps {
@@ -23,9 +23,6 @@ interface NoteSheetProps {
 export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) => {
   const c = note.content[locale];
   const body = c.detail && c.detail.length > 0 ? c.detail : [c.summary];
-  const isIntro = note.kind === "intro";
-  const isTraveler = note.kind === "traveler";
-  const headerBg = isIntro ? "#C23B3B" : "#1B2A4A";
 
   return (
     <div
@@ -39,8 +36,7 @@ export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) =
         className="relative max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-t-2xl bg-[#FCFBF6] pb-8 shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)]"
       >
         <div
-          className="relative rounded-t-2xl px-6 pt-4 pb-7 text-[#FCFBF6]"
-          style={{ background: headerBg }}
+          className="relative rounded-t-2xl bg-[#C23B3B] px-6 pt-4 pb-7 text-[#FCFBF6]"
         >
           <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/25" />
           <button
@@ -52,19 +48,9 @@ export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) =
           </button>
 
           <div
-            className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[10.5px] font-bold uppercase tracking-wider"
-            style={{
-              background: isIntro ? "#F6EFE2" : isTraveler ? "#C79A3E" : "#C23B3B",
-              color: isIntro ? "#C23B3B" : "#1B2A4A",
-            }}
+            className="inline-flex items-center gap-1.5 rounded bg-[#F6EFE2] px-3 py-1.5 font-mono text-[10.5px] font-bold uppercase tracking-wider text-[#C23B3B]"
           >
-            {isIntro ? (
-              <Info className="h-3.5 w-3.5" />
-            ) : isTraveler ? (
-              <Briefcase className="h-3.5 w-3.5" />
-            ) : (
-              <Package className="h-3.5 w-3.5" />
-            )}
+            <Info className="h-3.5 w-3.5" />
             {c.tag}
           </div>
 
@@ -111,5 +97,3 @@ export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) =
     </div>
   );
 };
-
-export default NoteSheet;

@@ -244,5 +244,3 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
     </>
   );
 };
-
-export default ContactFields;

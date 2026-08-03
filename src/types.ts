@@ -68,7 +68,11 @@ export interface PostContact {
   contact2_type: ContactMethod | null;
 }
 
-export type Locale = "uz" | "ru" | "en";
+// The board serves an Uzbek-speaking audience only. The type stays a named
+// union of one rather than disappearing, because the translations table and the
+// country registry are still keyed by it — a second locale is a matter of
+// adding the arm back and filling in the tables.
+export type Locale = "uz";
 
 export interface Translations {
   metaTitle: string;

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Plus, Briefcase, Package, StickyNote } from "lucide-react";
+import { Plus, Briefcase, Package, Megaphone } from "lucide-react";
 import { Translations } from "../types";
 
 interface PostFabProps {
@@ -69,7 +69,7 @@ export const PostFab: React.FC<PostFabProps> = ({
     },
     {
       key: "note",
-      Icon: StickyNote,
+      Icon: Megaphone,
       // Gold carries dark text — the stamp colour is light enough that the
       // cream used on the other two would not hold contrast.
       label: t.fabNoteLabel || "E'lon",
@@ -149,5 +149,3 @@ export const PostFab: React.FC<PostFabProps> = ({
     </>
   );
 };
-
-export default PostFab;

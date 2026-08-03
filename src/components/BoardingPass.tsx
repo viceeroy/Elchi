@@ -203,4 +203,3 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     </article>
   );
 };
-export default BoardingPass;

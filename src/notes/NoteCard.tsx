@@ -80,5 +80,3 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDism
     </article>
   );
 };
-
-export default NoteCard;

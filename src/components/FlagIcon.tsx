@@ -105,5 +105,3 @@ export const FlagIcon: React.FC<FlagIconProps> = ({ iso, className }) => {
       );
   }
 };
-
-export default FlagIcon;

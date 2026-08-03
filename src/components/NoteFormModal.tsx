@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, StickyNote, AlertCircle } from "lucide-react";
+import { X, Megaphone, AlertCircle } from "lucide-react";
 import { ContactMethod, Translations } from "../types";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
@@ -217,7 +217,7 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
             sheet is visibly not the parcel form. */}
         <div className="flex items-start gap-3 mb-6">
           <span className="w-10 h-10 flex-shrink-0 rounded-full bg-[#C79A3E] text-[#1B2A4A] flex items-center justify-center">
-            <StickyNote className="w-5 h-5" />
+            <Megaphone className="w-5 h-5" />
           </span>
           <div>
             <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight m-0">
@@ -326,5 +326,3 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
     </div>
   );
 };
-
-export default NoteFormModal;

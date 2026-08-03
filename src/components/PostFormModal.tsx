@@ -898,4 +898,3 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     </div>
   );
 };
-export default PostFormModal;

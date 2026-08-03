@@ -120,5 +120,3 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
     </div>
   );
 };
-
-export default RouteSelector;

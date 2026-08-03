@@ -1,5 +1,5 @@
 import React from "react";
-import { StickyNote } from "lucide-react";
+import { Megaphone } from "lucide-react";
 import { Post, Translations } from "../types";
 
 interface AnnouncementCardProps {
@@ -65,7 +65,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
       id={`post-card-${post.id}`}
     >
       <div style={stickerStyle}>
-        <StickyNote className="w-3 h-3" />
+        <Megaphone className="w-3 h-3" />
         {tagLabel}
       </div>
 
@@ -98,5 +98,3 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
     </article>
   );
 };
-
-export default AnnouncementCard;

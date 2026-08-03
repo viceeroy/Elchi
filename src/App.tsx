@@ -14,7 +14,7 @@ import { ProfileSheet } from "./components/ProfileSheet";
 import { NotesCarousel, NoteSheet, type Note } from "./notes";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
-import { Send, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, StickyNote, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
+import { Send, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, Megaphone, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 // Traveler posts store the luggage count as a neutral "chamadon" token
@@ -700,7 +700,7 @@ export default function App() {
                 }}
               >
                 {selectedPost.type === "announcement" ? (
-                  <StickyNote className="w-3.5 h-3.5 text-[#1B2A4A]" />
+                  <Megaphone className="w-3.5 h-3.5 text-[#1B2A4A]" />
                 ) : selectedPost.type === "traveler" ? (
                   <Briefcase className="w-3.5 h-3.5 text-[#1B2A4A]" />
                 ) : (
@@ -1010,4 +1010,3 @@ export default function App() {
     </div>
   );
 }
-export { App };

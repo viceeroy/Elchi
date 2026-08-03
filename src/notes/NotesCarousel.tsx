@@ -143,5 +143,3 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
     </section>
   );
 };
-
-export default NotesCarousel;
