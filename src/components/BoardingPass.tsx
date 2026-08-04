@@ -2,6 +2,9 @@ import React from "react";
 import { Post, Locale, Translations } from "../types";
 import { Briefcase, Package, ArrowRight } from "lucide-react";
 import { COUNTRIES, getCountry, isHubCity } from "../constants";
+import { useIsClamped } from "../lib/useIsClamped";
+import { stickerStyle } from "../lib/stickerStyle";
+import { flattenNote } from "../lib/postPreview";
 
 interface BoardingPassProps {
   post: Post;
@@ -18,6 +21,22 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
 }) => {
   const isTraveler = post.type === "traveler";
   const tagLabel = isTraveler ? t.travelerTag : t.requestTag;
+  const moreLabel = t.cardMoreLabel || "ko'proq";
+
+  // Same sanitisation an announcement body gets, minus the title split: emoji
+  // out, hard line breaks flattened to single spaces. Both would otherwise
+  // break the clamp arithmetic — an emoji inflates its line box, a newline
+  // spends one of the two clamped lines on whitespace. The stored note is not
+  // modified; the detail sheet still shows it exactly as typed.
+  //
+  // Can come back empty where post.note was not (a note of nothing but emoji),
+  // which is why the render below tests this and not post.note.
+  const noteText = flattenNote(post.note);
+
+  // Same cue, same rule as an announcement: printed only when the note below
+  // was actually cut. A parcel note is often short enough to print whole, so
+  // this stays absent on most cards.
+  const { ref: noteRef, isClamped } = useIsClamped<HTMLSpanElement>(noteText);
 
   // Route = country names from the stored ISO codes (the registry falls back
   // to the first entry so a malformed row can't crash the card).
@@ -37,29 +56,6 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   const showActualCities =
     Boolean(post.from_city && post.to_city) &&
     (!isHubCity(fromCountry, post.from_city) || !isHubCity(toCountry, post.to_city));
-
-  // Render sticker styles with distinct airmail tilt angle. In-flow, not
-  // absolutely positioned — it used to hang off the card's top edge; this
-  // keeps it anchored inside the card at a fixed spot regardless of the
-  // label's length ("Uchaman" vs "Pochta bor").
-  const stickerStyle = {
-    flexShrink: 0,
-    fontFamily: "'Space Mono', monospace",
-    fontSize: "10.5px",
-    letterSpacing: "1px",
-    textTransform: "uppercase" as const,
-    padding: "6px 12px",
-    borderRadius: 4,
-    fontWeight: 700,
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    boxShadow: "0 3px 8px rgba(27,42,74,0.15)",
-    border: "1px dashed rgba(255,255,255,0.4)",
-    transform: isTraveler ? "rotate(-2.5deg)" : "rotate(2.0deg)",
-    background: isTraveler ? "var(--color-blue)" : "var(--color-red)",
-    color: "var(--color-card)",
-  };
 
   // The card shows only the physical weight (kg + luggage), stripping any
   // category labels baked into the weight string — categories are shown only in
@@ -103,7 +99,14 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   return (
     <article
       onClick={onOpen}
-      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] min-h-[200px] bg-card rounded-xl border border-edge transition-all duration-300 cursor-pointer shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
+      /* h-[200px] with grid-rows-[minmax(0,1fr)], the same pair AnnouncementCard
+         uses, so a row is exactly as tall as a row whichever card type fills it.
+         This was min-h-[200px], which happened to measure 200px because the note
+         below is clamped — but "happens to fit" is not the same as "cannot grow",
+         and a single post that outgrew it would have made the feed ragged. The
+         row needs minmax(0,...) because an auto row has a min-content floor and
+         would size to the content instead of to the card. */
+      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] grid-rows-[minmax(0,1fr)] h-[200px] bg-card rounded-xl border border-edge transition-all duration-300 cursor-pointer shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
       id={`post-card-${post.id}`}
     >
       {/* Decorative Left Airmail Stripe */}
@@ -119,11 +122,24 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
           centred: the badge sits a fixed distance from the card's top on
           every card, whether the note is one line or five — its position was
           previously computed by centring the whole content block, so a short
-          post pulled the badge down toward the middle of the card. */}
-      <div className="pt-5 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col justify-start min-w-0">
-        <div>
+          post pulled the badge down toward the middle of the card.
+
+          p-5 sm:p-6 and gap-2, the same pair AnnouncementCard uses: one inset
+          on all four sides, one gap between every stacked child. The two card
+          types alternate in a single column, so copy that starts at a different
+          inset or stacks on a different rhythm reads as a misalignment. This
+          replaced a per-side ramp (pt-5/pb-5/pl-5/pr-3/sm:pl-8/sm:pr-6/md:py-6/
+          md:pl-10/md:pr-7) plus a wrapper div whose children carried their own
+          mt-2/mb-2/mt-0.5 — four different gaps down one panel. Children below
+          therefore set NO vertical margins. */}
+      <div className="p-5 sm:p-6 flex flex-col justify-start gap-2 min-w-0">
+        {/* Badge and route share a row, as the badge and title do on an
+            announcement. flex-wrap plus the route's min-w is the same trick:
+            beside the sticker where the column is wide enough, dropped to its
+            own line at 375px, where under 100px is left next to it. */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* Traveler / Request Tag Badge */}
-          <div style={stickerStyle}>
+          <div style={stickerStyle(post.type)}>
             {isTraveler ? (
               <Briefcase className="w-3 h-3 text-card" />
             ) : (
@@ -132,49 +148,60 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
             {tagLabel}
           </div>
 
-          {/* Destination Header (flight route is always Korea/Uzbekistan).
-              mt-2, not a bottom margin on the badge above — a fixed gap
-              between the two, independent of either one's own size. */}
-          <div className="mt-2 mb-2">
-            <div className="flex items-center gap-2.5 font-bold text-[17px] sm:text-[19px] leading-[1.25] text-ink tracking-tight">
-              <span>{hubFrom}</span>
-              <span className="text-gold flex items-center">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              </span>
-              <span>{hubTo}</span>
-            </div>
-            {/* Actual city (where the traveler/parcel is really going, beyond the airport) */}
-            {showActualCities && (
-              <div className="font-mono text-[11px] text-faint tracking-wide leading-none mt-0.5">
-                {post.from_city} → {post.to_city}
-              </div>
-            )}
-          </div>
-
-          {/* Post Details — description is clamped so the card height stays fixed
-              regardless of note length; long URLs/words wrap instead of overflowing.
-              Full text is shown in the detail modal on click. */}
-          {/* No bottom margin: this is the last thing in the panel, so a
-              trailing margin would just be dead space under the note. */}
-          <div className="text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0">
-            {physicalWeight && (
-              <span className="text-ink font-bold block mr-1">
-                {physicalWeight}
-              </span>
-            )}
-            {/* The note clamps to one line below sm, two at sm and up — the
-                fixed row height is what caps it, not an arbitrary line count.
-                The full note is in the detail sheet either way. */}
-            {post.note && (
-              <span className="line-clamp-1 sm:line-clamp-2 [overflow-wrap:anywhere]">
-                · {post.note}
-              </span>
-            )}
+          {/* Destination Header (flight route is always Korea/Uzbekistan). */}
+          <div className="min-w-[12rem] flex-1 flex items-center gap-2.5 font-bold text-[17px] sm:text-[19px] leading-[1.25] text-ink tracking-tight">
+            <span>{hubFrom}</span>
+            <span className="text-gold flex items-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </span>
+            <span>{hubTo}</span>
           </div>
         </div>
+
+        {/* Actual city (where the traveler/parcel is really going, beyond the airport) */}
+        {showActualCities && (
+          <div className="font-mono text-[11px] text-faint tracking-wide leading-none">
+            {post.from_city} → {post.to_city}
+          </div>
+        )}
+
+        {/* Post Details — description is clamped so the card height stays fixed
+            regardless of note length; long URLs/words wrap instead of overflowing.
+            Full text is shown in the detail modal on click. */}
+        <div className="text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0">
+          {physicalWeight && (
+            <span className="text-ink font-bold block mr-1">
+              {physicalWeight}
+            </span>
+          )}
+          {/* One line below sm, two at sm and up. Sized so that a clamped note
+              plus the "ko'proq" line below lands the same distance above the
+              bottom inset as an announcement's text does (~7px against its
+              ~4px). Three lines at sm looks like it should fit — it leaves 6px —
+              but the cue underneath needs 21, so the panel spills out of the
+              card. Don't raise this without re-measuring with a long note AND
+              the cue present. The full note is in the detail sheet either way. */}
+          {noteText && (
+            <span ref={noteRef} className="line-clamp-1 sm:line-clamp-2 [overflow-wrap:anywhere]">
+              · {noteText}
+            </span>
+          )}
+        </div>
+
+        {/* The "there is more of this in the detail sheet" cue, identical to the
+            announcement card's — same label, same weight, same rule for when it
+            shows. It also closes most of the gap this panel used to leave: with
+            the note clamped short, a parcel card's text stopped ~23px higher
+            above the bottom inset than an announcement's did. Not a button; the
+            whole card already opens the same sheet. */}
+        {isClamped && (
+          <span className="font-bold text-[13px] text-ink leading-none">
+            {moreLabel}
+          </span>
+        )}
       </div>
 
       {/* Ticket Tear-off Divider and Punch Notches (all breakpoints, scaled to stub width) */}

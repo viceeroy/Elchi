@@ -11,6 +11,7 @@ import { NoteFormModal } from "./components/NoteFormModal";
 import { PostFab } from "./components/PostFab";
 import { LoginModal } from "./components/LoginModal";
 import { ProfileSheet } from "./components/ProfileSheet";
+import { TypedHeadline } from "./components/TypedHeadline";
 import { NotesCarousel, NoteSheet, type Note } from "./notes";
 import { supabaseBrowser } from "./supabaseClient";
 import type { Session } from "@supabase/supabase-js";
@@ -50,12 +51,12 @@ export default function App() {
   // Which tab the composer opens on, set by the speed dial before the sheet
   // mounts. The user can still switch inside the form.
   const [composeType, setComposeType] = useState<PostType>("traveler");
-  // Feed filter — null means no filter, so the feed shows everything (notes and
-  // parcel posts together). Picking one narrows to it; picking it again clears
-  // back to null, which is what the "×" on the active chip does.
-  const [feedFilter, setFeedFilter] = useState<"parcel" | "notes" | null>(null);
-  const toggleFeedFilter = (next: "parcel" | "notes") =>
-    setFeedFilter((prev) => (prev === next ? null : next));
+  // Feed filter — exactly one of the two kinds is always showing. There is no
+  // "everything" state: parcel ads and standing service ads read so differently
+  // that a mixed feed was mostly noise, and the cleared chip left the user on a
+  // list they hadn't asked for. So the chips are a two-way selector, not a pair
+  // of toggles, and picking the active one is a no-op rather than a clear.
+  const [feedFilter, setFeedFilter] = useState<"parcel" | "notes">("parcel");
   // Speed-dial state for the floating "+"
   const [fabOpen, setFabOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -100,13 +101,24 @@ export default function App() {
     setFormOpen(true);
   };
 
-  // DEV: the login gate on posting is off while the note composer is being
-  // tested. Restore by deleting REQUIRE_LOGIN_TO_POST and its use below — the
-  // login path underneath is untouched and still works.
-  const REQUIRE_LOGIN_TO_POST = false;
+  // Signing out — or a refresh token that finally expires — while a composer or
+  // the profile sheet is open leaves an authenticated-only surface on screen.
+  // The submit would come back 401 and the profile sheet reads its user off a
+  // session that no longer exists, so both close with the session.
+  useEffect(() => {
+    if (session) return;
+    setFormOpen(false);
+    setProfileOpen(false);
+    pendingComposeRef.current = null;
+  }, [session]);
 
+  // Posting requires an account, with no dev escape hatch. There used to be a
+  // REQUIRE_LOGIN_TO_POST flag here that turned the gate off; it left the
+  // composer openable to a logged-out visitor who then filled the whole form
+  // and met a bare 401 on submit — the API has always required the token. The
+  // gate is now the same on both sides.
   const handleComposeClick = (kind: PostType) => {
-    if (session || !REQUIRE_LOGIN_TO_POST) {
+    if (session) {
       openComposer(kind);
     } else {
       pendingComposeRef.current = kind;
@@ -281,9 +293,9 @@ export default function App() {
         country,
         // Filtering happens in SQL so paging stays correct — a client-side
         // filter would leave the offsets counting rows the user can't see.
-        // "all" has to be explicit: the API defaults to parcels so that older
-        // bundles, which have no card for an announcement, never receive one.
-        type: feedFilter === "parcel" ? "parcel" : feedFilter === "notes" ? "announcement" : "all",
+        // The chips are exhaustive, so "all" is never requested from here; the
+        // API still supports it for other callers.
+        type: feedFilter === "parcel" ? "parcel" : "announcement",
         limit: String(PAGE_SIZE),
         offset: String(append ? posts.length : 0),
       });
@@ -478,44 +490,69 @@ export default function App() {
         
         {/* Hero Section */}
         <section className="pt-6 pb-2">
+          {/* The headline belongs to the active tab and types itself out on
+              every switch. `key` is the whole replay mechanism: a new tab means
+              a new instance, which starts empty and types from zero. */}
           <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 mb-2 tracking-tight">
-            <span className="text-red">{t.title}</span>
-            <span className="block sm:inline">{t.titleAccent}</span>
+            <TypedHeadline
+              key={feedFilter}
+              segments={
+                feedFilter === "parcel"
+                  ? [
+                      { text: t.title, className: "text-red" },
+                      // Kept as its own line on phones, as before the animation.
+                      { text: t.titleAccent, className: "block sm:inline" },
+                    ]
+                  : [
+                      { text: t.notesTitleBrand || "Elchi", className: "text-red" },
+                      // Deep navy, the same ink the parcel headline's accent
+                      // carries — `text-blue` sat a shade too light next to it.
+                      {
+                        text: t.notesTitleRest || " - bepul e'lonlar taxtasi",
+                        className: "text-ink",
+                      },
+                    ]
+              }
+            />
           </h1>
         </section>
 
         {/* Posts Filter and Feed */}
         <section className="pt-2">
           {/* Route line + feed filter chips. Picking a country filters the feed;
-              the chips narrow it to one kind of ad, and the "×" on an active
-              chip clears back to the mixed feed. */}
+              the chips pick which of the two kinds it shows. One is always
+              active — there is no "clear" affordance, because there is no
+              unfiltered feed to clear back to. */}
           <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 flex-shrink-0">
+            <div
+              role="radiogroup"
+              className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 flex-shrink-0"
+            >
               <button
                 type="button"
-                onClick={() => toggleFeedFilter("parcel")}
-                aria-pressed={feedFilter === "parcel"}
-                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
+                role="radio"
+                onClick={() => setFeedFilter("parcel")}
+                aria-checked={feedFilter === "parcel"}
+                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all ${
                   feedFilter === "parcel"
                     ? "bg-ink text-card shadow-sm"
                     : "text-body hover:text-ink"
                 }`}
               >
                 {t.feedTabParcelLabel || "Pochta"}
-                {feedFilter === "parcel" && <X className="w-3 h-3" />}
               </button>
               <button
                 type="button"
-                onClick={() => toggleFeedFilter("notes")}
-                aria-pressed={feedFilter === "notes"}
-                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
+                role="radio"
+                onClick={() => setFeedFilter("notes")}
+                aria-checked={feedFilter === "notes"}
+                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all ${
                   feedFilter === "notes"
                     ? "bg-gold text-ink shadow-sm"
                     : "text-body hover:text-ink"
                 }`}
               >
                 {t.feedTabNotesLabel || "E'lonlar"}
-                {feedFilter === "notes" && <X className="w-3 h-3" />}
               </button>
             </div>
 
@@ -615,7 +652,7 @@ export default function App() {
       {/* Post Creation Bottom Sheet Modal. A note has almost none of a parcel
           ad's fields, so it gets its own sheet rather than a third tab that
           would hide most of the form it sits in. */}
-      {formOpen && (
+      {formOpen && session && (
         composeType === "announcement" ? (
           <NoteFormModal
             t={t}

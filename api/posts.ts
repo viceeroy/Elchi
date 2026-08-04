@@ -28,9 +28,19 @@ const CORRIDOR_COUNTRIES = [...ALLOWED_COUNTRIES].filter((c) => c !== HOME_COUNT
 // DEV ONLY — lets an unregistered visitor post while the composer is being
 // tested locally. Off unless ELCHI_DEV_NO_AUTH=1 AND a service-role key is
 // present, because bypassing the 401 alone achieves nothing: the RLS insert
-// policy still demands a real auth.uid(). Must never be set in production.
+// policy still demands a real auth.uid().
+//
+// The environment check is the third condition and it is not redundant: "must
+// never be set in production" was a comment, and a comment does not survive
+// someone copying an env var between Vercel environments. VERCEL_ENV is set by
+// the platform on every deployment (production / preview / development) and
+// cannot be reached by a request, so a deployed function refuses the bypass
+// whatever the other two say.
 const DEV_NO_AUTH =
-  process.env.ELCHI_DEV_NO_AUTH === '1' && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.ELCHI_DEV_NO_AUTH === '1' &&
+  !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
+  process.env.VERCEL_ENV !== 'production' &&
+  process.env.NODE_ENV !== 'production';
 
 // The service-role client bypasses row-level security. Only reachable from the
 // DEV_NO_AUTH path above; every real request still inserts as its author.

@@ -269,8 +269,13 @@ single source for every rendered date.
    from the URL bar on `onAuthStateChange`.
 4. Session drives three gates: posting, deleting, and revealing a contact.
 
-`REQUIRE_LOGIN_TO_POST` in `App.tsx` is currently `false` (composer testing). The login path
-underneath is intact.
+All three gates are enforced twice: in `api/posts.ts` (401 without a verified bearer token) and
+again in Postgres (the RLS insert/delete policies and `get_post_contact`'s `auth.uid()` check).
+The client gates — the composer, the delete button, the contact panel — are UX only; none of
+them is the security boundary, and there is no flag that turns any of them off.
+
+Losing the session closes the composer and the profile sheet, and drops any revealed contact
+from state, so an expired token never leaves an authenticated-only surface on screen.
 
 ---
 
@@ -284,7 +289,7 @@ underneath is intact.
 | `TELEGRAM_BOT_TOKEN` | server | HMAC verification |
 | `VITE_TELEGRAM_BOT_USERNAME` | client | Login widget |
 | `ELCHI_API_PROXY` | dev | Overrides the Vite `/api` proxy target |
-| `ELCHI_DEV_NO_AUTH` | dev | Relaxes the post auth gate. Never in production |
+| `ELCHI_DEV_NO_AUTH` | dev | Relaxes the post auth gate. Ignored when `VERCEL_ENV`/`NODE_ENV` is `production` |
 
 Vercel builds with `npm run build` → `dist`, rewrites `/api/*` to the functions and everything
 else to `index.html` (SPA fallback). Schema changes apply as a dated file in `migrations/`,

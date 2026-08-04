@@ -188,8 +188,18 @@ export interface Translations {
   // announcements). Exclusive: only one of the two shows at a time.
   feedTabParcelLabel?: string;
   feedTabNotesLabel?: string;
+  // The announcements headline, split at its one colour boundary the same way
+  // `title`/`titleAccent` splits the parcel one: the brand word, then the rest
+  // of the sentence. Spacing lives inside the pieces, so the typing animation
+  // can concatenate them untouched.
+  notesTitleBrand?: string;
+  notesTitleRest?: string;
   // Sticker label on an announcement card, alongside travelerTag/requestTag.
   announcementTag?: string;
+  // Shown under a card's note when the note was too long to print whole — the
+  // card's "there is more of this in the detail sheet" cue. Only rendered when
+  // the text is actually cut, so it never promises a longer note than exists.
+  cardMoreLabel?: string;
 
   // Announcement stub — the navy panel on the right of the card. A note has no
   // travel date, so where a parcel card shows the trip its stub shows the date

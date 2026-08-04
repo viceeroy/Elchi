@@ -20,46 +20,31 @@ export const FlagIcon: React.FC<FlagIconProps> = ({ iso, className }) => {
 
   switch (iso) {
     case "KR":
+      // Drawn to the Taegukgi's actual construction rather than by eye. The
+      // flag is 3:2 with the origin at the centre, so every measurement below
+      // is the spec's own: taegeuk diameter = half the flag height (r = 24),
+      // trigram bars 24 long and 4 thick on the 33.69° diagonals, set half a
+      // taegeuk radius clear of the circle. The hand-placed version this
+      // replaced had the trigrams rotated the wrong way and sized by feel.
       return (
-        <svg viewBox="0 0 30 20" className={cls} style={style} role="img" aria-label="Korea">
-          <rect width="30" height="20" fill="#FFFFFF" />
-          {/* Taegeuk — red over blue, tilted as on the real flag */}
-          <g transform="rotate(-33.69 15 10)">
-            <path d="M15 5.6a4.4 4.4 0 0 1 0 8.8 2.2 2.2 0 0 1 0-4.4 2.2 2.2 0 0 0 0-4.4z" fill="#CD2E3A" />
-            <path d="M15 5.6a4.4 4.4 0 0 0 0 8.8 2.2 2.2 0 0 0 0-4.4 2.2 2.2 0 0 1 0-4.4z" fill="#0047A0" />
+        <svg viewBox="-72 -48 144 96" className={cls} style={style} role="img" aria-label="Korea">
+          <path fill="#FFFFFF" d="M-72-48v96H72v-96z" />
+          {/* Trigrams. Each bar is a stroked vertical line; the two groups are
+              the two diagonals, so ☰/☵ ride one and ☲/☷ the other. */}
+          <g stroke="#000000" strokeWidth="4">
+            <path
+              transform="rotate(33.69006752598)"
+              d="M-50-12v24m6 0v-24m6 0v24m76 0V1m0-2v-11m6 0v11m0 2v11m6 0V1m0-2v-11"
+            />
+            <path
+              transform="rotate(-33.69006752598)"
+              d="M-50-12v24m6 0V1m0-2v-11m6 0v24m76 0V1m0-2v-11m6 0v24m6 0V1m0-2v-11"
+            />
           </g>
-          {/* Four trigrams, simplified to their bar groupings */}
-          <g fill="#000000">
-            {/* ☰ upper hoist */}
-            <g transform="translate(3.4 2.6) rotate(33.69)">
-              <rect width="5" height="0.9" />
-              <rect y="1.5" width="5" height="0.9" />
-              <rect y="3" width="5" height="0.9" />
-            </g>
-            {/* ☷ lower fly */}
-            <g transform="translate(21.6 13.5) rotate(33.69)">
-              <rect width="2.1" height="0.9" />
-              <rect x="2.9" width="2.1" height="0.9" />
-              <rect y="1.5" width="2.1" height="0.9" />
-              <rect x="2.9" y="1.5" width="2.1" height="0.9" />
-              <rect y="3" width="2.1" height="0.9" />
-              <rect x="2.9" y="3" width="2.1" height="0.9" />
-            </g>
-            {/* ☵ lower hoist */}
-            <g transform="translate(4.6 16.6) rotate(-33.69)">
-              <rect width="2.1" height="0.9" />
-              <rect x="2.9" width="2.1" height="0.9" />
-              <rect y="1.5" width="5" height="0.9" />
-              <rect y="3" width="2.1" height="0.9" />
-              <rect x="2.9" y="3" width="2.1" height="0.9" />
-            </g>
-            {/* ☲ upper fly */}
-            <g transform="translate(22.8 0.7) rotate(-33.69)">
-              <rect width="5" height="0.9" />
-              <rect y="1.5" width="2.1" height="0.9" />
-              <rect x="2.9" y="1.5" width="2.1" height="0.9" />
-              <rect y="3" width="5" height="0.9" />
-            </g>
+          {/* Taegeuk — red above blue, tilted onto the same diagonal */}
+          <g transform="rotate(33.69006752598)">
+            <path fill="#CD2E3A" d="M12 0a18 18 0 11-36 0 24 24 0 1148 0" />
+            <path fill="#0047A0" d="M-24 0a24 24 0 1048 0A12 12 0 100 0a12 12 0 11-24 0" />
           </g>
         </svg>
       );
