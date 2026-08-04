@@ -44,11 +44,11 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
 
   // Matches the parcel sticker's geometry, tilted the other way from the
   // traveler stamp so a run of cards doesn't read as a repeating pattern.
+  // In-flow, not absolutely positioned — it used to hang off the card's top
+  // edge; this keeps it anchored inside the card at a fixed spot regardless
+  // of the label's length.
   const stickerStyle = {
-    position: "absolute" as const,
-    top: -10,
-    left: 20,
-    zIndex: 10,
+    flexShrink: 0,
     fontFamily: "'Space Mono', monospace",
     fontSize: "10.5px",
     letterSpacing: "1px",
@@ -69,14 +69,9 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   return (
     <article
       onClick={onOpen}
-      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] min-h-[148px] bg-card rounded-xl border border-edge transition-all duration-300 cursor-pointer shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
+      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] min-h-[200px] bg-card rounded-xl border border-edge transition-all duration-300 cursor-pointer shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
       id={`post-card-${post.id}`}
     >
-      <div style={stickerStyle}>
-        <Megaphone className="w-3 h-3" />
-        {tagLabel}
-      </div>
-
       {/* Left edge stripe — solid gold, the plain counterpart to the airmail
           weave on a parcel card. */}
       <div
@@ -84,29 +79,33 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
         style={{ background: "var(--color-gold)", borderRight: "1px solid var(--color-rule)" }}
       />
 
-      {/* The sticker sits above; the text here. Left padding clears the gold
-          stripe, the top clears the sticker, and the content centres in
-          whatever height is left once min-h-[148px] has had its say — so a
-          sixteen-character note doesn't hang off the top of an empty card. */}
-      {/* md:pb-5, not the pb-6 the rest of the scale would suggest: at md the
-          title (23.75px) + its 4px gap + three body lines (65.25px) + 32px top
-          padding + the 2px border come to 151px, and a 24px bottom padding
-          pushes the card 3px past the 148px the feed is built on. 20px lands
-          it at 147px and lets min-h-[148px] set the final height. */}
-      <div className="pt-8 pb-5 pl-5 pr-5 sm:pl-8 sm:pr-6 md:pt-8 md:pb-5 md:pl-10 md:pr-7 min-w-0 flex flex-col justify-center">
+      {/* Left padding clears the gold stripe. Top-anchored (justify-start),
+          not centred: the badge sits a fixed distance from the card's top on
+          every card, whether the note is one line or five — its position was
+          previously computed by centring the whole content block, so a short
+          note pulled the badge down toward the middle of the card. */}
+      <div className="pt-5 pb-5 pl-5 pr-5 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 min-w-0 flex flex-col justify-start">
+        <div style={stickerStyle} className="self-start">
+          <Megaphone className="w-3 h-3" />
+          {tagLabel}
+        </div>
+
         {/* The theme when the author gave one, otherwise a first clause lifted
             off the note. Null when the note is short enough to be its own
-            title, which is what stops it being printed twice. */}
+            title, which is what stops it being printed twice. mt-2, not a
+            bottom margin on the badge above — a fixed gap between the two,
+            independent of either one's own size. */}
         {preview.title && (
-          <div className="font-bold text-[17px] sm:text-[19px] leading-[1.25] text-ink tracking-tight mb-1 line-clamp-1 [overflow-wrap:anywhere]">
+          <div className="mt-2 font-bold text-[17px] sm:text-[19px] leading-[1.25] text-ink tracking-tight mb-1 line-clamp-1 [overflow-wrap:anywhere]">
             {preview.title}
           </div>
         )}
 
         {/* Clamped so a 500-character note can't crowd the cards under it; a
             short one still keeps to the same height. Full text in the detail
-            sheet. */}
-        <p className="text-[14px] sm:text-[14.5px] text-body leading-[1.5] m-0 line-clamp-3 [overflow-wrap:anywhere]">
+            sheet. No title above (a short note stands alone) still gets the
+            same mt-2 gap under the badge. */}
+        <p className={`${preview.title ? "" : "mt-2"} text-[14px] sm:text-[14.5px] text-body leading-[1.5] m-0 line-clamp-3 [overflow-wrap:anywhere]`}>
           {preview.body}
         </p>
       </div>

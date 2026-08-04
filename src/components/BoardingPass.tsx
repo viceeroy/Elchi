@@ -38,12 +38,12 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     Boolean(post.from_city && post.to_city) &&
     (!isHubCity(fromCountry, post.from_city) || !isHubCity(toCountry, post.to_city));
 
-  // Render sticker styles with distinct airmail tilt angle
+  // Render sticker styles with distinct airmail tilt angle. In-flow, not
+  // absolutely positioned — it used to hang off the card's top edge; this
+  // keeps it anchored inside the card at a fixed spot regardless of the
+  // label's length ("Uchaman" vs "Pochta bor").
   const stickerStyle = {
-    position: "absolute" as const,
-    top: -10,
-    left: 20,
-    zIndex: 10,
+    flexShrink: 0,
     fontFamily: "'Space Mono', monospace",
     fontSize: "10.5px",
     letterSpacing: "1px",
@@ -103,19 +103,9 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   return (
     <article
       onClick={onOpen}
-      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] min-h-[148px] bg-card rounded-xl border border-edge transition-all duration-300 cursor-pointer shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
+      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] min-h-[200px] bg-card rounded-xl border border-edge transition-all duration-300 cursor-pointer shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
       id={`post-card-${post.id}`}
     >
-      {/* Traveler or Request Tag Badge */}
-      <div style={stickerStyle}>
-        {isTraveler ? (
-          <Briefcase className="w-3 h-3 text-card" />
-        ) : (
-          <Package className="w-3 h-3 text-card" />
-        )}
-        {tagLabel}
-      </div>
-
       {/* Decorative Left Airmail Stripe */}
       <div 
         className="absolute left-0 top-0 bottom-0 w-2 rounded-l-xl opacity-90 pointer-events-none"
@@ -125,14 +115,27 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         }}
       ></div>
 
-      {/* Main Boarding Pass Content */}
-      {/* md:pt-6 md:pb-5 rather than md:py-6 — see the matching note in
-          AnnouncementCard: 24px of bottom padding puts the card 3px over the
-          148px feed row, and every card in the column has to agree. */}
-      <div className="pt-8 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:pt-6 md:pb-5 md:pl-10 md:pr-7 flex flex-col justify-center min-w-0">
+      {/* Main Boarding Pass Content. Top-anchored (justify-start), not
+          centred: the badge sits a fixed distance from the card's top on
+          every card, whether the note is one line or five — its position was
+          previously computed by centring the whole content block, so a short
+          post pulled the badge down toward the middle of the card. */}
+      <div className="pt-5 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col justify-start min-w-0">
         <div>
-          {/* Destination Header (flight route is always Korea/Uzbekistan) */}
-          <div className="mb-2">
+          {/* Traveler / Request Tag Badge */}
+          <div style={stickerStyle}>
+            {isTraveler ? (
+              <Briefcase className="w-3 h-3 text-card" />
+            ) : (
+              <Package className="w-3 h-3 text-card" />
+            )}
+            {tagLabel}
+          </div>
+
+          {/* Destination Header (flight route is always Korea/Uzbekistan).
+              mt-2, not a bottom margin on the badge above — a fixed gap
+              between the two, independent of either one's own size. */}
+          <div className="mt-2 mb-2">
             <div className="flex items-center gap-2.5 font-bold text-[17px] sm:text-[19px] leading-[1.25] text-ink tracking-tight">
               <span>{hubFrom}</span>
               <span className="text-gold flex items-center">
@@ -154,20 +157,17 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
           {/* Post Details — description is clamped so the card height stays fixed
               regardless of note length; long URLs/words wrap instead of overflowing.
               Full text is shown in the detail modal on click. */}
-          {/* No bottom margin: this is the last thing in the panel, so the old
-              mb-3 was pure trailing space — and 12px of it pushed the card past
-              the 148px feed row. */}
+          {/* No bottom margin: this is the last thing in the panel, so a
+              trailing margin would just be dead space under the note. */}
           <div className="text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0">
             {physicalWeight && (
               <span className="text-ink font-bold block mr-1">
                 {physicalWeight}
               </span>
             )}
-            {/* The note clamps to one line below sm. A parcel card carries two
-                rows an announcement doesn't — the city line and the cargo line
-                — and at 375px those plus a two-line note put it 11px over the
-                148px feed row. The full note is in the detail sheet either
-                way. */}
+            {/* The note clamps to one line below sm, two at sm and up — the
+                fixed row height is what caps it, not an arbitrary line count.
+                The full note is in the detail sheet either way. */}
             {post.note && (
               <span className="line-clamp-1 sm:line-clamp-2 [overflow-wrap:anywhere]">
                 · {post.note}
@@ -185,11 +185,8 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
       <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -bottom-2.5 w-4 h-4 bg-paper border border-edge rounded-full pointer-events-none"></div>
 
       {/* Right Ticket Stub (Date and Call to Action) */}
-      {/* md:py-5, matching AnnouncementCard's stub. This panel — three lines of
-          text plus the button — is the tallest cell in the grid, so it, not the
-          copy on the left, is what sets the card's height. At md:py-6 it made
-          the row 151px and no amount of trimming the left panel could pull it
-          back to 148px. */}
+      {/* md:py-5, matching AnnouncementCard's stub, so the two card types'
+          stubs stay visually identical. */}
       <div className="rounded-r-xl bg-ink text-card px-2 py-4 sm:px-3 md:py-5 md:px-4 flex flex-col justify-between items-stretch relative min-w-0">
         <div className="flex flex-col gap-0.5 text-center mt-1 md:mt-2">
           <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] md:tracking-[1.5px] leading-none text-faint">
