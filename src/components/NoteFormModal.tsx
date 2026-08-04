@@ -16,11 +16,11 @@ type FieldErrors = Partial<Record<FieldName, string | undefined>>;
 const FIELD_ORDER: FieldName[] = ["text", "contact"];
 
 const ERROR_INPUT_CLASS =
-  "border-[#C23B3B] focus:border-[#C23B3B] ring-1 ring-[#C23B3B]/30";
+  "border-red focus:border-red ring-1 ring-red/30";
 
 const FieldError: React.FC<{ message?: string }> = ({ message }) =>
   message ? (
-    <p className="mt-1.5 flex items-center gap-1.5 text-[#C23B3B] text-[12px] font-semibold">
+    <p className="mt-1.5 flex items-center gap-1.5 text-red text-[12px] font-semibold">
       <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
       {message}
     </p>
@@ -199,16 +199,16 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-[#1b2a4a]/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
+      className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#FCFBF6] w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
+      <div className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
         {/* Notch pull-bar */}
-        <div className="w-10 h-1 bg-[#D8D3C4] rounded-full mx-auto mb-5" />
+        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5" />
 
         <button
           onClick={onClose}
-          className="absolute right-[18px] top-[18px] bg-[#F2EFE6] border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-[#1B2A4A] hover:bg-[#E4E0D2] transition-colors"
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-ink hover:bg-rule transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -216,11 +216,11 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
         {/* Header — gold, matching the note option on the speed dial, so the
             sheet is visibly not the parcel form. */}
         <div className="flex items-start gap-3 mb-6">
-          <span className="w-10 h-10 flex-shrink-0 rounded-full bg-[#C79A3E] text-[#1B2A4A] flex items-center justify-center">
+          <span className="w-10 h-10 flex-shrink-0 rounded-full bg-gold text-ink flex items-center justify-center">
             <Megaphone className="w-5 h-5" />
           </span>
           <div>
-            <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight m-0">
+            <h2 className="text-2xl font-extrabold text-ink tracking-tight m-0">
               {t.noteTitle}
             </h2>
             <p className="text-[13px] text-[#6B7280] m-0 mt-1 leading-snug">
@@ -245,7 +245,7 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
               as the older headline field. Left blank, the body text alone
               carries the ad. */}
           <div>
-            <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+            <label className="block text-[11px] font-bold text-faint tracking-wider uppercase mb-1.5">
               {t.noteThemeLabel || "Theme"}
             </label>
             <input
@@ -254,17 +254,17 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
               onChange={(e) => setTheme(e.target.value)}
               maxLength={THEME_MAX}
               placeholder={t.noteThemePlaceholder}
-              className="w-full box-sizing-border-box p-3 border rounded-lg text-base font-bold bg-[#FCFBF6] text-[#1B2A4A] outline-none border-[#D8D3C4] focus:border-[#C79A3E] placeholder:font-normal placeholder:text-[#8A8F98]"
+              className="w-full box-sizing-border-box p-3 border rounded-lg text-base font-bold bg-card text-ink outline-none border-field focus:border-gold placeholder:font-normal placeholder:text-faint"
             />
           </div>
 
           {/* The whole ad. One box, no structure. */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase">
+              <label className="block text-[11px] font-bold text-faint tracking-wider uppercase">
                 {t.noteTextLabel}
               </label>
-              <span className="font-mono text-[10px] text-[#8A8F98]">
+              <span className="font-mono text-[10px] text-faint">
                 {text.length}/{NOTE_MAX}
               </span>
             </div>
@@ -275,8 +275,8 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
               maxLength={NOTE_MAX}
               rows={6}
               placeholder={t.noteTextPlaceholder}
-              className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none resize-y leading-relaxed ${
-                errors.text ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#C79A3E]"
+              className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink outline-none resize-y leading-relaxed ${
+                errors.text ? ERROR_INPUT_CLASS : "border-field focus:border-gold"
               }`}
             />
             <FieldError message={errors.text} />
@@ -303,7 +303,7 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
           {submitError && (
             <div
               ref={submitErrorRef}
-              className="flex items-start gap-2 bg-[#FBEAEA] border border-[#C23B3B]/30 rounded-lg px-3.5 py-3 text-[#C23B3B] text-sm font-semibold"
+              className="flex items-start gap-2 bg-[#FBEAEA] border border-red/30 rounded-lg px-3.5 py-3 text-red text-sm font-semibold"
             >
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               {submitError}
@@ -313,12 +313,12 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3.5 bg-[#C79A3E] hover:bg-[#D6AA4E] text-[#1B2A4A] border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors disabled:opacity-60"
+            className="w-full py-3.5 bg-gold hover:bg-[#D6AA4E] text-ink border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors disabled:opacity-60"
           >
             {submitting ? t.submittingBtn : t.noteSubmitBtn}
           </button>
 
-          <div className="text-center font-mono text-[10.5px] text-[#8A8F98]">
+          <div className="text-center font-mono text-[10.5px] text-faint">
             {t.noteAutoDeleteLabel}
           </div>
         </form>

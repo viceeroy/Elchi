@@ -30,11 +30,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDism
         }
       }}
       id={`note-card-${note.id}`}
-      className="relative h-full overflow-hidden rounded-xl bg-[#C23B3B] text-[#F6EFE2] cursor-pointer shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+      className="relative h-full overflow-hidden rounded-xl bg-red text-[#F6EFE2] cursor-pointer shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
       style={{ boxShadow: "0 1px 2px rgba(27,42,74,0.06), 0 10px 28px -18px rgba(27,42,74,0.28)" }}
     >
       {/* Airmail stripe along the top edge, matching the page header */}
-      <div className="h-2 bg-[repeating-linear-gradient(-45deg,#C23B3B_0_12px,#FCFBF6_12px_17px,#2A4B8D_17px_29px,#FCFBF6_29px_34px)]" />
+      <div className="h-2 bg-[repeating-linear-gradient(-45deg,var(--color-red)_0_12px,var(--color-card)_12px_17px,var(--color-blue)_17px_29px,var(--color-card)_29px_34px)]" />
 
       {onDismiss && (
         <button
@@ -56,7 +56,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDism
         <div className="font-mono text-[10.5px] uppercase tracking-[1.5px] text-[#F6EFE2]/75">
           {c.tag}
         </div>
-        <h3 className="m-0 mt-1.5 text-[22px] font-extrabold tracking-tight text-[#FCFBF6]">
+        <h3 className="m-0 mt-1.5 text-[22px] font-extrabold tracking-tight text-card">
           {c.title}
         </h3>
         <p className="m-0 mt-2 text-[14px] leading-relaxed text-[#F6EFE2]/90">
@@ -64,7 +64,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDism
         </p>
       </div>
 
-      {/* Postmark — a lightened tint of the site navy (#2A4B8D). The navy
+      {/* Postmark — a lightened tint of the site blue (--color-blue). The navy
           itself goes near-invisible on the brick red, so the stamp is raised
           far enough to read while staying in the same blue family as the
           airmail stripe. */}

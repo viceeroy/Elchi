@@ -53,8 +53,8 @@ export const PostFab: React.FC<PostFabProps> = ({
       // Blue, red and gold exactly as the traveler/request/note stamps on the
       // cards (see BoardingPass, AnnouncementCard), so the dial is
       // colour-readable before the label is, and tilted alternating ways.
-      color: "#2A4B8D",
-      textColor: "#FCFBF6",
+      color: "var(--color-blue)",
+      textColor: "var(--color-card)",
       tilt: "rotate(-2.5deg)",
       onPick: onPickTraveler,
     },
@@ -62,8 +62,8 @@ export const PostFab: React.FC<PostFabProps> = ({
       key: "request",
       Icon: Package,
       label: t.fabRequestLabel || "Pochta",
-      color: "#C23B3B",
-      textColor: "#FCFBF6",
+      color: "var(--color-red)",
+      textColor: "var(--color-card)",
       tilt: "rotate(2deg)",
       onPick: onPickRequest,
     },
@@ -73,8 +73,8 @@ export const PostFab: React.FC<PostFabProps> = ({
       // Gold carries dark text — the stamp colour is light enough that the
       // cream used on the other two would not hold contrast.
       label: t.fabNoteLabel || "E'lon",
-      color: "#C79A3E",
-      textColor: "#1B2A4A",
+      color: "var(--color-gold)",
+      textColor: "var(--color-ink)",
       tilt: "rotate(-2deg)",
       onPick: onPickNote,
     },
@@ -87,7 +87,7 @@ export const PostFab: React.FC<PostFabProps> = ({
       {open && (
         <div
           onClick={() => onToggle(false)}
-          className="fixed inset-0 z-40 bg-[#1b2a4a]/30 backdrop-blur-[2px] animate-[fadein_0.16s_ease]"
+          className="fixed inset-0 z-40 bg-ink/30 backdrop-blur-[2px] animate-[fadein_0.16s_ease]"
           aria-hidden="true"
         />
       )}
@@ -138,7 +138,7 @@ export const PostFab: React.FC<PostFabProps> = ({
           onClick={() => onToggle(!open)}
           aria-expanded={open}
           aria-label={open ? t.fabCloseLabel || "Close" : t.fabOpenLabel || "Post an ad"}
-          className="w-14 h-14 rounded-full bg-[#1B2A4A] text-[#C79A3E] border-none flex items-center justify-center shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all"
+          className="w-14 h-14 rounded-full bg-ink text-gold border-none flex items-center justify-center shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all"
         >
           <Plus
             className={`w-7 h-7 transition-transform duration-200 ${open ? "rotate-45" : ""}`}

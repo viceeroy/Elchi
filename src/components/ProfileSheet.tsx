@@ -57,33 +57,33 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
 
   return (
     <div
-      className="fixed inset-0 bg-[#1b2a4a]/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
+      className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#FCFBF6] w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
-        <div className="w-10 h-1 bg-[#D8D3C4] rounded-full mx-auto mb-5"></div>
+      <div className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
+        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5"></div>
 
         <button
           onClick={onClose}
-          className="absolute right-[18px] top-[18px] bg-[#F2EFE6] border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-[#1B2A4A] hover:bg-[#E4E0D2] transition-colors"
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-ink hover:bg-rule transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight mb-5">{t.profileTitle}</h2>
+        <h2 className="text-2xl font-extrabold text-ink tracking-tight mb-5">{t.profileTitle}</h2>
 
         {/* Identity */}
         <div className="flex items-center gap-4 mb-6">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover border border-[#E4E0D2]" />
+            <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover border border-rule" />
           ) : (
-            <div className="w-14 h-14 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-xl font-black">
+            <div className="w-14 h-14 rounded-full bg-ink text-card flex items-center justify-center text-xl font-black">
               {initial}
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-lg font-bold text-[#1B2A4A] truncate">{name}</p>
-            <p className="text-sm text-[#5A6272] flex items-center gap-1.5">
+            <p className="text-lg font-bold text-ink truncate">{name}</p>
+            <p className="text-sm text-body flex items-center gap-1.5">
               {provider === "telegram" ? <Send className="w-3.5 h-3.5" /> : null}
               {t.profileLoginMethod}: {methodLabel}
             </p>
@@ -91,13 +91,13 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
         </div>
 
         {/* Stats */}
-        <div className="flex items-center gap-3 rounded-xl border border-[#E9E5D8] bg-[#F7F4EC] px-4 py-3 mb-6">
-          <div className="w-9 h-9 rounded-lg bg-[#1B2A4A] text-[#C79A3E] flex items-center justify-center">
+        <div className="flex items-center gap-3 rounded-xl border border-edge bg-[#F7F4EC] px-4 py-3 mb-6">
+          <div className="w-9 h-9 rounded-lg bg-ink text-gold flex items-center justify-center">
             <Package className="w-4.5 h-4.5" />
           </div>
           <div>
-            <p className="text-xl font-black text-[#1B2A4A] leading-none">{postCount ?? "…"}</p>
-            <p className="text-xs text-[#5A6272] mt-1">{t.profilePostsCount}</p>
+            <p className="text-xl font-black text-ink leading-none">{postCount ?? "…"}</p>
+            <p className="text-xs text-body mt-1">{t.profilePostsCount}</p>
           </div>
         </div>
 
@@ -105,7 +105,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
         <button
           onClick={handleSignOut}
           disabled={signingOut}
-          className="w-full flex items-center justify-center gap-2 border border-[#D8D3C4] rounded-lg py-3 text-sm font-bold text-[#C23B3B] bg-[#FCFBF6] hover:bg-[#F7ECEC] hover:border-[#C23B3B]/40 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 border border-field rounded-lg py-3 text-sm font-bold text-red bg-card hover:bg-[#F7ECEC] hover:border-red/40 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <LogOut className="w-4 h-4" />
           {t.signOut}

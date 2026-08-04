@@ -68,7 +68,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
         className="group/side flex items-center gap-1.5 bg-transparent border-none p-0 cursor-pointer max-w-full min-w-0"
       >
         <FlagIcon iso={selected.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />
-        <span className="font-bold text-[13px] sm:text-[17px] leading-none text-[#1B2A4A] group-hover/side:text-[#2A4B8D] transition-colors truncate">
+        <span className="font-bold text-[13px] sm:text-[17px] leading-none text-ink group-hover/side:text-blue transition-colors truncate">
           {selected.country}
         </span>
         <svg
@@ -80,7 +80,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`shrink-0 text-[#B9B4A5] group-hover/side:text-[#2A4B8D] transition-transform ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 text-[#B9B4A5] group-hover/side:text-blue transition-transform ${open ? "rotate-180" : ""}`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -88,7 +88,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
 
       {/* Country dropdown */}
       {open && (
-        <div className="absolute top-[calc(100%+8px)] right-0 z-30 bg-[#FCFBF6] border border-[#E4E0D2] rounded-xl shadow-lg py-1.5 min-w-[180px]">
+        <div className="absolute top-[calc(100%+8px)] right-0 z-30 bg-card border border-rule rounded-xl shadow-lg py-1.5 min-w-[180px]">
           {options.map((c) => {
             const active = c.iso === selected.iso;
             return (
@@ -97,19 +97,19 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
                 type="button"
                 onClick={() => selectCountry(c)}
                 className={`w-full flex items-center justify-between gap-3 px-3.5 py-2 text-left transition-colors ${
-                  active ? "bg-[#F2EFE6]" : "hover:bg-[#F2EFE6]"
+                  active ? "bg-paper" : "hover:bg-paper"
                 }`}
               >
                 <span className="flex items-center gap-2">
                   <FlagIcon iso={c.iso} className="w-[18px] h-[13px]" />
                   <span className="flex flex-col">
-                    <span className={`text-[13px] ${active ? "font-bold" : "font-semibold"} text-[#1B2A4A]`}>
+                    <span className={`text-[13px] ${active ? "font-bold" : "font-semibold"} text-ink`}>
                       {c.country}
                     </span>
-                    <span className="text-[11px] text-[#8A8F98]">{c.city}</span>
+                    <span className="text-[11px] text-faint">{c.city}</span>
                   </span>
                 </span>
-                <span className="font-mono text-[11px] font-bold tracking-[1px] text-[#C79A3E]">
+                <span className="font-mono text-[11px] font-bold tracking-[1px] text-gold">
                   {c.code}
                 </span>
               </button>

@@ -4,13 +4,47 @@
 @theme {
   --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Space Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* ---------------------------------------------------------------------
+     Palette. Twelve colours, and the whole board is built from them. Every
+     one used to be a hex literal repeated inline across the components; the
+     names below are now the only place a value is written down.
+
+     `paper` is deliberately DARKER than the #F2EFE6 it replaces. The cards
+     are `card` on `paper`, and at the old value the two were close enough
+     that a card read as a lighter patch of the page rather than a thing
+     sitting on it. The body rule below and the root div in App.tsx both
+     point at this token so they cannot drift apart again.
+     --------------------------------------------------------------------- */
+  --color-paper: #EDE9DC;   /* page background */
+  --color-card: #FCFBF6;    /* card background, and light text on navy */
+  --color-ink: #1B2A4A;     /* navy — body text, stub, dark chips */
+  --color-blue: #2A4B8D;    /* traveler stamp, airmail stripe, links */
+  --color-red: #C23B3B;     /* request stamp, airmail stripe, errors */
+  --color-gold: #C79A3E;    /* announcement stamp, accents, CTAs */
+  --color-gold-lit: #D9AC50;/* gold, hovered */
+  --color-edge: #E9E5D8;    /* card border */
+  --color-rule: #E4E0D2;    /* dividers, secondary borders */
+  --color-body: #5A6272;    /* body copy grey */
+  --color-faint: #8A8F98;   /* muted grey — meta, placeholders */
+  --color-field: #D8D3C4;   /* input border */
+
+  /* Card elevation. These were inline `style={{ boxShadow }}` objects on
+     both card components, which silently beat the `shadow-sm` /
+     `hover:shadow-md` classes sitting right next to them — so the hover
+     shadow never rendered. As tokens they can be applied as real utilities
+     and the hover state works. */
+  --shadow-card: 0 1px 2px rgba(27, 42, 74, 0.04),
+                 0 10px 28px -18px rgba(27, 42, 74, 0.18);
+  --shadow-card-hover: 0 2px 6px rgba(27, 42, 74, 0.06),
+                       0 18px 40px -20px rgba(27, 42, 74, 0.28);
 }
 
 body {
   margin: 0;
-  background-color: #F2EFE6;
+  background-color: var(--color-paper);
   font-family: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
-  color: #1B2A4A;
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -22,11 +56,11 @@ body {
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #E4E0D2;
+  background: var(--color-rule);
   border-radius: 10px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #C79A3E;
+  background: var(--color-gold);
 }
 
 /* Toast entrance animation */

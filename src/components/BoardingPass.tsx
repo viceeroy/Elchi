@@ -57,8 +57,8 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     boxShadow: "0 3px 8px rgba(27,42,74,0.15)",
     border: "1px dashed rgba(255,255,255,0.4)",
     transform: isTraveler ? "rotate(-2.5deg)" : "rotate(2.0deg)",
-    background: isTraveler ? "#2A4B8D" : "#C23B3B",
-    color: "#FCFBF6",
+    background: isTraveler ? "var(--color-blue)" : "var(--color-red)",
+    color: "var(--color-card)",
   };
 
   // The card shows only the physical weight (kg + luggage), stripping any
@@ -94,9 +94,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
 
-      const months = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
-
-      return `${d.getDate()} ${months[d.getMonth()]}`;
+      return `${d.getDate()} ${t.months[d.getMonth()]}`;
     } catch {
       return dateStr;
     }
@@ -105,18 +103,15 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   return (
     <article
       onClick={onOpen}
-      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] bg-[#FCFBF6] rounded-xl border border-[#E9E5D8] transition-all duration-300 cursor-pointer shadow-sm hover:-translate-y-1 hover:shadow-md"
-      style={{
-        boxShadow: "0 1px 2px rgba(27,42,74,0.04), 0 10px 28px -18px rgba(27,42,74,0.18)",
-      }}
+      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] min-h-[148px] bg-card rounded-xl border border-edge transition-all duration-300 cursor-pointer shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
       id={`post-card-${post.id}`}
     >
       {/* Traveler or Request Tag Badge */}
       <div style={stickerStyle}>
         {isTraveler ? (
-          <Briefcase className="w-3 h-3 text-[#FCFBF6]" />
+          <Briefcase className="w-3 h-3 text-card" />
         ) : (
-          <Package className="w-3 h-3 text-[#FCFBF6]" />
+          <Package className="w-3 h-3 text-card" />
         )}
         {tagLabel}
       </div>
@@ -125,19 +120,22 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
       <div 
         className="absolute left-0 top-0 bottom-0 w-2 rounded-l-xl opacity-90 pointer-events-none"
         style={{
-          background: "repeating-linear-gradient(-45deg, #2A4B8D, #2A4B8D 6px, #FCFBF6 6px, #FCFBF6 12px, #C23B3B 12px, #C23B3B 18px, #FCFBF6 18px, #FCFBF6 24px)",
-          borderRight: "1px solid #E4E0D2"
+          background: "repeating-linear-gradient(-45deg, var(--color-blue), var(--color-blue) 6px, var(--color-card) 6px, var(--color-card) 12px, var(--color-red) 12px, var(--color-red) 18px, var(--color-card) 18px, var(--color-card) 24px)",
+          borderRight: "1px solid var(--color-rule)"
         }}
       ></div>
 
       {/* Main Boarding Pass Content */}
-      <div className="pt-8 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col justify-between min-w-0">
+      {/* md:pt-6 md:pb-5 rather than md:py-6 — see the matching note in
+          AnnouncementCard: 24px of bottom padding puts the card 3px over the
+          148px feed row, and every card in the column has to agree. */}
+      <div className="pt-8 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:pt-6 md:pb-5 md:pl-10 md:pr-7 flex flex-col justify-center min-w-0">
         <div>
           {/* Destination Header (flight route is always Korea/Uzbekistan) */}
           <div className="mb-2">
-            <div className="flex items-center gap-2.5 font-extrabold text-[16px] sm:text-[19px] text-[#1B2A4A] tracking-tight">
+            <div className="flex items-center gap-2.5 font-bold text-[17px] sm:text-[19px] leading-[1.25] text-ink tracking-tight">
               <span>{hubFrom}</span>
-              <span className="text-[#C79A3E] flex items-center">
+              <span className="text-gold flex items-center">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13" />
                   <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -147,7 +145,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
             </div>
             {/* Actual city (where the traveler/parcel is really going, beyond the airport) */}
             {showActualCities && (
-              <div className="font-mono text-[11px] text-[#8A8F98] tracking-wide mt-0.5">
+              <div className="font-mono text-[11px] text-faint tracking-wide leading-none mt-0.5">
                 {post.from_city} → {post.to_city}
               </div>
             )}
@@ -156,14 +154,22 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
           {/* Post Details — description is clamped so the card height stays fixed
               regardless of note length; long URLs/words wrap instead of overflowing.
               Full text is shown in the detail modal on click. */}
-          <div className="text-[13.5px] text-[#5A6272] leading-relaxed mb-3 min-w-0">
+          {/* No bottom margin: this is the last thing in the panel, so the old
+              mb-3 was pure trailing space — and 12px of it pushed the card past
+              the 148px feed row. */}
+          <div className="text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0">
             {physicalWeight && (
-              <span className="text-[#1B2A4A] font-bold block mr-1">
+              <span className="text-ink font-bold block mr-1">
                 {physicalWeight}
               </span>
             )}
+            {/* The note clamps to one line below sm. A parcel card carries two
+                rows an announcement doesn't — the city line and the cargo line
+                — and at 375px those plus a two-line note put it 11px over the
+                148px feed row. The full note is in the detail sheet either
+                way. */}
             {post.note && (
-              <span className="line-clamp-2 [overflow-wrap:anywhere]">
+              <span className="line-clamp-1 sm:line-clamp-2 [overflow-wrap:anywhere]">
                 · {post.note}
               </span>
             )}
@@ -172,29 +178,34 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
       </div>
 
       {/* Ticket Tear-off Divider and Punch Notches (all breakpoints, scaled to stub width) */}
-      <div className="absolute right-[88px] sm:right-[110px] md:right-[135px] top-3 bottom-3 w-0 border-l-2 border-dashed border-[#E4E0D2] pointer-events-none"></div>
+      <div className="absolute right-[88px] sm:right-[110px] md:right-[135px] top-3 bottom-3 w-0 border-l-2 border-dashed border-rule pointer-events-none"></div>
 
       {/* Decorative Ticket Punch Holes (Notches) */}
-      <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -top-2.5 w-4 h-4 bg-[#F2EFE6] border border-[#E9E5D8] rounded-full pointer-events-none"></div>
-      <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -bottom-2.5 w-4 h-4 bg-[#F2EFE6] border border-[#E9E5D8] rounded-full pointer-events-none"></div>
+      <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -top-2.5 w-4 h-4 bg-paper border border-edge rounded-full pointer-events-none"></div>
+      <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -bottom-2.5 w-4 h-4 bg-paper border border-edge rounded-full pointer-events-none"></div>
 
       {/* Right Ticket Stub (Date and Call to Action) */}
-      <div className="rounded-r-xl bg-[#1B2A4A] text-[#FCFBF6] px-2 py-4 sm:px-3 md:py-6 md:px-4 flex flex-col justify-between items-stretch relative min-w-0">
+      {/* md:py-5, matching AnnouncementCard's stub. This panel — three lines of
+          text plus the button — is the tallest cell in the grid, so it, not the
+          copy on the left, is what sets the card's height. At md:py-6 it made
+          the row 151px and no amount of trimming the left panel could pull it
+          back to 148px. */}
+      <div className="rounded-r-xl bg-ink text-card px-2 py-4 sm:px-3 md:py-5 md:px-4 flex flex-col justify-between items-stretch relative min-w-0">
         <div className="flex flex-col gap-0.5 text-center mt-1 md:mt-2">
-          <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] md:tracking-[1.5px] text-gray-400">
+          <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] md:tracking-[1.5px] leading-none text-faint">
             {t.stubLabel}
           </span>
-          <span className="font-mono text-[12px] sm:text-[13px] md:text-[15px] font-bold mt-0.5 text-[#FCFBF6] leading-tight">
+          <span className="font-mono text-[12px] sm:text-[13px] md:text-[15px] font-bold mt-0.5 text-card leading-tight">
             {formatDate(post.date)}
           </span>
-          <span className="font-sans text-[10px] md:text-[11px] font-semibold text-[#C79A3E] mt-1 flex items-center justify-center gap-1">
+          <span className="font-sans text-[10px] md:text-[11px] font-semibold text-gold mt-1 flex items-center justify-center gap-1">
             <ArrowRight className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{post.to_city}</span>
           </span>
         </div>
 
         <button
           onClick={(e) => { e.stopPropagation(); onOpen(); }}
-          className="font-mono text-[9px] sm:text-[10px] md:text-[11px] bg-[#C79A3E] text-[#1B2A4A] border-none py-2 px-1 md:px-2 rounded-md font-bold cursor-pointer tracking-wider hover:bg-[#D9AC50] transition-colors shadow-sm mt-3"
+          className="font-mono text-[9px] sm:text-[10px] md:text-[11px] bg-gold text-ink border-none py-2 px-1 md:px-2 rounded-md font-bold cursor-pointer tracking-wider leading-none hover:bg-gold-lit transition-colors shadow-sm mt-3"
           id={`stub-btn-${post.id}`}
         >
           {t.contactBtn.replace(" →", "")}

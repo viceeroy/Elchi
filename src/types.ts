@@ -191,6 +191,17 @@ export interface Translations {
   // Sticker label on an announcement card, alongside travelerTag/requestTag.
   announcementTag?: string;
 
+  // Announcement stub — the navy panel on the right of the card. A note has no
+  // travel date, so where a parcel card shows the trip its stub shows the date
+  // the ad went up.
+  stubPostedLabel: string;
+
+  // Month names, January first. The single source for every date the board
+  // renders: the two card stubs and the detail sheet all read this array, which
+  // is why it is NOT optional — an absent key would have to be covered by an
+  // Uzbek literal inside a component, and there used to be three such copies.
+  months: string[];
+
   // Body label on an announcement in the detail sheet.
   announcementBodyLabel?: string;
 
