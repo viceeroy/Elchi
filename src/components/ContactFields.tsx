@@ -7,7 +7,7 @@ import { ContactMethod, Translations } from "../types";
 export const sanitizePhone = (value: string) => value.replace(/[^\d+\-\s()]/g, "");
 
 const ERROR_INPUT_CLASS =
-  "border-[#C23B3B] focus:border-[#C23B3B] ring-1 ring-[#C23B3B]/30";
+  "border-red focus:border-red ring-1 ring-red/30";
 
 interface ContactFieldsProps {
   t: Translations;
@@ -58,18 +58,18 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
     <>
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold">
+          <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold">
             {label || t.contactLabel}
           </label>
 
-          <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-lg p-0.5 gap-0.5">
+          <div className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5">
             <button
               type="button"
               onClick={() => onMethodChange("telegram")}
               className={`px-3 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${
                 method === "telegram"
-                  ? "bg-[#2A4B8D] text-white shadow-sm"
-                  : "text-[#5A6272] hover:text-[#1B2A4A]"
+                  ? "bg-blue text-white shadow-sm"
+                  : "text-body hover:text-ink"
               }`}
             >
               <Send className="w-2.5 h-2.5" />
@@ -84,7 +84,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
               className={`px-3 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${
                 method === "phone"
                   ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-[#5A6272] hover:text-[#1B2A4A]"
+                  : "text-body hover:text-ink"
               }`}
             >
               <Phone className="w-2.5 h-2.5" />
@@ -94,9 +94,9 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
         </div>
 
         <div className="relative">
-          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-[#8A8F98]">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-faint">
             {method === "telegram" ? (
-              <span className="font-mono text-sm font-bold text-[#2A4B8D] mr-0.5">@</span>
+              <span className="font-mono text-sm font-bold text-blue mr-0.5">@</span>
             ) : (
               <Phone className="w-4 h-4 text-emerald-600" />
             )}
@@ -121,19 +121,19 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                 : "+998 90-123-4567 yoki +82 10-1234-5678"
             }
             maxLength={method === "telegram" ? 99 : 100}
-            className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono transition-all ${
+            className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono transition-all ${
               error
                 ? ERROR_INPUT_CLASS
                 : method === "telegram"
-                  ? "border-[#D8D3C4] focus:border-[#2A4B8D] focus:ring-1 focus:ring-[#2A4B8D]"
-                  : "border-[#D8D3C4] focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                  ? "border-field focus:border-blue focus:ring-1 focus:ring-blue"
+                  : "border-field focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
             }`}
             style={{ paddingLeft: "34px" }}
           />
         </div>
 
         {error && (
-          <p className="mt-1.5 flex items-center gap-1.5 text-[#C23B3B] text-[12px] font-semibold">
+          <p className="mt-1.5 flex items-center gap-1.5 text-red text-[12px] font-semibold">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
             {error}
           </p>
@@ -142,14 +142,14 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
         {/* Live preview of the t.me link, or country-code shortcuts for phones */}
         {method === "telegram" ? (
           handle && (
-            <div className="mt-1.5 font-mono text-[10.5px] text-[#2A4B8D] flex items-center gap-1.5 bg-[#E8EEF8]/60 px-2.5 py-1.5 rounded-md border border-[#D5E2F4] w-fit">
+            <div className="mt-1.5 font-mono text-[10.5px] text-blue flex items-center gap-1.5 bg-[#E8EEF8]/60 px-2.5 py-1.5 rounded-md border border-[#D5E2F4] w-fit">
               <Send className="w-3 h-3" />
               <span className="opacity-75">Telegram havola:</span>
               <a
                 href={`https://t.me/${handle}`}
                 target="_blank"
                 rel="noreferrer"
-                className="underline text-[#C79A3E] font-bold hover:text-[#1B2A4A] tracking-tight"
+                className="underline text-gold font-bold hover:text-ink tracking-tight"
               >
                 t.me/{handle}
               </a>
@@ -188,7 +188,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
         {showContact2 ? (
           <>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold">
+              <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold">
                 {t.secondaryContactLabel || "Qo'shimcha bog'lanish"}
               </label>
               <button
@@ -197,17 +197,17 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                   onShowContact2Change(false);
                   onContact2Change("");
                 }}
-                className="text-[#8A8F98] hover:text-[#C23B3B]"
+                className="text-faint hover:text-red"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-[#8A8F98]">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-faint">
                 {method === "telegram" ? (
                   <Phone className="w-4 h-4 text-emerald-600" />
                 ) : (
-                  <span className="font-mono text-sm font-bold text-[#2A4B8D] mr-0.5">@</span>
+                  <span className="font-mono text-sm font-bold text-blue mr-0.5">@</span>
                 )}
               </div>
               <input
@@ -224,7 +224,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                     : "username"
                 }
                 maxLength={method === "telegram" ? 100 : 99}
-                className="w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono border-[#D8D3C4] focus:border-[#2A4B8D] focus:ring-1 focus:ring-[#2A4B8D]"
+                className="w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono border-field focus:border-blue focus:ring-1 focus:ring-blue"
                 style={{ paddingLeft: "34px" }}
               />
             </div>
@@ -233,7 +233,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
           <button
             type="button"
             onClick={() => onShowContact2Change(true)}
-            className="font-mono text-xs font-semibold px-4 py-3 bg-[#FCFBF6] text-[#6B7280] border border-dashed border-[#D8D3C4] rounded-lg hover:border-[#1B2A4A]"
+            className="font-mono text-xs font-semibold px-4 py-3 bg-card text-[#6B7280] border border-dashed border-field rounded-lg hover:border-ink"
           >
             {method === "telegram"
               ? t.addPhoneBtn || "+ Add phone number"

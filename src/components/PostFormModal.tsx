@@ -18,14 +18,14 @@ const FIELD_ORDER: FieldName[] = ["fromCity", "toCity", "date", "weight", "note"
 
 const FieldError: React.FC<{ message?: string }> = ({ message }) =>
   message ? (
-    <p className="mt-1.5 flex items-center gap-1.5 text-[#C23B3B] text-[12px] font-semibold">
+    <p className="mt-1.5 flex items-center gap-1.5 text-red text-[12px] font-semibold">
       <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
       {message}
     </p>
   ) : null;
 
 // Applied to inputs that failed validation, replacing their usual border.
-const ERROR_INPUT_CLASS = "border-[#C23B3B] focus:border-[#C23B3B] ring-1 ring-[#C23B3B]/30";
+const ERROR_INPUT_CLASS = "border-red focus:border-red ring-1 ring-red/30";
 
 interface PostFormModalProps {
   t: Translations;
@@ -304,8 +304,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     }
   };
 
-  const itemChipBase = { fontFamily: "'Space Mono', monospace", fontSize: 12, padding: '8px 15px', border: '1px solid #D8D3C4', borderRadius: 100, background: '#FCFBF6', cursor: 'pointer', color: '#1B2A4A', transition: 'all .15s ease' };
-  const itemChipActive = { ...itemChipBase, background: '#1B2A4A', color: '#FCFBF6', border: '1px solid #1B2A4A' };
+  const itemChipBase = { fontFamily: "'Space Mono', monospace", fontSize: 12, padding: '8px 15px', border: '1px solid var(--color-field)', borderRadius: 100, background: 'var(--color-card)', cursor: 'pointer', color: 'var(--color-ink)', transition: 'all .15s ease' };
+  const itemChipActive = { ...itemChipBase, background: 'var(--color-ink)', color: 'var(--color-card)', border: '1px solid var(--color-ink)' };
 
   const itemTypeChips = itemTypes.map(it => ({
     ...it,
@@ -319,19 +319,19 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-[#1b2a4a]/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
+      className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div 
-        className="bg-[#FCFBF6] w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative"
+        className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative"
       >
         {/* Notch pull-bar */}
-        <div className="w-10 h-1 bg-[#D8D3C4] rounded-full mx-auto mb-5"></div>
+        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5"></div>
         
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute right-[18px] top-[18px] bg-[#F2EFE6] border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-[#1B2A4A] hover:bg-[#E4E0D2] transition-colors"
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-ink hover:bg-rule transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -339,14 +339,14 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         {/* Tab Toggle between Traveler and Request — the active tab borrows the
             stamp styling from the post cards (see BoardingPass), so the blue/red
             colour coding means the same thing while composing as when browsing. */}
-        <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-1 mb-6 gap-1">
+        <div className="flex bg-paper border border-edge rounded-xl p-1 mb-6 gap-1">
           <button
             type="button"
             onClick={() => setPostType("traveler")}
             className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
               postType === "traveler"
-                ? "bg-[#2A4B8D] text-[#FCFBF6] border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] -rotate-[1.5deg]"
-                : "border border-transparent text-[#5A6272] hover:text-[#2A4B8D]"
+                ? "bg-blue text-card border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] -rotate-[1.5deg]"
+                : "border border-transparent text-body hover:text-blue"
             }`}
           >
             <Briefcase className="w-4 h-4" />
@@ -357,8 +357,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             onClick={() => setPostType("request")}
             className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
               postType === "request"
-                ? "bg-[#C23B3B] text-[#FCFBF6] border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] rotate-[1.5deg]"
-                : "border border-transparent text-[#5A6272] hover:text-[#C23B3B]"
+                ? "bg-red text-card border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] rotate-[1.5deg]"
+                : "border border-transparent text-body hover:text-red"
             }`}
           >
             <Package className="w-4 h-4" />
@@ -367,7 +367,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         </div>
 
         {/* Header Title */}
-        <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight mb-6">{t.addPostTitle}</h2>
+        <h2 className="text-2xl font-extrabold text-ink tracking-tight mb-6">{t.addPostTitle}</h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Honeypot Spam Trap (Hidden for humans) */}
@@ -387,13 +387,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 the country already on the other side swaps them. */}
             <div className="flex flex-row items-end gap-2 sm:gap-3 mb-4">
               <div className="flex-1 min-w-0">
-                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+                <label className="block text-[11px] font-bold text-faint tracking-wider uppercase mb-1.5">
                   Qaysi davlatdan
                 </label>
                 <select
                   value={fromCountry}
                   onChange={(e) => pickCountry("from", e.target.value)}
-                  className="w-full p-3 border border-[#D8D3C4] focus:border-[#2A4B8D] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none font-semibold"
+                  className="w-full p-3 border border-field focus:border-blue rounded-lg text-sm bg-card text-ink outline-none font-semibold"
                 >
                   {COUNTRIES.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -403,16 +403,16 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 </select>
               </div>
 
-              <ArrowRight className="w-5 h-5 text-[#C79A3E] pb-0.5 mb-2 flex-shrink-0 self-center" />
+              <ArrowRight className="w-5 h-5 text-gold pb-0.5 mb-2 flex-shrink-0 self-center" />
 
               <div className="flex-1 min-w-0">
-                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+                <label className="block text-[11px] font-bold text-faint tracking-wider uppercase mb-1.5">
                   Qaysi davlatga
                 </label>
                 <select
                   value={toCountry}
                   onChange={(e) => pickCountry("to", e.target.value)}
-                  className="w-full p-3 border border-[#D8D3C4] focus:border-[#2A4B8D] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none font-semibold"
+                  className="w-full p-3 border border-field focus:border-blue rounded-lg text-sm bg-card text-ink outline-none font-semibold"
                 >
                   {COUNTRIES.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -426,7 +426,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             {/* Free-text From / To cities (display only — filtering uses countries) */}
             <div className="flex flex-row items-end gap-2 sm:gap-3">
               <div className="flex-1 min-w-0">
-                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+                <label className="block text-[11px] font-bold text-faint tracking-wider uppercase mb-1.5">
                   Qaysi shahardan
                 </label>
                 <input
@@ -436,16 +436,16 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   onChange={(e) => { setFromCity(e.target.value); clearError("fromCity"); }}
                   placeholder="Qayerdan (masalan: Seoul)"
                   maxLength={100}
-                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
-                    errors.fromCity ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink outline-none ${
+                    errors.fromCity ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
                   }`}
                 />
               </div>
 
-              <ArrowRight className="w-5 h-5 text-[#C79A3E] pb-0.5 mb-2 flex-shrink-0 self-center" />
+              <ArrowRight className="w-5 h-5 text-gold pb-0.5 mb-2 flex-shrink-0 self-center" />
 
               <div className="flex-1 min-w-0">
-                <label className="block text-[11px] font-bold text-[#8A8F98] tracking-wider uppercase mb-1.5">
+                <label className="block text-[11px] font-bold text-faint tracking-wider uppercase mb-1.5">
                   Qaysi shaharga
                 </label>
                 <input
@@ -455,8 +455,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   onChange={(e) => { setToCity(e.target.value); clearError("toCity"); }}
                   placeholder="Qayerga (masalan: Toshkent)"
                   maxLength={100}
-                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] outline-none ${
-                    errors.toCity ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink outline-none ${
+                    errors.toCity ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
                   }`}
                 />
               </div>
@@ -466,7 +466,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
           {/* Date Selection Section */}
           <div ref={(el) => { fieldRefs.current.date = el; }}>
-            <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold mb-2">
+            <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold mb-2">
               {postType === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest}
             </label>
             <div className="flex flex-col gap-3">
@@ -481,8 +481,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     onClick={() => { setSelectedMonth(m.value); setSelectedDay(null); setDateFlexible(false); }}
                     className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
                       selectedMonth === m.value && !dateFlexible
-                        ? "bg-[#1B2A4A] text-[#FCFBF6]"
-                        : "bg-[#F2EFE6] text-[#6B7280] hover:bg-[#E4E0D2]"
+                        ? "bg-ink text-card"
+                        : "bg-paper text-[#6B7280] hover:bg-rule"
                     }`}
                   >
                     {m.label}
@@ -494,8 +494,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     onClick={() => { setDateFlexible(true); setSelectedDay(null); clearError("date"); }}
                     className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
                       dateFlexible
-                        ? "bg-[#C79A3E] text-[#FCFBF6]"
-                        : "bg-[#F2EFE6] text-[#6B7280] hover:bg-[#E4E0D2]"
+                        ? "bg-gold text-card"
+                        : "bg-paper text-[#6B7280] hover:bg-rule"
                     }`}
                   >
                     {t.dateFlexibleBtn}
@@ -515,10 +515,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                       onClick={() => { setSelectedDay(d.getDate()); clearError("date"); }}
                       className={`font-mono flex flex-col items-center gap-0.5 min-w-[42px] p-2.5 rounded-lg border cursor-pointer transition-all ${
                         isSelected
-                          ? "bg-[#1B2A4A] text-[#FCFBF6] border-[#1B2A4A] scale-105 shadow-sm"
+                          ? "bg-ink text-card border-ink scale-105 shadow-sm"
                           : errors.date
-                            ? "bg-[#FCFBF6] text-[#1B2A4A] border-[#C23B3B]"
-                            : "bg-[#FCFBF6] text-[#1B2A4A] border-[#E4E0D2] hover:border-[#1B2A4A]"
+                            ? "bg-card text-ink border-red"
+                            : "bg-card text-ink border-rule hover:border-ink"
                       }`}
                     >
                       <span className="text-[9px] opacity-65">{weekdays[d.getDay()]}</span>
@@ -535,29 +535,29 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
           {/* Weight & Category Section */}
           <div>
-            <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold mb-2">
+            <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold mb-2">
               {postType === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}
             </label>
 
             {postType === "traveler" ? (
               // Traveler: Weight Stepper + Suitcase Option
               <div className="flex flex-wrap items-center gap-4" ref={(el) => { fieldRefs.current.weight = el; }}>
-                <div className={`flex items-center gap-3.5 bg-[#F2EFE6] border rounded-xl p-2.5 ${errors.weight ? "border-[#C23B3B]" : "border-[#E9E5D8]"}`}>
+                <div className={`flex items-center gap-3.5 bg-paper border rounded-xl p-2.5 ${errors.weight ? "border-red" : "border-edge"}`}>
                   <button
                     type="button"
                     onClick={() => { setWeightKg(w => Math.max(0, w - 1)); clearError("weight"); }}
-                    className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
+                    className="w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90"
                   >
                     −
                   </button>
                   <div className="flex flex-col items-center min-w-[50px]">
-                    <span className="text-xl font-extrabold text-[#1B2A4A]">{weightKg}</span>
-                    <span className="font-mono text-[9px] text-[#8A8F98] tracking-widest font-bold">KG</span>
+                    <span className="text-xl font-extrabold text-ink">{weightKg}</span>
+                    <span className="font-mono text-[9px] text-faint tracking-widest font-bold">KG</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => { setWeightKg(w => Math.min(40, w + 1)); clearError("weight"); }}
-                    className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
+                    className="w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90"
                   >
                     +
                   </button>
@@ -565,7 +565,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
                 <div className="flex items-center gap-2">
                   {weightLuggage > 0 ? (
-                    <div className="flex items-center gap-2.5 bg-[#1B2A4A] text-[#FCFBF6] rounded-xl py-2.5 px-4 animate-[popup_0.25s_ease]">
+                    <div className="flex items-center gap-2.5 bg-ink text-card rounded-xl py-2.5 px-4 animate-[popup_0.25s_ease]">
                       <span className="text-sm font-bold flex items-center gap-2">
                         <Briefcase className="w-4 h-4" />
                         {weightLuggage} {luggageWordLabel}
@@ -582,8 +582,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button
                       type="button"
                       onClick={() => { setWeightLuggage(1); clearError("weight"); }}
-                      className={`font-mono text-xs font-semibold px-4 py-3 bg-[#FCFBF6] text-[#6B7280] border border-dashed rounded-lg hover:border-[#1B2A4A] ${
-                        errors.weight ? "border-[#C23B3B]" : "border-[#D8D3C4]"
+                      className={`font-mono text-xs font-semibold px-4 py-3 bg-card text-[#6B7280] border border-dashed rounded-lg hover:border-ink ${
+                        errors.weight ? "border-red" : "border-field"
                       }`}
                     >
                       + {t.addLuggageBtn}
@@ -593,7 +593,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setWeightLuggage(l => Math.min(5, l + 1))}
-                      className="w-8 h-8 rounded-full bg-[#F2EFE6] text-[#1B2A4A] font-bold border border-[#D8D3C4] hover:bg-[#E4E0D2] flex items-center justify-center"
+                      className="w-8 h-8 rounded-full bg-paper text-ink font-bold border border-field hover:bg-rule flex items-center justify-center"
                     >
                       +
                     </button>
@@ -623,26 +623,26 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   onChange={(e) => setCustomItemType(e.target.value)}
                   placeholder={t.itemTypeOtherPlaceholder}
                   maxLength={100}
-                  className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-[#D8D3C4] rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A]"
-                  style={{ padding: "10px 14px", border: "1.5px solid #D8D3C4", borderRadius: "8px" }}
+                  className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-field rounded-lg text-sm bg-card text-ink"
+                  style={{ padding: "10px 14px", border: "1.5px solid var(--color-field)", borderRadius: "8px" }}
                 />
 
-                <div className="flex items-center gap-3.5 bg-[#F2EFE6] border border-[#E9E5D8] rounded-xl p-2.5 w-fit">
+                <div className="flex items-center gap-3.5 bg-paper border border-edge rounded-xl p-2.5 w-fit">
                   <button 
                     type="button"
                     onClick={() => setWeightKg(w => Math.max(0, w - 1))}
-                    className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
+                    className="w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90"
                   >
                     −
                   </button>
                   <div className="flex flex-col items-center min-w-[50px]">
-                    <span className="text-xl font-extrabold text-[#1B2A4A]">{weightKg}</span>
-                    <span className="font-mono text-[9px] text-[#8A8F98] tracking-widest font-bold">KG</span>
+                    <span className="text-xl font-extrabold text-ink">{weightKg}</span>
+                    <span className="font-mono text-[9px] text-faint tracking-widest font-bold">KG</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setWeightKg(w => Math.min(30, w + 1))}
-                    className="w-8 h-8 rounded-full bg-[#1B2A4A] text-[#FCFBF6] flex items-center justify-center text-lg font-bold hover:opacity-90"
+                    className="w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90"
                   >
                     +
                   </button>
@@ -654,7 +654,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
           {/* Note/Izoh — required */}
           <div>
-            <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold mb-1.5">
+            <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold mb-1.5">
               {t.noteLabel.replace(" (ixtiyoriy)", "").replace(" (опционально)", "").replace(" (optional)", "")} <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -663,11 +663,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               onChange={(e) => { setNote(e.target.value); clearError("note"); }}
               placeholder={t.notePlaceholder}
               maxLength={1000}
-              className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] resize-y min-h-[72px] outline-none ${
-                errors.note ? ERROR_INPUT_CLASS : "border-[#D8D3C4] focus:border-[#2A4B8D]"
+              className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink resize-y min-h-[72px] outline-none ${
+                errors.note ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
               }`}
             ></textarea>
-            <div className={`font-mono text-[10.5px] text-right mt-1 ${note.length >= 1000 ? "text-[#C23B3B]" : "text-[#8A8F98]"}`}>
+            <div className={`font-mono text-[10.5px] text-right mt-1 ${note.length >= 1000 ? "text-red" : "text-faint"}`}>
               {note.length}/1000
             </div>
             <FieldError message={errors.note} />
@@ -676,12 +676,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
           {/* Contact */}
           <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold">
+                <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold">
                   {t.contactLabel} <span className="text-red-500">*</span>
                 </label>
                 
                 {/* Micro Tabs for Contact Choice */}
-                <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-lg p-0.5 gap-0.5 scale-[0.9] origin-right">
+                <div className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 scale-[0.9] origin-right">
                   <button
                     type="button"
                     onClick={() => {
@@ -695,8 +695,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     }}
                     className={`px-3 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${
                       contactMethod === "telegram"
-                        ? "bg-[#2A4B8D] text-white shadow-sm"
-                        : "text-[#5A6272] hover:text-[#1B2A4A]"
+                        ? "bg-blue text-white shadow-sm"
+                        : "text-body hover:text-ink"
                     }`}
                   >
                     <Send className="w-2.5 h-2.5" />
@@ -713,7 +713,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     className={`px-3 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${
                       contactMethod === "phone"
                         ? "bg-emerald-600 text-white shadow-sm"
-                        : "text-[#5A6272] hover:text-[#1B2A4A]"
+                        : "text-body hover:text-ink"
                     }`}
                   >
                     <Phone className="w-2.5 h-2.5" />
@@ -724,9 +724,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
               <div className="relative">
                 {/* Prefix Icon/Text */}
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-[#8A8F98]">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-faint">
                   {contactMethod === "telegram" ? (
-                    <span className="font-mono text-sm font-bold text-[#2A4B8D] mr-0.5">@</span>
+                    <span className="font-mono text-sm font-bold text-blue mr-0.5">@</span>
                   ) : (
                     <Phone className="w-4 h-4 text-emerald-600" />
                   )}
@@ -753,12 +753,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                       : "+998 90-123-4567 yoki +82 10-1234-5678"
                   }
                   maxLength={contactMethod === "telegram" ? 99 : 100}
-                  className={`w-full box-sizing-border-box p-3 pl-8.5 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono transition-all ${
+                  className={`w-full box-sizing-border-box p-3 pl-8.5 border rounded-lg text-sm bg-card text-ink font-mono transition-all ${
                     errors.contact
                       ? ERROR_INPUT_CLASS
                       : contactMethod === "telegram"
-                        ? "border-[#D8D3C4] focus:border-[#2A4B8D] focus:ring-1 focus:ring-[#2A4B8D]"
-                        : "border-[#D8D3C4] focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                        ? "border-field focus:border-blue focus:ring-1 focus:ring-blue"
+                        : "border-field focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
                   }`}
                   style={{ paddingLeft: "34px" }}
                 />
@@ -769,14 +769,14 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               {/* Dynamic Helper Link or Country Code Suggestions */}
               {contactMethod === "telegram" ? (
                 contact.trim().replace("@", "") && (
-                  <div className="mt-1.5 font-mono text-[10.5px] text-[#2A4B8D] flex items-center gap-1.5 bg-[#E8EEF8]/60 px-2.5 py-1.5 rounded-md border border-[#D5E2F4] w-fit">
+                  <div className="mt-1.5 font-mono text-[10.5px] text-blue flex items-center gap-1.5 bg-[#E8EEF8]/60 px-2.5 py-1.5 rounded-md border border-[#D5E2F4] w-fit">
                     <Send className="w-3 h-3" />
                     <span className="opacity-75">Telegram havola:</span>
                     <a
                       href={`https://t.me/${contact.trim().replace("@", "")}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="underline text-[#C79A3E] font-bold hover:text-[#1B2A4A] tracking-tight"
+                      className="underline text-gold font-bold hover:text-ink tracking-tight"
                     >
                       t.me/{contact.trim().replace("@", "")}
                     </a>
@@ -815,23 +815,23 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             {showContact2 ? (
               <>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block font-mono text-[10.5px] tracking-wider uppercase text-[#2A4B8D] font-bold">
+                  <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold">
                     {t.secondaryContactLabel || "Qo'shimcha bog'lanish"}
                   </label>
                   <button
                     type="button"
                     onClick={() => { setShowContact2(false); setContact2(""); }}
-                    className="text-[#8A8F98] hover:text-[#C23B3B]"
+                    className="text-faint hover:text-red"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-[#8A8F98]">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-faint">
                     {contactMethod === "telegram" ? (
                       <Phone className="w-4 h-4 text-emerald-600" />
                     ) : (
-                      <span className="font-mono text-sm font-bold text-[#2A4B8D] mr-0.5">@</span>
+                      <span className="font-mono text-sm font-bold text-blue mr-0.5">@</span>
                     )}
                   </div>
                   <input
@@ -849,7 +849,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                         : "username"
                     }
                     maxLength={contactMethod === "telegram" ? 100 : 99}
-                    className="w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-[#FCFBF6] text-[#1B2A4A] font-mono border-[#D8D3C4] focus:border-[#2A4B8D] focus:ring-1 focus:ring-[#2A4B8D]"
+                    className="w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono border-field focus:border-blue focus:ring-1 focus:ring-blue"
                     style={{ paddingLeft: "34px" }}
                   />
                 </div>
@@ -858,7 +858,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowContact2(true)}
-                className="font-mono text-xs font-semibold px-4 py-3 bg-[#FCFBF6] text-[#6B7280] border border-dashed border-[#D8D3C4] rounded-lg hover:border-[#1B2A4A]"
+                className="font-mono text-xs font-semibold px-4 py-3 bg-card text-[#6B7280] border border-dashed border-field rounded-lg hover:border-ink"
               >
                 {contactMethod === "telegram" ? (t.addPhoneBtn || "+ Add phone number") : (t.addTelegramBtn || "+ Add Telegram")}
               </button>
@@ -870,7 +870,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
           {submitError && (
             <div
               ref={submitErrorRef}
-              className="flex items-start gap-2 bg-[#FBEAEA] border border-[#C23B3B]/30 rounded-lg px-3.5 py-3 text-[#C23B3B] text-sm font-semibold"
+              className="flex items-start gap-2 bg-[#FBEAEA] border border-red/30 rounded-lg px-3.5 py-3 text-red text-sm font-semibold"
             >
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               {submitError}
@@ -881,16 +881,16 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
           <button
             type="submit"
             disabled={submitting}
-            className={`w-full py-3.5 text-[#FCFBF6] border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors ${
+            className={`w-full py-3.5 text-card border-none rounded-lg font-bold text-base cursor-pointer mt-4 transition-colors ${
               postType === "traveler"
-                ? "bg-[#2A4B8D] hover:bg-[#355CA8]"
-                : "bg-[#C23B3B] hover:bg-[#D04A4A]"
+                ? "bg-blue hover:bg-[#355CA8]"
+                : "bg-red hover:bg-[#D04A4A]"
             }`}
           >
             {submitting ? t.submittingBtn : t.submitBtn}
           </button>
 
-          <div className="text-center font-mono text-[10.5px] text-[#8A8F98]">
+          <div className="text-center font-mono text-[10.5px] text-faint">
             {t.autoDeleteLabel}
           </div>
         </form>

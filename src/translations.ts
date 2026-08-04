@@ -109,6 +109,8 @@ export const translations: Record<Locale, Translations> = {
     feedTabNotesLabel: "E'lonlar",
     announcementTag: "E'lon",
     announcementBodyLabel: "Matn",
+    stubPostedLabel: "Joylandi",
+    months: ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'],
     noteTitle: "Oddiy e'lon",
     noteSubtitle: "Xizmatingiz yoki taklifingiz haqida bir-ikki gap yozing.",
     noteThemeLabel: "Mavzu (ixtiyoriy)",

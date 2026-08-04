@@ -426,9 +426,7 @@ export default function App() {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
 
-      const monthNames = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
-
-      return `${d.getDate()}-${monthNames[d.getMonth()]}, ${d.getFullYear()}`;
+      return `${d.getDate()}-${t.months[d.getMonth()]}, ${d.getFullYear()}`;
     } catch {
       return dateStr;
     }
@@ -444,16 +442,16 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen pb-[120px] bg-[#F2EFE6] text-[#1B2A4A] relative">
+    <div className="min-h-screen pb-[120px] bg-paper text-ink relative">
       {/* Airmail stripes at the very top */}
-      <div className="h-2 bg-[repeating-linear-gradient(-45deg,#C23B3B_0_12px,#FCFBF6_12px_17px,#2A4B8D_17px_29px,#FCFBF6_29px_34px)]"></div>
+      <div className="h-2 bg-[repeating-linear-gradient(-45deg,var(--color-red)_0_12px,var(--color-card)_12px_17px,var(--color-blue)_17px_29px,var(--color-card)_29px_34px)]"></div>
 
       {/* Header / Navbar */}
-      <header className="bg-[#FCFBF6]/90 backdrop-blur-md border-b border-[#E4E0D2] sticky top-0 z-40 shadow-sm">
+      <header className="bg-card/90 backdrop-blur-md border-b border-rule sticky top-0 z-40 shadow-sm">
         <div className="max-w-[680px] mx-auto px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src={elchiLogo} alt="" className="h-7 w-auto" />
-            <span className="font-extrabold text-[19px] tracking-tight text-[#1B2A4A]">Elchi</span>
+            <span className="font-extrabold text-[19px] tracking-tight text-ink">Elchi</span>
           </div>
           
           <div className="flex items-center gap-4">
@@ -467,7 +465,7 @@ export default function App() {
                 }
               }}
               aria-label={t.profileMenuLabel || "Profile"}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E4E0D2] bg-[#F2EFE6] text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-rule bg-paper text-ink hover:border-ink transition-all"
             >
               <User size={16} />
             </button>
@@ -481,7 +479,7 @@ export default function App() {
         {/* Hero Section */}
         <section className="pt-6 pb-2">
           <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 mb-2 tracking-tight">
-            <span className="text-[#C23B3B]">{t.title}</span>
+            <span className="text-red">{t.title}</span>
             <span className="block sm:inline">{t.titleAccent}</span>
           </h1>
         </section>
@@ -492,15 +490,15 @@ export default function App() {
               the chips narrow it to one kind of ad, and the "×" on an active
               chip clears back to the mixed feed. */}
           <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="flex bg-[#F2EFE6] border border-[#E9E5D8] rounded-lg p-0.5 gap-0.5 flex-shrink-0">
+            <div className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => toggleFeedFilter("parcel")}
                 aria-pressed={feedFilter === "parcel"}
                 className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
                   feedFilter === "parcel"
-                    ? "bg-[#1B2A4A] text-[#FCFBF6] shadow-sm"
-                    : "text-[#5A6272] hover:text-[#1B2A4A]"
+                    ? "bg-ink text-card shadow-sm"
+                    : "text-body hover:text-ink"
                 }`}
               >
                 {t.feedTabParcelLabel || "Pochta"}
@@ -512,8 +510,8 @@ export default function App() {
                 aria-pressed={feedFilter === "notes"}
                 className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
                   feedFilter === "notes"
-                    ? "bg-[#C79A3E] text-[#1B2A4A] shadow-sm"
-                    : "text-[#5A6272] hover:text-[#1B2A4A]"
+                    ? "bg-gold text-ink shadow-sm"
+                    : "text-body hover:text-ink"
                 }`}
               >
                 {t.feedTabNotesLabel || "E'lonlar"}
@@ -538,13 +536,12 @@ export default function App() {
               {Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] bg-[#FCFBF6] rounded-xl border border-[#E9E5D8] overflow-hidden animate-pulse"
-                  style={{ boxShadow: "0 1px 2px rgba(27,42,74,0.04), 0 10px 28px -18px rgba(27,42,74,0.18)" }}
+                  className="grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] min-h-[148px] bg-card rounded-xl border border-edge overflow-hidden animate-pulse shadow-[var(--shadow-card)]"
                 >
                   <div className="pt-8 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col gap-3">
-                    <div className="h-5 w-2/3 bg-[#E9E5D8] rounded" />
-                    <div className="h-3.5 w-1/3 bg-[#E9E5D8] rounded" />
-                    <div className="h-3.5 w-4/5 bg-[#E9E5D8] rounded mt-2" />
+                    <div className="h-5 w-2/3 bg-edge rounded" />
+                    <div className="h-3.5 w-1/3 bg-edge rounded" />
+                    <div className="h-3.5 w-4/5 bg-edge rounded mt-2" />
                   </div>
                   <div className="bg-[#EDEAE0] flex flex-col items-center justify-center gap-2 p-3">
                     <div className="h-3 w-10 bg-[#DDD8C9] rounded" />
@@ -582,13 +579,13 @@ export default function App() {
                     type="button"
                     onClick={() => fetchPosts({ append: true })}
                     disabled={loadingMore}
-                    className="font-mono text-xs font-bold py-3 px-6 bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#2A4B8D] hover:text-[#2A4B8D] rounded-xl text-[#1B2A4A] flex items-center gap-2 transition-all shadow-sm active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="font-mono text-xs font-bold py-3 px-6 bg-card border border-field hover:border-blue hover:text-blue rounded-xl text-ink flex items-center gap-2 transition-all shadow-sm active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <span>{loadingMore ? (t.submittingBtn || "...") : (t.loadMoreBtn || "Yana yuklash ↓")}</span>
                   </button>
                 </div>
               ) : posts.length > PAGE_SIZE ? (
-                <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs font-mono text-[#8A8F98] tracking-wider py-2">
+                <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs font-mono text-faint tracking-wider py-2">
                   <Check className="w-3.5 h-3.5 flex-shrink-0" />
                   {t.allLoaded || "Barcha e'lonlar yuklandi"}
                 </div>
@@ -597,8 +594,8 @@ export default function App() {
           ) : null}
 
           {/* Disclaimer Banner */}
-          <div className="mt-6 p-3 bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] rounded-r-xl text-[13px] text-[#6B7280] leading-snug shadow-sm">
-            <span className="font-bold text-[#1B2A4A] mr-1">{t.disclaimerTitle}</span>
+          <div className="mt-6 p-3 bg-card border border-edge border-l-4 border-l-gold rounded-r-xl text-[13px] text-[#6B7280] leading-snug shadow-sm">
+            <span className="font-bold text-ink mr-1">{t.disclaimerTitle}</span>
             {t.disclaimerText}
           </div>
         </section>
@@ -675,17 +672,17 @@ export default function App() {
       {/* Post Detail Viewer Bottom Sheet Modal */}
       {selectedPost && (
         <div 
-          className="fixed inset-0 bg-[#1b2a4a]/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
+          className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
           onClick={(e) => e.target === e.currentTarget && closeDetailModal()}
         >
-          <div className="bg-[#FCFBF6] w-full max-w-[560px] rounded-t-2xl pb-8 max-h-[88vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
+          <div className="bg-card w-full max-w-[560px] rounded-t-2xl pb-8 max-h-[88vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
             
             {/* Header portion inside card format */}
-            <div className="bg-[#1B2A4A] text-[#FCFBF6] px-6 pt-4 pb-7 relative rounded-t-2xl">
+            <div className="bg-ink text-card px-6 pt-4 pb-7 relative rounded-t-2xl">
               <div className="w-10 h-1 bg-white/25 rounded-full mx-auto mb-5"></div>
               <button
                 onClick={closeDetailModal}
-                className="absolute right-[18px] top-[16px] bg-white/10 hover:bg-white/20 border-none w-8 h-8 rounded-full flex items-center justify-center text-[#FCFBF6] transition-colors"
+                className="absolute right-[18px] top-[16px] bg-white/10 hover:bg-white/20 border-none w-8 h-8 rounded-full flex items-center justify-center text-card transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -694,17 +691,17 @@ export default function App() {
                 className="font-mono text-[10.5px] uppercase px-3 py-1.5 rounded inline-flex items-center gap-1.5"
                 style={{
                   background:
-                    selectedPost.type === "request" ? "#C23B3B" : "#C79A3E",
-                  color: "#1B2A4A",
+                    selectedPost.type === "request" ? "var(--color-red)" : "var(--color-gold)",
+                  color: "var(--color-ink)",
                   fontWeight: 700
                 }}
               >
                 {selectedPost.type === "announcement" ? (
-                  <Megaphone className="w-3.5 h-3.5 text-[#1B2A4A]" />
+                  <Megaphone className="w-3.5 h-3.5 text-ink" />
                 ) : selectedPost.type === "traveler" ? (
-                  <Briefcase className="w-3.5 h-3.5 text-[#1B2A4A]" />
+                  <Briefcase className="w-3.5 h-3.5 text-ink" />
                 ) : (
-                  <Package className="w-3.5 h-3.5 text-[#1B2A4A]" />
+                  <Package className="w-3.5 h-3.5 text-ink" />
                 )}
                 {selectedPost.type === "announcement"
                   ? (t.announcementTag || "E'lon")
@@ -732,7 +729,7 @@ export default function App() {
                     <>
                       <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">
                         <span>{hubFrom}</span>
-                        <span className="text-[#C79A3E] flex items-center">
+                        <span className="text-gold flex items-center">
                           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="22" y1="2" x2="11" y2="13" />
                             <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -769,15 +766,15 @@ export default function App() {
             <div className="px-6 pt-6">
               {/* Cargo box is parcel-only — an announcement carries none. */}
               {selectedPost.type !== "announcement" && (
-                <div className="bg-[#F2EFE6] rounded-xl p-3.5 mb-5">
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
-                  <div className="font-bold text-base text-[#1B2A4A]">{localizeWeight(selectedPost.weight)}</div>
+                <div className="bg-paper rounded-xl p-3.5 mb-5">
+                  <div className="font-mono text-[10px] tracking-wider uppercase text-blue mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
+                  <div className="font-bold text-base text-ink">{localizeWeight(selectedPost.weight)}</div>
                 </div>
               )}
 
               {selectedPost.note && (
                 <div className="mb-5">
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#2A4B8D] mb-2">
+                  <div className="font-mono text-[10px] tracking-wider uppercase text-blue mb-2">
                     {selectedPost.type === "announcement"
                       ? (t.announcementBodyLabel || t.noteLabel.replace(" (ixtiyoriy)", ""))
                       : t.noteLabel.replace(" (ixtiyoriy)", "")}
@@ -785,7 +782,7 @@ export default function App() {
                   {/* On an announcement this is the ad's body copy, not a remark
                       on someone else's trip, so it drops the quotes and italics. */}
                   <div
-                    className={`text-[14px] text-[#3A4256] leading-relaxed bg-[#FCFBF6] border border-[#E9E5D8] border-l-4 border-l-[#C79A3E] p-4 rounded-r-lg [overflow-wrap:anywhere] whitespace-pre-wrap max-h-[40vh] overflow-y-auto ${
+                    className={`text-[14px] text-[#3A4256] leading-relaxed bg-card border border-edge border-l-4 border-l-gold p-4 rounded-r-lg [overflow-wrap:anywhere] whitespace-pre-wrap max-h-[40vh] overflow-y-auto ${
                       selectedPost.type === "announcement" ? "" : "italic"
                     }`}
                   >
@@ -800,13 +797,13 @@ export default function App() {
                   onClick={handleShare}
                   title={shareCopied ? (t.shareSuccess || "Havola nusxalandi!") : (t.shareBtn || "Ulashish")}
                   aria-label={shareCopied ? (t.shareSuccess || "Havola nusxalandi!") : (t.shareBtn || "Ulashish")}
-                  className="w-10 h-10 flex items-center justify-center bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#2A4B8D] rounded-xl transition-all shadow-sm active:scale-[0.98]"
+                  className="w-10 h-10 flex items-center justify-center bg-card border border-field hover:border-blue rounded-xl transition-all shadow-sm active:scale-[0.98]"
                   id="share-post-btn"
                 >
                   {shareCopied ? (
                     <Check className="w-4 h-4 text-emerald-600 animate-[bounce_0.2s_ease-in-out]" />
                   ) : (
-                    <Share2 className="w-4 h-4 text-[#C79A3E]" />
+                    <Share2 className="w-4 h-4 text-gold" />
                   )}
                 </button>
 
@@ -816,7 +813,7 @@ export default function App() {
                     disabled={deleting}
                     title={t.deleteBtn}
                     aria-label={t.deleteBtn}
-                    className="w-10 h-10 flex items-center justify-center bg-[#FCFBF6] border border-[#D8D3C4] hover:border-[#C23B3B] hover:bg-[#F7ECEC] rounded-xl text-[#C23B3B] transition-all shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-10 h-10 flex items-center justify-center bg-card border border-field hover:border-red hover:bg-[#F7ECEC] rounded-xl text-red transition-all shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                     id="delete-post-btn"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -832,7 +829,7 @@ export default function App() {
                 if (!selectedPost.contact_type) return null;
 
                 const sectionLabel = (
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-[#8A8F98]">
+                  <div className="font-mono text-[10px] tracking-wider uppercase text-faint">
                     {t.contactLabel}
                   </div>
                 );
@@ -844,7 +841,7 @@ export default function App() {
                 // numbers.
                 if (!session) {
                   return (
-                    <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
+                    <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
                       {sectionLabel}
                       <p className="text-[13px] text-[#6B7280] m-0 leading-snug">
                         {t.contactLockedText}
@@ -852,7 +849,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setLoginOpen(true)}
-                        className="font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
+                        className="font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full bg-blue hover:bg-ink text-card"
                         id="reveal-contact-btn"
                       >
                         <Lock className="w-4 h-4 flex-shrink-0" />
@@ -864,7 +861,7 @@ export default function App() {
 
                 if (contactLoading) {
                   return (
-                    <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
+                    <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
                       {sectionLabel}
                       <div className="h-5 w-2/3 bg-[#E3DFD1] rounded animate-pulse" />
                       <div className="h-10 w-full bg-[#E3DFD1] rounded-lg animate-pulse" />
@@ -874,9 +871,9 @@ export default function App() {
 
                 if (contactError || !revealedContact) {
                   return (
-                    <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
+                    <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
                       {sectionLabel}
-                      <p className="text-[13px] text-[#C23B3B] m-0 leading-snug">
+                      <p className="text-[13px] text-red m-0 leading-snug">
                         {contactError || t.errorGeneral}
                       </p>
                     </div>
@@ -894,7 +891,7 @@ export default function App() {
                   isTg ? "Telegramda ochish" : "Qo'ng'iroq qilish";
 
                 return (
-                  <div className="flex flex-col gap-3 p-4 bg-[#F2EFE6] rounded-xl">
+                  <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
                     {sectionLabel}
 
                     {/* Values side by side, each with its own copy button */}
@@ -902,18 +899,18 @@ export default function App() {
                       <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 font-mono text-sm font-bold min-w-0">
                           {contactInfo.isTelegram ? (
-                            <Send className="w-3.5 h-3.5 text-[#2A4B8D] flex-shrink-0" />
+                            <Send className="w-3.5 h-3.5 text-blue flex-shrink-0" />
                           ) : (
                             <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
                           )}
-                          <span className={`truncate ${contactInfo.isTelegram ? "text-[#2A4B8D]" : "text-emerald-700"}`}>
+                          <span className={`truncate ${contactInfo.isTelegram ? "text-blue" : "text-emerald-700"}`}>
                             {revealedContact.contact}
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleCopyContact(revealedContact.contact)}
-                          className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
+                          className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-field bg-white text-faint hover:text-ink hover:border-ink transition-all"
                           title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                         >
                           {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
@@ -921,21 +918,21 @@ export default function App() {
                       </div>
 
                       {revealedContact.contact2 && contact2Info && (
-                        <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0 border-l border-[#D8D3C4] pl-2">
+                        <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0 border-l border-field pl-2">
                           <div className="flex items-center gap-1.5 font-mono text-sm font-bold min-w-0">
                             {contact2Info.isTelegram ? (
-                              <Send className="w-3.5 h-3.5 text-[#2A4B8D] flex-shrink-0" />
+                              <Send className="w-3.5 h-3.5 text-blue flex-shrink-0" />
                             ) : (
                               <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
                             )}
-                            <span className={`truncate ${contact2Info.isTelegram ? "text-[#2A4B8D]" : "text-emerald-700"}`}>
+                            <span className={`truncate ${contact2Info.isTelegram ? "text-blue" : "text-emerald-700"}`}>
                               {revealedContact.contact2}
                             </span>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleCopyContact(revealedContact.contact2!)}
-                            className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-[#D8D3C4] bg-white text-[#8A8F98] hover:text-[#1B2A4A] hover:border-[#1B2A4A] transition-all"
+                            className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-field bg-white text-faint hover:text-ink hover:border-ink transition-all"
                             title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                           >
                             {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
@@ -952,7 +949,7 @@ export default function App() {
                         rel="noreferrer"
                         className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full ${
                           contactInfo.isTelegram
-                            ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
+                            ? "bg-blue hover:bg-ink text-card"
                             : "bg-emerald-600 hover:bg-emerald-700 text-white"
                         }`}
                         id="contact-action-btn"
@@ -968,7 +965,7 @@ export default function App() {
                           rel="noreferrer"
                           className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full ${
                             contact2Info.isTelegram
-                              ? "bg-[#2A4B8D] hover:bg-[#1B2A4A] text-[#FCFBF6]"
+                              ? "bg-blue hover:bg-ink text-card"
                               : "bg-emerald-600 hover:bg-emerald-700 text-white"
                           }`}
                         >
@@ -989,11 +986,11 @@ export default function App() {
       {toastMessage && (
         <div 
           id="post-created-toast"
-          className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-[#1B2A4A] text-white px-5 py-3.5 rounded-xl shadow-2xl border border-white/10 flex items-center gap-3.5 animate-popin transition-all"
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-ink text-white px-5 py-3.5 rounded-xl shadow-2xl border border-white/10 flex items-center gap-3.5 animate-popin transition-all"
           style={{ width: "90%", maxWidth: "420px" }}
         >
-          <div className="w-8 h-8 rounded-full bg-[#C79A3E]/20 text-[#C79A3E] flex items-center justify-center flex-shrink-0">
-            <Sparkles className="w-4 h-4 text-[#C79A3E]" />
+          <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-gold" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold m-0">{toastMessage}</p>

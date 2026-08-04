@@ -130,14 +130,14 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
       {notes.length > 1 && active > 0 && (
         <ChevronLeft
           aria-hidden="true"
-          className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B2A4A]/40"
+          className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40"
         />
       )}
 
       {notes.length > 1 && active < notes.length - 1 && (
         <ChevronRight
           aria-hidden="true"
-          className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B2A4A]/40"
+          className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40"
         />
       )}
     </section>

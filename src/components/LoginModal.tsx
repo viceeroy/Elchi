@@ -122,23 +122,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
 
   return (
     <div
-      className="fixed inset-0 bg-[#1b2a4a]/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
+      className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#FCFBF6] w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
+      <div className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
         {/* Notch pull-bar */}
-        <div className="w-10 h-1 bg-[#D8D3C4] rounded-full mx-auto mb-5"></div>
+        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5"></div>
 
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-[18px] top-[18px] bg-[#F2EFE6] border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-[#1B2A4A] hover:bg-[#E4E0D2] transition-colors"
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-ink hover:bg-rule transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <h2 className="text-2xl font-extrabold text-[#1B2A4A] tracking-tight mb-1">{t.loginTitle}</h2>
-        <p className="text-sm text-[#5A6272] mb-6">{t.loginSubtitle}</p>
+        <h2 className="text-2xl font-extrabold text-ink tracking-tight mb-1">{t.loginTitle}</h2>
+        <p className="text-sm text-body mb-6">{t.loginSubtitle}</p>
 
         {/* Auth options in a centered column sized to the Telegram widget, so
             the fixed-width Telegram button and the Google button below share the
@@ -152,30 +152,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
               silently stops responding — so it's shown as-is, centered. */}
           <div className="relative flex justify-center min-h-[40px]">
             {TELEGRAM_BOT_USERNAME && !tgReady && (
-              <div className="absolute inset-0 h-10 rounded-lg bg-[#E4E0D2] animate-pulse" />
+              <div className="absolute inset-0 h-10 rounded-lg bg-rule animate-pulse" />
             )}
             <div className="flex justify-center w-full" ref={telegramContainerRef} />
           </div>
           {!TELEGRAM_BOT_USERNAME && (
-            <p className="text-[#C23B3B] text-xs text-center">
+            <p className="text-red text-xs text-center">
               {t.loginErrorGeneral || "Telegram login unavailable"}
             </p>
           )}
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-4">
-            <span className="flex-1 h-px bg-[#E4E0D2]" />
-            <span className="text-[11px] font-medium uppercase tracking-wider text-[#8A8F98]">
+            <span className="flex-1 h-px bg-rule" />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-faint">
               {t.orDivider || "yoki"}
             </span>
-            <span className="flex-1 h-px bg-[#E4E0D2]" />
+            <span className="flex-1 h-px bg-rule" />
           </div>
 
           {/* Google OAuth */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading !== null}
-            className="w-full flex items-center justify-center gap-2 border border-[#D8D3C4] rounded-lg py-3 text-sm font-bold text-[#1B2A4A] bg-[#FCFBF6] hover:bg-[#F2EFE6] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 border border-field rounded-lg py-3 text-sm font-bold text-ink bg-card hover:bg-paper transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -186,8 +186,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
             {t.continueWithGoogle}
           </button>
 
-          {(loading === "telegram" || loading === "google") && <p className="text-[#5A6272] text-sm mt-2 text-center">...</p>}
-          {error && <p className="text-[#C23B3B] text-sm mt-4 text-center">{error}</p>}
+          {(loading === "telegram" || loading === "google") && <p className="text-body text-sm mt-2 text-center">...</p>}
+          {error && <p className="text-red text-sm mt-4 text-center">{error}</p>}
         </div>
       </div>
     </div>

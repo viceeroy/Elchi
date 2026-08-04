@@ -99,7 +99,7 @@ export const FlagIcon: React.FC<FlagIconProps> = ({ iso, className }) => {
       return (
         <span
           className={cls}
-          style={{ ...style, display: "inline-block", background: "#E4E0D2" }}
+          style={{ ...style, display: "inline-block", background: "var(--color-rule)" }}
           aria-hidden="true"
         />
       );
