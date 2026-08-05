@@ -11,6 +11,8 @@
     "test": "node --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
+    "@supabase/auth-js": "2.110.7",
+    "@supabase/postgrest-js": "2.110.7",
     "@supabase/supabase-js": "^2.49.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vercel/analytics": "^2.0.1",

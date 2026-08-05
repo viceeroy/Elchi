@@ -85,9 +85,17 @@ export const TypedHeadline: React.FC<TypedHeadlineProps> = ({
   // The ghost is also the accessible copy: it is the stable, complete string,
   // while the animating layer is hidden from assistive tech to keep a partial
   // word from being announced.
+  //
+  // The ghost must hide with `opacity-0`, NOT `invisible`. Tailwind's
+  // `invisible` is `visibility: hidden`, which drops the element out of the
+  // accessibility tree exactly like `display: none` — so with the animating
+  // layer already `aria-hidden`, *both* layers were hidden and the page's h1
+  // exposed an empty name on both feed tabs. `opacity-0` keeps the element
+  // rendered, laid out and readable to assistive tech while still invisible on
+  // screen, which is the whole point of the ghost.
   return (
     <span className={`relative block ${className ?? ""}`}>
-      <span className="invisible">{renderRuns(full.length)}</span>
+      <span className="opacity-0">{renderRuns(full.length)}</span>
       <span aria-hidden="true" className="absolute inset-0">
         {renderRuns(typed)}
       </span>

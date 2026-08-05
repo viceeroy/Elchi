@@ -175,7 +175,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
           note actually has. */}
       <div className="rounded-r-xl bg-ink text-card px-2 py-4 sm:px-3 md:py-5 md:px-4 flex flex-col justify-between items-stretch relative min-w-0">
         <div className="flex flex-col gap-0.5 text-center mt-1 md:mt-2">
-          <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] md:tracking-[1.5px] leading-none text-faint">
+          <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] md:tracking-[1.5px] leading-none text-faint-on-ink">
             {t.stubPostedLabel}
           </span>
           <span className="font-mono text-[12px] sm:text-[13px] md:text-[15px] font-bold mt-0.5 text-card leading-tight">

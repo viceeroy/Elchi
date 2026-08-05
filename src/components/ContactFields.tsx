@@ -21,9 +21,10 @@ interface ContactFieldsProps {
   onShowContact2Change: (show: boolean) => void;
   error?: string;
   inputRef?: (el: HTMLInputElement | null) => void;
-  // Overrides the section label. Used by the note sheet, where the contact is
-  // optional and the label has to say so.
-  label?: string;
+  // Overrides the section label. A node rather than a string because the two
+  // callers disagree about more than the words: the note sheet says the field
+  // is optional in plain text, the parcel form appends a red required asterisk.
+  label?: React.ReactNode;
 }
 
 /**
@@ -35,8 +36,19 @@ interface ContactFieldsProps {
  * validates (see lib/contact.ts). The secondary field is always the opposite
  * channel of the primary — two Telegram usernames would be redundant.
  *
- * Currently used by the announcement sheet; PostFormModal still carries its
- * own copy of this markup and can adopt this component later.
+ * Used by both composers. It had a second life as ~180 duplicated lines inside
+ * PostFormModal, which is how the two sheets came to disagree about the size of
+ * the channel toggle; anything that touches how a handle is entered or
+ * normalised belongs here, once, so a fix cannot land on one sheet only.
+ *
+ * What deliberately does NOT live here is what happens when the author switches
+ * channels with text already typed. The parcel form promotes a bare "someone"
+ * to "@someone" and seeds an empty field with "@"; the note sheet must not,
+ * because its contact is optional and a lone "@" would turn an empty field into
+ * a validation error. So the toggle reports the change through onMethodChange
+ * and each caller decides. Only the Telegram → phone direction is handled here,
+ * because stripping a "@" that can no longer be valid is the same answer for
+ * both.
  */
 export const ContactFields: React.FC<ContactFieldsProps> = ({
   t,
@@ -62,7 +74,14 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
             {label || t.contactLabel}
           </label>
 
-          <div className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5">
+          {/* scale-[0.9] origin-right: the toggle is a secondary control and
+              reads as one at 90%, which is the size the parcel composer always
+              used. It carried the classes locally while it had its own copy of
+              this markup, so adopting the shared component silently grew it —
+              the scale lives here now, and both sheets get it. origin-right
+              keeps the right edge pinned to the label row's justify-between, so
+              the shrink comes off the left and nothing shifts. */}
+          <div className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 scale-[0.9] origin-right">
             <button
               type="button"
               onClick={() => onMethodChange("telegram")}
@@ -83,7 +102,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
               }}
               className={`px-3 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${
                 method === "phone"
-                  ? "bg-emerald-600 text-white shadow-sm"
+                  ? "bg-green text-white shadow-sm"
                   : "text-body hover:text-ink"
               }`}
             >
@@ -98,7 +117,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
             {method === "telegram" ? (
               <span className="font-mono text-sm font-bold text-blue mr-0.5">@</span>
             ) : (
-              <Phone className="w-4 h-4 text-emerald-600" />
+              <Phone className="w-4 h-4 text-green" />
             )}
           </div>
 
@@ -126,7 +145,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                 ? ERROR_INPUT_CLASS
                 : method === "telegram"
                   ? "border-field focus:border-blue focus:ring-1 focus:ring-blue"
-                  : "border-field focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                  : "border-field focus:border-green focus:ring-1 focus:ring-green"
             }`}
             style={{ paddingLeft: "34px" }}
           />
@@ -144,12 +163,14 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
           handle && (
             <div className="mt-1.5 font-mono text-[10.5px] text-blue flex items-center gap-1.5 bg-[#E8EEF8]/60 px-2.5 py-1.5 rounded-md border border-[#D5E2F4] w-fit">
               <Send className="w-3 h-3" />
-              <span className="opacity-75">Telegram havola:</span>
+              {/* /90 rather than /75, which composited to 4.13:1 on the chip's
+                  tinted background — under AA at 10.5px. */}
+              <span className="opacity-90">Telegram havola:</span>
               <a
                 href={`https://t.me/${handle}`}
                 target="_blank"
                 rel="noreferrer"
-                className="underline text-gold font-bold hover:text-ink tracking-tight"
+                className="underline text-gold-deep font-bold hover:text-ink tracking-tight"
               >
                 t.me/{handle}
               </a>
@@ -164,7 +185,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                   onContactChange("+998 " + contact.replace(/^\+?\d*/, "").trim());
                 }
               }}
-              className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
+              className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
             >
               🇺🇿 +998
             </button>
@@ -175,7 +196,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                   onContactChange("+82 " + contact.replace(/^\+?\d*/, "").trim());
                 }
               }}
-              className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
+              className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
             >
               🇰🇷 +82
             </button>
@@ -205,7 +226,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-faint">
                 {method === "telegram" ? (
-                  <Phone className="w-4 h-4 text-emerald-600" />
+                  <Phone className="w-4 h-4 text-green" />
                 ) : (
                   <span className="font-mono text-sm font-bold text-blue mr-0.5">@</span>
                 )}
@@ -233,7 +254,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
           <button
             type="button"
             onClick={() => onShowContact2Change(true)}
-            className="font-mono text-xs font-semibold px-4 py-3 bg-card text-[#6B7280] border border-dashed border-field rounded-lg hover:border-ink"
+            className="font-mono text-xs font-semibold px-4 py-3 bg-card text-body border border-dashed border-field rounded-lg hover:border-ink"
           >
             {method === "telegram"
               ? t.addPhoneBtn || "+ Add phone number"

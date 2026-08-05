@@ -176,6 +176,25 @@ export interface Translations {
   contactLockedText: string;
   contactLockedBtn: string;
 
+  // Screen-reader-only announcements. These are never painted — they exist so
+  // that a state change with no visual equivalent in the accessibility tree
+  // (a handle arriving, a value copied, a post deleted) is spoken. Keep them
+  // short: they are read aloud in full, interrupting nothing else.
+  srContactRevealed?: string;
+  srCopied?: string;
+  srPostDeleted?: string;
+
+  // Accessible names for controls that render as an icon alone. A sighted user
+  // reads the ✕ glyph; a screen reader has nothing to read without these, and
+  // every sheet in the app closes through one of them.
+  closeLabel?: string;
+  dismissLabel?: string;
+  copyContactLabel?: string;
+  // The post detail sheet has no heading element to point `aria-labelledby` at
+  // — its title is the route line, which is a different shape per post type —
+  // so the dialog carries a static name instead.
+  postDetailsTitle?: string;
+
   // Composer speed dial — the floating "+" and the three things it opens: the
   // two sides of a parcel ad, and a note.
   fabOpenLabel?: string;

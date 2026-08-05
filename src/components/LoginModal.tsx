@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Translations } from "../types";
 import { X } from "lucide-react";
 import { supabaseBrowser } from "../supabaseClient";
+import { useDialog } from "../hooks/useDialog";
 
 interface LoginModalProps {
   t: Translations;
@@ -30,6 +31,7 @@ const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "";
 export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSuccess }) => {
   const [loading, setLoading] = useState<"telegram" | "google" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const panelRef = useDialog<HTMLDivElement>(onClose);
   // Telegram renders a fixed-width iframe button we can't restyle. Measure it
   // once it mounts and match the Google button + divider to the same width so
   // the two options read as a set.
@@ -125,19 +127,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
       className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-modal-title"
+        tabIndex={-1}
+        className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative outline-none"
+      >
         {/* Notch pull-bar */}
-        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5"></div>
+        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5" aria-hidden="true"></div>
 
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-ink hover:bg-rule transition-colors"
+          aria-label={t.closeLabel || "Yopish"}
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-body hover:text-ink hover:bg-rule transition-colors"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
 
-        <h2 className="text-2xl font-extrabold text-ink tracking-tight mb-1">{t.loginTitle}</h2>
+        <h2 id="login-modal-title" className="text-2xl font-extrabold text-ink tracking-tight mb-1">{t.loginTitle}</h2>
         <p className="text-sm text-body mb-6">{t.loginSubtitle}</p>
 
         {/* Auth options in a centered column sized to the Telegram widget, so

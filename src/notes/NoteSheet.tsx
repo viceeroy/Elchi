@@ -2,6 +2,8 @@ import React from "react";
 import { X, Briefcase, Package, Info, Megaphone } from "lucide-react";
 import { Locale } from "../types";
 import { Note } from "./data";
+import { translations } from "../translations";
+import { useDialog } from "../hooks/useDialog";
 
 const TYPE_ICON = {
   traveler: { Icon: Briefcase, bg: "var(--color-gold)" },
@@ -23,6 +25,11 @@ interface NoteSheetProps {
 export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) => {
   const c = note.content[locale];
   const body = c.detail && c.detail.length > 0 ? c.detail : [c.summary];
+  // This sheet takes a locale rather than a `t` bundle — it renders static
+  // editorial copy, not API data — so it reaches the string table directly for
+  // the one label it needs. Still not a hardcoded Uzbek literal in a component.
+  const t = translations[locale];
+  const panelRef = useDialog<HTMLDivElement>(onClose);
 
   return (
     <div
@@ -30,21 +37,23 @@ export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) =
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={c.title}
-        className="relative max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-t-2xl bg-card pb-8 shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)]"
+        tabIndex={-1}
+        className="relative max-h-[88vh] w-full max-w-[560px] overflow-y-auto rounded-t-2xl bg-card pb-8 shadow-2xl outline-none animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)]"
       >
         <div
           className="relative rounded-t-2xl bg-red px-6 pt-4 pb-7 text-card"
         >
-          <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/25" />
+          <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/25" aria-hidden="true" />
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t.closeLabel || "Yopish"}
             className="absolute right-[18px] top-[16px] flex h-8 w-8 items-center justify-center rounded-full border-none bg-white/10 text-card transition-colors hover:bg-white/20"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
 
           <div
