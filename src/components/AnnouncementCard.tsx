@@ -40,7 +40,6 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   t,
   onOpen,
 }) => {
-  const tagLabel = t.announcementTag || "E'lon";
   const moreLabel = t.cardMoreLabel || "ko'proq";
   const preview = derivePreview(post.headline, post.note);
   const postedDate = formatPostedDate(post.created_at, t);
@@ -112,7 +111,6 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <div style={stickerStyle(post.type)}>
             <Megaphone className="w-3 h-3" />
-            {tagLabel}
           </div>
 
           {/* The theme when the author gave one, otherwise a first clause lifted

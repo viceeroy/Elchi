@@ -2,7 +2,8 @@ import { CSSProperties } from "react";
 import { PostType } from "../types";
 
 /**
- * The corner sticker every feed card wears — "UCHAMAN", "POCHTA BOR", "E'LON".
+ * The corner sticker every feed card wears — an icon chip now, one icon per
+ * post type ("UCHAMAN" → briefcase, "POCHTA BOR" → parcel, "E'LON" → megaphone).
  *
  * One definition for all three post types. This lived as a ~15-line object
  * literal copy-pasted into BoardingPass and AnnouncementCard, identical but for
@@ -28,7 +29,10 @@ const STICKER_BASE: CSSProperties = {
   fontSize: "10.5px",
   letterSpacing: "1px",
   textTransform: "uppercase",
-  padding: "6px 12px",
+  // Squared up around a lone icon: the labels ("Uchaman", "Pochta bor") left the
+  // badge carrying copy, so the side padding had to clear two words; with the
+  // word gone, that 12px shrank to 8px so the sticker reads as an icon chip.
+  padding: "6px 8px",
   borderRadius: 4,
   fontWeight: 700,
   display: "inline-flex",

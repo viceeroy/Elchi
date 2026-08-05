@@ -20,7 +20,6 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   onOpen,
 }) => {
   const isTraveler = post.type === "traveler";
-  const tagLabel = isTraveler ? t.travelerTag : t.requestTag;
   const moreLabel = t.cardMoreLabel || "ko'proq";
 
   // Same sanitisation an announcement body gets, minus the title split: emoji
@@ -138,14 +137,14 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
             beside the sticker where the column is wide enough, dropped to its
             own line at 375px, where under 100px is left next to it. */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Traveler / Request Tag Badge */}
+          {/* Traveler / Request Tag Badge — icon only; the post type reads from
+              the icon and the sticker colour. */}
           <div style={stickerStyle(post.type)}>
             {isTraveler ? (
               <Briefcase className="w-3 h-3 text-card" />
             ) : (
               <Package className="w-3 h-3 text-card" />
             )}
-            {tagLabel}
           </div>
 
           {/* Destination Header (flight route is always Korea/Uzbekistan). */}
