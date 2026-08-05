@@ -6,7 +6,7 @@
   --font-mono: "Space Mono", ui-monospace, SFMono-Regular, monospace;
 
   /* ---------------------------------------------------------------------
-     Palette. Twelve colours, and the whole board is built from them. Every
+     Palette. Sixteen colours, and the whole board is built from them. Every
      one used to be a hex literal repeated inline across the components; the
      names below are now the only place a value is written down.
 
@@ -15,19 +15,49 @@
      that a card read as a lighter patch of the page rather than a thing
      sitting on it. The body rule below and the root div in App.tsx both
      point at this token so they cannot drift apart again.
+
+     Every text pairing below clears WCAG AA (4.5:1) on the backgrounds it
+     actually lands on — the ratios in the comments are measured, not
+     estimated. That constraint is why some colours come in two versions: a
+     brand value used as a *background*, and a darker sibling for the same
+     colour used as *text* on paper or card. `gold` on card is 2.50:1, which
+     is unreadable, but ink on `gold` is 5.50:1 — the colour is fine as a
+     stamp and unusable as a link, so both exist rather than compromising one
+     into a muddy middle that serves neither.
      --------------------------------------------------------------------- */
   --color-paper: #EDE9DC;   /* page background */
   --color-card: #FCFBF6;    /* card background, and light text on navy */
   --color-ink: #1B2A4A;     /* navy — body text, stub, dark chips */
   --color-blue: #2A4B8D;    /* traveler stamp, airmail stripe, links */
-  --color-red: #C23B3B;     /* request stamp, airmail stripe, errors */
-  --color-gold: #C79A3E;    /* announcement stamp, accents, CTAs */
+  /* Darkened from #C23B3B, which was 4.34:1 as error text on paper — just
+     under AA. Every other use is red-as-background, and those only improved:
+     card on red went 5.09 → 5.81. */
+  --color-red: #B53333;     /* request stamp, airmail stripe, errors */
+  --color-gold: #C79A3E;    /* announcement stamp, accents, CTAs — BACKGROUND ONLY */
   --color-gold-lit: #D9AC50;/* gold, hovered */
+  /* Gold as *text* on a light background. Plain `gold` is 2.50:1 on card and
+     2.13:1 on paper — the worst pairing in the app, and it was carrying an
+     underlined link. This clears AA on both (5.35 / 4.57). */
+  --color-gold-deep: #816428;
   --color-edge: #E9E5D8;    /* card border */
   --color-rule: #E4E0D2;    /* dividers, secondary borders */
   --color-body: #5A6272;    /* body copy grey */
-  --color-faint: #8A8F98;   /* muted grey — meta, placeholders */
+  /* Darkened from #8A8F98, which failed AA on both backgrounds it is used on
+     (2.68:1 on paper, 3.14:1 on card) while carrying form labels, input
+     placeholders and meta lines. Now 4.61 / 5.40. */
+  --color-faint: #64686F;   /* muted grey — meta, placeholders */
+  /* The same muted role, but on the navy stub. `faint` cannot serve both: it
+     is dark-on-light, so darkening it for AA on paper pushed the stub label
+     the wrong way (4.38:1 and falling). This is the light-on-dark twin, 5.69
+     on ink. */
+  --color-faint-on-ink: #9FA4AF;
   --color-field: #D8D3C4;   /* input border */
+  /* The phone/call affordance, which was raw Tailwind emerald — the one
+     colour family in the app that never went through a token. emerald-600 as
+     a button fill was 3.77:1 under white text; this is emerald-700, which
+     clears AA there (5.48) and as text on paper (4.52). */
+  --color-green: #047857;
+  --color-green-deep: #065F46; /* green, hovered */
 
   /* Card elevation. These were inline `style={{ boxShadow }}` objects on
      both card components, which silently beat the `shadow-sm` /

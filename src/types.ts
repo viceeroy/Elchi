@@ -176,6 +176,25 @@ export interface Translations {
   contactLockedText: string;
   contactLockedBtn: string;
 
+  // Screen-reader-only announcements. These are never painted — they exist so
+  // that a state change with no visual equivalent in the accessibility tree
+  // (a handle arriving, a value copied, a post deleted) is spoken. Keep them
+  // short: they are read aloud in full, interrupting nothing else.
+  srContactRevealed?: string;
+  srCopied?: string;
+  srPostDeleted?: string;
+
+  // Accessible names for controls that render as an icon alone. A sighted user
+  // reads the ✕ glyph; a screen reader has nothing to read without these, and
+  // every sheet in the app closes through one of them.
+  closeLabel?: string;
+  dismissLabel?: string;
+  copyContactLabel?: string;
+  // The post detail sheet has no heading element to point `aria-labelledby` at
+  // — its title is the route line, which is a different shape per post type —
+  // so the dialog carries a static name instead.
+  postDetailsTitle?: string;
+
   // Composer speed dial — the floating "+" and the three things it opens: the
   // two sides of a parcel ad, and a note.
   fabOpenLabel?: string;
@@ -188,8 +207,18 @@ export interface Translations {
   // announcements). Exclusive: only one of the two shows at a time.
   feedTabParcelLabel?: string;
   feedTabNotesLabel?: string;
+  // The announcements headline, split at its one colour boundary the same way
+  // `title`/`titleAccent` splits the parcel one: the brand word, then the rest
+  // of the sentence. Spacing lives inside the pieces, so the typing animation
+  // can concatenate them untouched.
+  notesTitleBrand?: string;
+  notesTitleRest?: string;
   // Sticker label on an announcement card, alongside travelerTag/requestTag.
   announcementTag?: string;
+  // Shown under a card's note when the note was too long to print whole — the
+  // card's "there is more of this in the detail sheet" cue. Only rendered when
+  // the text is actually cut, so it never promises a longer note than exists.
+  cardMoreLabel?: string;
 
   // Announcement stub — the navy panel on the right of the card. A note has no
   // travel date, so where a parcel card shows the trip its stub shows the date

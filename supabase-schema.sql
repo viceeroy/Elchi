@@ -148,6 +148,16 @@ CREATE INDEX IF NOT EXISTS idx_posts_route ON posts(from_country, to_country);
 -- against idx_posts_route cannot use.
 CREATE INDEX IF NOT EXISTS idx_posts_corridor
     ON posts (corridor_country) WHERE type = 'announcement';
+-- Serves the notes board only: `type = 'announcement'` is a single value, so
+-- this composite is scanned with created_at already ordered underneath it and
+-- no sort node. The parcel board's `type IN ('traveler','request')` cannot use
+-- it — a ScalarArrayOp scan orders rows only within each type value, so the
+-- planner ignores the index and does a full scan plus top-N sort. That path
+-- wants a plain (created_at DESC) index instead. See
+-- migrations/2026-08-05-posts-created-at-index.sql for the measurements and for
+-- why the view's expires_at filter cannot become a partial-index predicate.
+CREATE INDEX IF NOT EXISTS idx_posts_type_created
+    ON posts (type, created_at DESC);
 
 DO $$
 BEGIN

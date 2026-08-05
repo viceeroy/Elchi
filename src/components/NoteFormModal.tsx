@@ -4,6 +4,7 @@ import { ContactMethod, Translations } from "../types";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
 import { ContactFields } from "./ContactFields";
+import { useDialog } from "../hooks/useDialog";
 
 // Matches the server's cap on an announcement body (api/posts.ts). Long enough
 // to describe a service properly; still short enough that a note stays a
@@ -62,6 +63,7 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
   onClose,
   onSubmitSuccess,
 }) => {
+  const panelRef = useDialog<HTMLDivElement>(onClose);
   const [theme, setTheme] = useState("");
   const [text, setText] = useState("");
 
@@ -202,15 +204,23 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
       className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="note-form-title"
+        tabIndex={-1}
+        className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative outline-none"
+      >
         {/* Notch pull-bar */}
-        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5" />
+        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5" aria-hidden="true" />
 
         <button
           onClick={onClose}
-          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-ink hover:bg-rule transition-colors"
+          aria-label={t.closeLabel || "Yopish"}
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-body hover:text-ink hover:bg-rule transition-colors"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
 
         {/* Header — gold, matching the note option on the speed dial, so the
@@ -220,10 +230,10 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
             <Megaphone className="w-5 h-5" />
           </span>
           <div>
-            <h2 className="text-2xl font-extrabold text-ink tracking-tight m-0">
+            <h2 id="note-form-title" className="text-2xl font-extrabold text-ink tracking-tight m-0">
               {t.noteTitle}
             </h2>
-            <p className="text-[13px] text-[#6B7280] m-0 mt-1 leading-snug">
+            <p className="text-[13px] text-body m-0 mt-1 leading-snug">
               {t.noteSubtitle}
             </p>
           </div>
@@ -300,15 +310,25 @@ export const NoteFormModal: React.FC<NoteFormModalProps> = ({
             inputRef={(el) => { fieldRefs.current.contact = el; }}
           />
 
-          {submitError && (
-            <div
-              ref={submitErrorRef}
-              className="flex items-start gap-2 bg-[#FBEAEA] border border-red/30 rounded-lg px-3.5 py-3 text-red text-sm font-semibold"
-            >
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              {submitError}
-            </div>
-          )}
+          {/* Always-mounted live region, `sr-only` until it has something to
+              say — see the matching block in PostFormModal for why the
+              conditional wrapper this replaced never announced. */}
+          <div
+            ref={submitErrorRef}
+            role="alert"
+            className={
+              submitError
+                ? "flex items-start gap-2 bg-[#FBEAEA] border border-red/30 rounded-lg px-3.5 py-3 text-red text-sm font-semibold"
+                : "sr-only"
+            }
+          >
+            {submitError ? (
+              <>
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                {submitError}
+              </>
+            ) : null}
+          </div>
 
           <button
             type="submit"

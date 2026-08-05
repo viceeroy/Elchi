@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Post, PostContact, Locale, PostType, ContactMethod } from "./types";
 import { telegramUsername, phoneDialString } from "../lib/contact";
 import { translations, defaultLocale } from "./translations";
@@ -6,16 +6,73 @@ import { COUNTRIES, getCountry, isHubCity } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
 import { AnnouncementCard } from "./components/AnnouncementCard";
 import { RouteSelector } from "./components/RouteSelector";
-import { PostFormModal } from "./components/PostFormModal";
-import { NoteFormModal } from "./components/NoteFormModal";
 import { PostFab } from "./components/PostFab";
-import { LoginModal } from "./components/LoginModal";
-import { ProfileSheet } from "./components/ProfileSheet";
-import { NotesCarousel, NoteSheet, type Note } from "./notes";
+import { TypedHeadline } from "./components/TypedHeadline";
+import { NotesCarousel, type Note } from "./notes";
+import { useDialog } from "./hooks/useDialog";
+import { useAnnouncer } from "./hooks/useAnnouncer";
 import { supabaseBrowser } from "./supabaseClient";
-import type { Session } from "@supabase/supabase-js";
+// From auth-js, not the supabase-js umbrella: src no longer depends on the
+// umbrella at all (see supabaseClient.ts), and a type-only import back to it
+// invites someone to "tidy" it into a value import and quietly restore 86 kB.
+import type { Session } from "@supabase/auth-js";
 import { Send, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, Megaphone, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
+
+// Every one of these is a modal or a bottom sheet: none of them is on screen at
+// first paint, and most visitors never open any of them — the board is a
+// read-mostly noticeboard, and three of the five are behind a login the average
+// reader does not have. Shipping them in the entry chunk made the first render
+// of the feed wait on code for screens that were never requested. They are
+// already rendered conditionally, so splitting them costs no extra unmounting
+// logic; it only stops the bytes travelling.
+//
+// React.lazy wants a default export and this codebase uses named exports
+// throughout (see the component convention in CLAUDE.md), hence the
+// `.then(m => ({ default: m.X }))` on each. NoteSheet is imported from its own
+// module rather than the ./notes barrel so the chunk doesn't drag in
+// NotesCarousel and the notes data, which the first screen already needs.
+const PostFormModal = lazy(() =>
+  import("./components/PostFormModal").then((m) => ({ default: m.PostFormModal })),
+);
+const NoteFormModal = lazy(() =>
+  import("./components/NoteFormModal").then((m) => ({ default: m.NoteFormModal })),
+);
+const LoginModal = lazy(() =>
+  import("./components/LoginModal").then((m) => ({ default: m.LoginModal })),
+);
+const ProfileSheet = lazy(() =>
+  import("./components/ProfileSheet").then((m) => ({ default: m.ProfileSheet })),
+);
+const NoteSheet = lazy(() =>
+  import("./notes/NoteSheet").then((m) => ({ default: m.NoteSheet })),
+);
+
+// Warms a lazy chunk before it is rendered. Splitting these sheets moves their
+// download from "before first paint" to "when tapped", and on a slow connection
+// that trades a faster feed for a sheet that hangs after the tap. The speed dial
+// gives us the gap to avoid it: opening it is a separate tap that always
+// precedes picking a composer, so the fetch starts while the user is still
+// choosing. Calling this is fire-and-forget — the import is cached by the
+// bundler runtime, and a failed prefetch is not an error worth surfacing
+// because the real render retries the same import.
+function prefetchComposers() {
+  void import("./components/PostFormModal").catch(() => {});
+  void import("./components/NoteFormModal").catch(() => {});
+}
+
+// The scrim every sheet renders behind itself, shown on its own while a chunk
+// is still in flight. Without it a tap on a slow connection looks ignored: the
+// old code had the component in hand and painted instantly. This is not a
+// spinner on purpose — the sheets animate up from the bottom over exactly this
+// backdrop, so on a fast connection the fallback is indistinguishable from the
+// first frame of the sheet itself rather than a flash of unrelated UI.
+const SheetFallback: React.FC = () => (
+  <div
+    className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] z-[100] animate-[fadein_0.2s_ease]"
+    aria-hidden="true"
+  />
+);
 
 // Traveler posts store the luggage count as a neutral "chamadon" token
 // (see PostFormModal). Expand it here from the count so it reads as a proper
@@ -50,12 +107,12 @@ export default function App() {
   // Which tab the composer opens on, set by the speed dial before the sheet
   // mounts. The user can still switch inside the form.
   const [composeType, setComposeType] = useState<PostType>("traveler");
-  // Feed filter — null means no filter, so the feed shows everything (notes and
-  // parcel posts together). Picking one narrows to it; picking it again clears
-  // back to null, which is what the "×" on the active chip does.
-  const [feedFilter, setFeedFilter] = useState<"parcel" | "notes" | null>(null);
-  const toggleFeedFilter = (next: "parcel" | "notes") =>
-    setFeedFilter((prev) => (prev === next ? null : next));
+  // Feed filter — exactly one of the two kinds is always showing. There is no
+  // "everything" state: parcel ads and standing service ads read so differently
+  // that a mixed feed was mostly noise, and the cleared chip left the user on a
+  // list they hadn't asked for. So the chips are a two-way selector, not a pair
+  // of toggles, and picking the active one is a no-op rather than a clear.
+  const [feedFilter, setFeedFilter] = useState<"parcel" | "notes">("parcel");
   // Speed-dial state for the floating "+"
   const [fabOpen, setFabOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -76,6 +133,11 @@ export default function App() {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  // Whether the session above is an ANSWER or merely the initial guess. `null`
+  // is a valid resolved value (logged out), so the state alone cannot say which
+  // it is — and the feed effect below has to know, or it fires once for
+  // "unknown" and again for the real session.
+  const [authResolved, setAuthResolved] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   // Which side of the form to open once login completes — posting is gated
@@ -84,9 +146,19 @@ export default function App() {
 
   // Track auth session so add-post can be gated behind Telegram login
   useEffect(() => {
-    supabaseBrowser.auth.getSession().then(({ data }) => setSession(data.session));
+    // Mark the session resolved even when the lookup fails: the feed waits on
+    // this flag, so a rejected getSession() must degrade to "logged out" rather
+    // than leave the board stuck on its skeleton forever.
+    supabaseBrowser.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch((err) => console.error("Error reading session:", err))
+      .finally(() => setAuthResolved(true));
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      // supabase-js emits INITIAL_SESSION on init, which can beat the promise
+      // above. Either path is an answer.
+      setAuthResolved(true);
       // Strip leftover OAuth hash (#access_token / bare #) from URL bar
       if (window.location.hash) {
         window.history.replaceState(null, "", window.location.pathname + window.location.search);
@@ -100,13 +172,24 @@ export default function App() {
     setFormOpen(true);
   };
 
-  // DEV: the login gate on posting is off while the note composer is being
-  // tested. Restore by deleting REQUIRE_LOGIN_TO_POST and its use below — the
-  // login path underneath is untouched and still works.
-  const REQUIRE_LOGIN_TO_POST = false;
+  // Signing out — or a refresh token that finally expires — while a composer or
+  // the profile sheet is open leaves an authenticated-only surface on screen.
+  // The submit would come back 401 and the profile sheet reads its user off a
+  // session that no longer exists, so both close with the session.
+  useEffect(() => {
+    if (session) return;
+    setFormOpen(false);
+    setProfileOpen(false);
+    pendingComposeRef.current = null;
+  }, [session]);
 
+  // Posting requires an account, with no dev escape hatch. There used to be a
+  // REQUIRE_LOGIN_TO_POST flag here that turned the gate off; it left the
+  // composer openable to a logged-out visitor who then filled the whole form
+  // and met a bare 401 on submit — the API has always required the token. The
+  // gate is now the same on both sides.
   const handleComposeClick = (kind: PostType) => {
-    if (session || !REQUIRE_LOGIN_TO_POST) {
+    if (session) {
       openComposer(kind);
     } else {
       pendingComposeRef.current = kind;
@@ -116,6 +199,11 @@ export default function App() {
 
   // Active translation dictionary
   const t = translations[locale];
+
+  // Screen-reader announcements for the asynchronous state changes below —
+  // the contact reveal, the copy buttons, the toast and the delete. All of
+  // them used to change only pixels.
+  const { announce, announceError, liveRegions } = useAnnouncer();
 
   // The document title, meta description and <html lang> are the Uzbek strings
   // already shipped in the static index.html, so there is nothing to sync at
@@ -152,9 +240,15 @@ export default function App() {
   // Uses position:fixed on <body> so touch/swipe gestures can't scroll the list
   // behind the overlay (the cause of the "shaking" background), and restores the
   // exact prior scroll position on close so the user doesn't jump.
+  //
+  // Login and the profile sheet are in the list too. They were missing, which
+  // left the feed scrollable behind the two sheets a logged-out visitor is most
+  // likely to meet first. Nesting is safe: opening login over the detail sheet
+  // re-runs this effect, and cleanup + setup happen in the same commit, so the
+  // body is unfixed and re-fixed at the same offset without a paint between.
   useEffect(() => {
     const isModalOpen =
-      selectedPost !== null || selectedNote !== null || formOpen;
+      selectedPost !== null || selectedNote !== null || formOpen || loginOpen || profileOpen;
     if (!isModalOpen) return;
 
     const scrollY = window.scrollY;
@@ -177,7 +271,7 @@ export default function App() {
       body.style.paddingRight = "";
       window.scrollTo(0, scrollY);
     };
-  }, [selectedPost, selectedNote, formOpen]);
+  }, [selectedPost, selectedNote, formOpen, loginOpen, profileOpen]);
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -195,6 +289,11 @@ export default function App() {
       window.history.replaceState({}, "", newUrl);
     }
   };
+
+  // The detail sheet is inline JSX rather than its own component, so its focus
+  // management is wired here and told when the sheet is up. Everything else in
+  // the app mounts and unmounts, and calls useDialog with no second argument.
+  const detailPanelRef = useDialog<HTMLDivElement>(closeDetailModal, selectedPost !== null);
 
   const handleShare = async () => {
     if (!selectedPost) return;
@@ -234,6 +333,7 @@ export default function App() {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setShareCopied(true);
+      announce(t.shareSuccess || "Havola nusxalandi!");
       setTimeout(() => setShareCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy link:", err);
@@ -245,14 +345,19 @@ export default function App() {
       document.execCommand("copy");
       document.body.removeChild(input);
       setShareCopied(true);
+      announce(t.shareSuccess || "Havola nusxalandi!");
       setTimeout(() => setShareCopied(false), 2000);
     }
   };
 
   const handleCopyContact = async (text: string) => {
+    // Both paths end in the same visual tell — the icon flips to a check — so
+    // both announce. The announcement is what a screen-reader user gets
+    // instead of that check.
     try {
       await navigator.clipboard.writeText(text);
       setContactCopied(true);
+      announce(t.srCopied || "Nusxalandi");
       setTimeout(() => setContactCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy contact:", err);
@@ -263,6 +368,7 @@ export default function App() {
       document.execCommand("copy");
       document.body.removeChild(input);
       setContactCopied(true);
+      announce(t.srCopied || "Nusxalandi");
       setTimeout(() => setContactCopied(false), 2000);
     }
   };
@@ -281,9 +387,9 @@ export default function App() {
         country,
         // Filtering happens in SQL so paging stays correct — a client-side
         // filter would leave the offsets counting rows the user can't see.
-        // "all" has to be explicit: the API defaults to parcels so that older
-        // bundles, which have no card for an announcement, never receive one.
-        type: feedFilter === "parcel" ? "parcel" : feedFilter === "notes" ? "announcement" : "all",
+        // The chips are exhaustive, so "all" is never requested from here; the
+        // API still supports it for other callers.
+        type: feedFilter === "parcel" ? "parcel" : "announcement",
         limit: String(PAGE_SIZE),
         offset: String(append ? posts.length : 0),
       });
@@ -307,10 +413,21 @@ export default function App() {
 
   // Refetch from page 1 whenever the corridor or the feed filter changes, and
   // when the session changes so is_mine is recomputed for the new viewer.
+  //
+  // The wait on authResolved is what stops a returning visitor fetching the
+  // whole feed twice on every load. `session` starts null, so this effect used
+  // to fire once with no viewer, then again the moment getSession() came back
+  // with one and `session?.user?.id` went undefined → uuid. Two full pages over
+  // the wire, the second landing late enough to visibly replace the first.
+  //
+  // Waiting costs nothing: fetchPosts already awaits getSession() itself before
+  // it can attach the bearer token, so the request was never going out ahead of
+  // the session anyway — the first fetch was pure waste, not a head start.
   useEffect(() => {
+    if (!authResolved) return;
     fetchPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country, feedFilter, session?.user?.id]);
+  }, [authResolved, country, feedFilter, session?.user?.id]);
 
   // Pull the open post's contact handles. Logged-out viewers get nothing to
   // fetch — the reveal is gated server-side too, so this is UI only.
@@ -343,9 +460,35 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPost?.id, session?.user?.id]);
 
+  // Speak the outcome of that fetch. The handles themselves are read out, not
+  // just "contact ready": they are the entire payload of the reveal, and a
+  // screen-reader user would otherwise have to go hunting for what changed.
+  // Announced from an effect rather than inside the fetch so the DOM the
+  // message describes is already committed when the region updates.
+  useEffect(() => {
+    if (!revealedContact) return;
+    const handles = [revealedContact.contact, revealedContact.contact2]
+      .filter(Boolean)
+      .join(", ");
+    announce(`${t.srContactRevealed || "Kontakt ochildi"}: ${handles}`);
+  }, [revealedContact, announce, t.srContactRevealed]);
+
+  // Assertive, unlike everything else here: a failed reveal is a dead end, and
+  // the user needs to know before they keep pressing.
+  useEffect(() => {
+    if (contactError) announceError(contactError);
+  }, [contactError, announceError]);
+
   const setToast = (message: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToastMessage(message);
+    // The toast is the only confirmation that a post went up, and it appears
+    // without taking focus and removes itself after four seconds — a screen
+    // reader would never encounter it. Announcing here rather than putting
+    // aria-live on the toast element keeps the timing right: the toast mounts
+    // together with its text, which is exactly the case a live region does not
+    // reliably catch.
+    announce(message);
     toastTimerRef.current = setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -382,11 +525,17 @@ export default function App() {
       if (res.ok) {
         closeDetailModal();
         fetchPosts();
+        // Deleting is the one action with no confirmation of any kind: the
+        // sheet closes and the feed silently reloads without the post. A
+        // sighted user infers it from the row disappearing; this says it.
+        announce(t.srPostDeleted || "E'lon o'chirildi");
       } else {
         console.error("Failed to delete post", await res.text());
+        announceError(t.errorGeneral);
       }
     } catch (err) {
       console.error("Error deleting post:", err);
+      announceError(t.errorGeneral);
     } finally {
       setDeleting(false);
     }
@@ -443,6 +592,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen pb-[120px] bg-paper text-ink relative">
+      {/* Both live regions, mounted for the life of the app and empty until
+          something is announced. They render nothing visible. */}
+      {liveRegions}
+
       {/* Airmail stripes at the very top */}
       <div className="h-2 bg-[repeating-linear-gradient(-45deg,var(--color-red)_0_12px,var(--color-card)_12px_17px,var(--color-blue)_17px_29px,var(--color-card)_29px_34px)]"></div>
 
@@ -478,44 +631,69 @@ export default function App() {
         
         {/* Hero Section */}
         <section className="pt-6 pb-2">
+          {/* The headline belongs to the active tab and types itself out on
+              every switch. `key` is the whole replay mechanism: a new tab means
+              a new instance, which starts empty and types from zero. */}
           <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 mb-2 tracking-tight">
-            <span className="text-red">{t.title}</span>
-            <span className="block sm:inline">{t.titleAccent}</span>
+            <TypedHeadline
+              key={feedFilter}
+              segments={
+                feedFilter === "parcel"
+                  ? [
+                      { text: t.title, className: "text-red" },
+                      // Kept as its own line on phones, as before the animation.
+                      { text: t.titleAccent, className: "block sm:inline" },
+                    ]
+                  : [
+                      { text: t.notesTitleBrand || "Elchi", className: "text-red" },
+                      // Deep navy, the same ink the parcel headline's accent
+                      // carries — `text-blue` sat a shade too light next to it.
+                      {
+                        text: t.notesTitleRest || " - bepul e'lonlar taxtasi",
+                        className: "text-ink",
+                      },
+                    ]
+              }
+            />
           </h1>
         </section>
 
         {/* Posts Filter and Feed */}
         <section className="pt-2">
           {/* Route line + feed filter chips. Picking a country filters the feed;
-              the chips narrow it to one kind of ad, and the "×" on an active
-              chip clears back to the mixed feed. */}
+              the chips pick which of the two kinds it shows. One is always
+              active — there is no "clear" affordance, because there is no
+              unfiltered feed to clear back to. */}
           <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 flex-shrink-0">
+            <div
+              role="radiogroup"
+              className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 flex-shrink-0"
+            >
               <button
                 type="button"
-                onClick={() => toggleFeedFilter("parcel")}
-                aria-pressed={feedFilter === "parcel"}
-                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
+                role="radio"
+                onClick={() => setFeedFilter("parcel")}
+                aria-checked={feedFilter === "parcel"}
+                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all ${
                   feedFilter === "parcel"
                     ? "bg-ink text-card shadow-sm"
                     : "text-body hover:text-ink"
                 }`}
               >
                 {t.feedTabParcelLabel || "Pochta"}
-                {feedFilter === "parcel" && <X className="w-3 h-3" />}
               </button>
               <button
                 type="button"
-                onClick={() => toggleFeedFilter("notes")}
-                aria-pressed={feedFilter === "notes"}
-                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs flex items-center gap-1.5 transition-all ${
+                role="radio"
+                onClick={() => setFeedFilter("notes")}
+                aria-checked={feedFilter === "notes"}
+                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all ${
                   feedFilter === "notes"
                     ? "bg-gold text-ink shadow-sm"
                     : "text-body hover:text-ink"
                 }`}
               >
                 {t.feedTabNotesLabel || "E'lonlar"}
-                {feedFilter === "notes" && <X className="w-3 h-3" />}
               </button>
             </div>
 
@@ -594,7 +772,7 @@ export default function App() {
           ) : null}
 
           {/* Disclaimer Banner */}
-          <div className="mt-6 p-3 bg-card border border-edge border-l-4 border-l-gold rounded-r-xl text-[13px] text-[#6B7280] leading-snug shadow-sm">
+          <div className="mt-6 p-3 bg-card border border-edge border-l-4 border-l-gold rounded-r-xl text-[13px] text-body leading-snug shadow-sm">
             <span className="font-bold text-ink mr-1">{t.disclaimerTitle}</span>
             {t.disclaimerText}
           </div>
@@ -606,7 +784,12 @@ export default function App() {
       <PostFab
         t={t}
         open={fabOpen}
-        onToggle={setFabOpen}
+        onToggle={(open) => {
+          // Start pulling the composer chunks as the dial fans out, not after
+          // the user has picked a side. See prefetchComposers.
+          if (open) prefetchComposers();
+          setFabOpen(open);
+        }}
         onPickTraveler={() => handleComposeClick("traveler")}
         onPickRequest={() => handleComposeClick("request")}
         onPickNote={() => handleComposeClick("announcement")}
@@ -615,58 +798,66 @@ export default function App() {
       {/* Post Creation Bottom Sheet Modal. A note has almost none of a parcel
           ad's fields, so it gets its own sheet rather than a third tab that
           would hide most of the form it sits in. */}
-      {formOpen && (
-        composeType === "announcement" ? (
-          <NoteFormModal
-            t={t}
-            country={country}
-            onClose={() => setFormOpen(false)}
-            onSubmitSuccess={handleNoteSubmitSuccess}
-          />
-        ) : (
-          <PostFormModal
-            t={t}
-            locale={locale}
-            initialType={composeType}
-            onClose={() => setFormOpen(false)}
-            onSubmitSuccess={handlePostSubmitSuccess}
-          />
-        )
+      {formOpen && session && (
+        <Suspense fallback={<SheetFallback />}>
+          {composeType === "announcement" ? (
+            <NoteFormModal
+              t={t}
+              country={country}
+              onClose={() => setFormOpen(false)}
+              onSubmitSuccess={handleNoteSubmitSuccess}
+            />
+          ) : (
+            <PostFormModal
+              t={t}
+              locale={locale}
+              initialType={composeType}
+              onClose={() => setFormOpen(false)}
+              onSubmitSuccess={handlePostSubmitSuccess}
+            />
+          )}
+        </Suspense>
       )}
 
       {/* Login Modal — Telegram only, required to add a post */}
       {loginOpen && (
-        <LoginModal
-          t={t}
-          onClose={() => setLoginOpen(false)}
-          onLoginSuccess={() => {
-            setLoginOpen(false);
-            const pending = pendingComposeRef.current;
-            if (pending) {
-              pendingComposeRef.current = null;
-              openComposer(pending);
-            }
-          }}
-        />
+        <Suspense fallback={<SheetFallback />}>
+          <LoginModal
+            t={t}
+            onClose={() => setLoginOpen(false)}
+            onLoginSuccess={() => {
+              setLoginOpen(false);
+              const pending = pendingComposeRef.current;
+              if (pending) {
+                pendingComposeRef.current = null;
+                openComposer(pending);
+              }
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Profile Bottom Sheet — shown when the logged-in user taps the profile icon */}
       {profileOpen && session && (
-        <ProfileSheet
-          t={t}
-          session={session}
-          onClose={() => setProfileOpen(false)}
-          onSignOut={() => setProfileOpen(false)}
-        />
+        <Suspense fallback={<SheetFallback />}>
+          <ProfileSheet
+            t={t}
+            session={session}
+            onClose={() => setProfileOpen(false)}
+            onSignOut={() => setProfileOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/* Board note expanded view */}
       {selectedNote && (
-        <NoteSheet
-          note={selectedNote}
-          locale={locale}
-          onClose={() => setSelectedNote(null)}
-        />
+        <Suspense fallback={<SheetFallback />}>
+          <NoteSheet
+            note={selectedNote}
+            locale={locale}
+            onClose={() => setSelectedNote(null)}
+          />
+        </Suspense>
       )}
 
       {/* Post Detail Viewer Bottom Sheet Modal */}
@@ -675,16 +866,24 @@ export default function App() {
           className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
           onClick={(e) => e.target === e.currentTarget && closeDetailModal()}
         >
-          <div className="bg-card w-full max-w-[560px] rounded-t-2xl pb-8 max-h-[88vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative">
-            
+          <div
+            ref={detailPanelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.postDetailsTitle || "E'lon tafsilotlari"}
+            tabIndex={-1}
+            className="bg-card w-full max-w-[560px] rounded-t-2xl pb-8 max-h-[88vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative outline-none"
+          >
+
             {/* Header portion inside card format */}
             <div className="bg-ink text-card px-6 pt-4 pb-7 relative rounded-t-2xl">
-              <div className="w-10 h-1 bg-white/25 rounded-full mx-auto mb-5"></div>
+              <div className="w-10 h-1 bg-white/25 rounded-full mx-auto mb-5" aria-hidden="true"></div>
               <button
                 onClick={closeDetailModal}
+                aria-label={t.closeLabel || "Yopish"}
                 className="absolute right-[18px] top-[16px] bg-white/10 hover:bg-white/20 border-none w-8 h-8 rounded-full flex items-center justify-center text-card transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
 
               <div
@@ -801,7 +1000,7 @@ export default function App() {
                   id="share-post-btn"
                 >
                   {shareCopied ? (
-                    <Check className="w-4 h-4 text-emerald-600 animate-[bounce_0.2s_ease-in-out]" />
+                    <Check className="w-4 h-4 text-green animate-[bounce_0.2s_ease-in-out]" />
                   ) : (
                     <Share2 className="w-4 h-4 text-gold" />
                   )}
@@ -843,7 +1042,7 @@ export default function App() {
                   return (
                     <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
                       {sectionLabel}
-                      <p className="text-[13px] text-[#6B7280] m-0 leading-snug">
+                      <p className="text-[13px] text-body m-0 leading-snug">
                         {t.contactLockedText}
                       </p>
                       <button
@@ -861,10 +1060,14 @@ export default function App() {
 
                 if (contactLoading) {
                   return (
-                    <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
+                    // aria-busy marks the section as mid-update, so a screen
+                    // reader can say the region is loading rather than reading
+                    // two empty skeleton bars. The arrival itself is announced
+                    // from the effect above.
+                    <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl" aria-busy="true">
                       {sectionLabel}
-                      <div className="h-5 w-2/3 bg-[#E3DFD1] rounded animate-pulse" />
-                      <div className="h-10 w-full bg-[#E3DFD1] rounded-lg animate-pulse" />
+                      <div className="h-5 w-2/3 bg-[#E3DFD1] rounded animate-pulse" aria-hidden="true" />
+                      <div className="h-10 w-full bg-[#E3DFD1] rounded-lg animate-pulse" aria-hidden="true" />
                     </div>
                   );
                 }
@@ -901,9 +1104,9 @@ export default function App() {
                           {contactInfo.isTelegram ? (
                             <Send className="w-3.5 h-3.5 text-blue flex-shrink-0" />
                           ) : (
-                            <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            <Phone className="w-3.5 h-3.5 text-green flex-shrink-0" />
                           )}
-                          <span className={`truncate ${contactInfo.isTelegram ? "text-blue" : "text-emerald-700"}`}>
+                          <span className={`truncate ${contactInfo.isTelegram ? "text-blue" : "text-green"}`}>
                             {revealedContact.contact}
                           </span>
                         </div>
@@ -912,8 +1115,9 @@ export default function App() {
                           onClick={() => handleCopyContact(revealedContact.contact)}
                           className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-field bg-white text-faint hover:text-ink hover:border-ink transition-all"
                           title={t.contactHelpCopyText || "Kontaktni nusxalash"}
+                          aria-label={t.copyContactLabel || "Kontaktni nusxalash"}
                         >
-                          {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                          {contactCopied ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
 
@@ -923,9 +1127,9 @@ export default function App() {
                             {contact2Info.isTelegram ? (
                               <Send className="w-3.5 h-3.5 text-blue flex-shrink-0" />
                             ) : (
-                              <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                              <Phone className="w-3.5 h-3.5 text-green flex-shrink-0" />
                             )}
-                            <span className={`truncate ${contact2Info.isTelegram ? "text-blue" : "text-emerald-700"}`}>
+                            <span className={`truncate ${contact2Info.isTelegram ? "text-blue" : "text-green"}`}>
                               {revealedContact.contact2}
                             </span>
                           </div>
@@ -934,8 +1138,9 @@ export default function App() {
                             onClick={() => handleCopyContact(revealedContact.contact2!)}
                             className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-field bg-white text-faint hover:text-ink hover:border-ink transition-all"
                             title={t.contactHelpCopyText || "Kontaktni nusxalash"}
+                            aria-label={t.copyContactLabel || "Kontaktni nusxalash"}
                           >
-                            {contactCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                            {contactCopied ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
                           </button>
                         </div>
                       )}
@@ -950,7 +1155,7 @@ export default function App() {
                         className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full ${
                           contactInfo.isTelegram
                             ? "bg-blue hover:bg-ink text-card"
-                            : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "bg-green hover:bg-green-deep text-white"
                         }`}
                         id="contact-action-btn"
                       >
@@ -966,7 +1171,7 @@ export default function App() {
                           className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full ${
                             contact2Info.isTelegram
                               ? "bg-blue hover:bg-ink text-card"
-                              : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              : "bg-green hover:bg-green-deep text-white"
                           }`}
                         >
                           {contact2Info.isTelegram ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
@@ -998,9 +1203,10 @@ export default function App() {
           <button
             type="button"
             onClick={() => setToastMessage(null)}
+            aria-label={t.dismissLabel || "Yopish"}
             className="text-white/60 hover:text-white bg-transparent border-none p-1 rounded-full cursor-pointer hover:bg-white/10 transition-colors flex-shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       )}

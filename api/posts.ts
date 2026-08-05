@@ -28,9 +28,19 @@ const CORRIDOR_COUNTRIES = [...ALLOWED_COUNTRIES].filter((c) => c !== HOME_COUNT
 // DEV ONLY — lets an unregistered visitor post while the composer is being
 // tested locally. Off unless ELCHI_DEV_NO_AUTH=1 AND a service-role key is
 // present, because bypassing the 401 alone achieves nothing: the RLS insert
-// policy still demands a real auth.uid(). Must never be set in production.
+// policy still demands a real auth.uid().
+//
+// The environment check is the third condition and it is not redundant: "must
+// never be set in production" was a comment, and a comment does not survive
+// someone copying an env var between Vercel environments. VERCEL_ENV is set by
+// the platform on every deployment (production / preview / development) and
+// cannot be reached by a request, so a deployed function refuses the bypass
+// whatever the other two say.
 const DEV_NO_AUTH =
-  process.env.ELCHI_DEV_NO_AUTH === '1' && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.ELCHI_DEV_NO_AUTH === '1' &&
+  !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
+  process.env.VERCEL_ENV !== 'production' &&
+  process.env.NODE_ENV !== 'production';
 
 // The service-role client bypasses row-level security. Only reachable from the
 // DEV_NO_AUTH path above; every real request still inserts as its author.
@@ -167,15 +177,25 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(row);
   }
 
-  const user = await resolveUser(req);
-
   // --- Single post (deep links: ?postId=... may point outside page 1). ---
   if (id) {
-    const { data, error } = await supabase
-      .from('public_posts')
-      .select(PUBLIC_COLUMNS)
-      .eq('id', id)
-      .maybeSingle();
+    // The row lookup and the token check are independent — the query is not
+    // scoped by the caller, who only decides `is_mine` afterwards. Resolving the
+    // user used to happen first and cost a full round trip to the auth server
+    // before the post query had even been sent. Both start here instead.
+    //
+    // resolveUser is called inside the branch rather than above it so that no
+    // validation early-return can leave it in flight: its "never throws"
+    // contract covers a bad token, not a network failure, and a floating
+    // rejection on a serverless invocation is an unhandled rejection.
+    const [{ data, error }, user] = await Promise.all([
+      supabase
+        .from('public_posts')
+        .select(PUBLIC_COLUMNS)
+        .eq('id', id)
+        .maybeSingle(),
+      resolveUser(req),
+    ]);
 
     if (error) {
       console.error('Error fetching post:', error);
@@ -203,12 +223,19 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
 
   let query = supabase
     .from('public_posts')
-    .select(PUBLIC_COLUMNS, { count: 'exact' })
+    .select(PUBLIC_COLUMNS)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit); // one extra row to detect a next page
 
-  // Which kind of ad the feed wants. The count is on the same query, so `total`
-  // and the fetch-one-extra `hasMore` above both stay correct per filter.
+  // No `{ count: 'exact' }`. It made PostgREST run a second, unbounded COUNT
+  // over the whole filtered set on every feed request — work proportional to the
+  // board rather than to the page, and it cannot stop at LIMIT the way the row
+  // query does. The only thing it fed was a `total` in the response, and the
+  // "N active posts" label that read it was deleted in cdfd528. Paging runs on
+  // the fetch-one-extra `hasMore` above, which costs one row.
+  //
+  // Which kind of ad the feed wants. The filter is applied to the same query
+  // the rows come from, so `hasMore` stays correct per filter.
   const rawType = typeof req.query.type === 'string' ? req.query.type : 'parcel';
   if (!(rawType in TYPE_FILTERS)) {
     return res.status(400).json({ error: 'Noto\'g\'ri e\'lon turi' });
@@ -261,7 +288,10 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  const { data, error, count } = await query;
+  // Same independence as the single-post branch above, and the same reason for
+  // calling resolveUser only here: every 400 on the filters has already been
+  // returned, so nothing can be left in flight.
+  const [{ data, error }, user] = await Promise.all([query, resolveUser(req)]);
   if (error) {
     console.error('Error fetching posts:', error);
     return res.status(500).json({ error: 'Xatolik yuz berdi' });
@@ -271,10 +301,14 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
   const hasMore = rows.length > limit;
   const page = await markOwnership(hasMore ? rows.slice(0, limit) : rows, user);
 
+  // `total` is gone with the count that produced it. Dropping the key rather
+  // than sending `offset + page.length` in its place is deliberate: that number
+  // is not the total, and a stale cached bundle from before cdfd528 guards with
+  // `typeof data.total === "number"` and falls back to the page length on its
+  // own. An absent key degrades; a wrong one is believed.
   return res.status(200).json({
     posts: page,
     hasMore,
-    total: count ?? offset + page.length,
   });
 }
 

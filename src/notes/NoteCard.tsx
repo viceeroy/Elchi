@@ -2,6 +2,7 @@ import React from "react";
 import { X } from "lucide-react";
 import { Locale } from "../types";
 import { Note } from "./data";
+import { translations } from "../translations";
 
 interface NoteCardProps {
   note: Note;
@@ -43,7 +44,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDism
             e.stopPropagation();
             onDismiss();
           }}
-          aria-label="Dismiss"
+          aria-label={translations[locale].dismissLabel || "Yopish"}
           className="absolute right-3 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-full border-none bg-white/15 text-[#F6EFE2] transition-colors hover:bg-white/25"
         >
           <X className="h-3.5 w-3.5" />
@@ -53,7 +54,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDism
       {/* Right padding keeps the copy clear of the postmark, which sits in
           the bottom-right corner at every width. */}
       <div className="px-5 pt-4 pb-5 pr-[92px] sm:px-6 sm:pr-[100px]">
-        <div className="font-mono text-[10.5px] uppercase tracking-[1.5px] text-[#F6EFE2]/75">
+        {/* /90, not /75: at 75% the cream composited to 3.61:1 on the red card,
+            under AA for 10.5px type. 90% keeps the tag visibly quieter than the
+            title while clearing it at 4.55:1. */}
+        <div className="font-mono text-[10.5px] uppercase tracking-[1.5px] text-[#F6EFE2]/90">
           {c.tag}
         </div>
         <h3 className="m-0 mt-1.5 text-[22px] font-extrabold tracking-tight text-card">

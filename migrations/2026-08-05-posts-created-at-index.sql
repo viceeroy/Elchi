@@ -1,0 +1,44 @@
+-- ===========================================================================
+-- Elchi — index the column the feed actually sorts by
+-- Run ONCE in Supabase → SQL Editor. Idempotent and safe to re-run.
+--
+-- Every list request ends in `ORDER BY created_at DESC LIMIT n OFFSET m`
+-- (api/posts.ts, handleGet). Until now nothing indexed `created_at` at all:
+-- the existing indexes (type, route, corridor, expires_at) could narrow the
+-- rows, but the planner then had to sort the entire matching set on every
+-- request — including page 1, and including the very first screen a visitor
+-- sees. That cost grows with the board and lands directly on feed latency.
+--
+-- The leading `type` column earns its place on ONE of the two feeds, not both,
+-- and the difference is worth stating because the obvious reading is wrong.
+--
+-- The notes board filters `type = 'announcement'` — a single value — so the
+-- composite is scanned with `type` pinned and `created_at` already in order
+-- underneath it. No sort node, and the scan stops at LIMIT. Measured on 50k
+-- synthetic rows: 24 rows read, 0.07 ms.
+--
+-- The parcel board filters `type IN ('traveler','request')`. Postgres executes
+-- that as a ScalarArrayOp index scan, which returns rows ordered by created_at
+-- only *within* each type value, never across both — so the ordering is not
+-- usable and the planner falls back to a full scan plus a top-N sort. It does
+-- not merge the two ranges. Measured on the same 50k rows: 33,333 rows scanned,
+-- 12.2 ms, with this index present and ignored.
+--
+-- So this index serves the notes board. The parcel board — the app's default
+-- screen — needs a plain `(created_at DESC)` index instead, which is scanned in
+-- order with `type` demoted to a filter: 36 rows read, 0.06 ms on the same data.
+-- That index is NOT created here; see the follow-up migration.
+--
+-- `expires_at >= CURRENT_DATE` (the public_posts view) deliberately stays a
+-- filter rather than a partial-index predicate: CURRENT_DATE is STABLE, not
+-- IMMUTABLE, so Postgres rejects it in a WHERE clause on an index — and an
+-- index whose predicate meant "not expired as of the day it was built" would
+-- quietly stop matching tomorrow.
+--
+-- Not CONCURRENTLY: it cannot run inside a transaction block, and the board is
+-- small enough that the brief write lock is cheaper than the operational
+-- footgun of a half-built invalid index.
+-- ===========================================================================
+
+CREATE INDEX IF NOT EXISTS idx_posts_type_created
+    ON posts (type, created_at DESC);

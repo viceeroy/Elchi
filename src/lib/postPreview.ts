@@ -12,6 +12,24 @@
 // here writes anything back: `derivePreview` is pure, and the stored note is
 // never modified.
 
+/**
+ * The sanitisation half of `derivePreview`, without the title split.
+ *
+ * A parcel card prints its note as a trailing clause after a "·", so it has no
+ * use for a promoted title — but it has exactly the same problem with the raw
+ * text that an announcement does. Its note used to render raw, which meant an
+ * emoji inflated the line box it landed in and a hard line break burned one of
+ * the one-or-two clamped lines on whitespace, both of which throw off the line
+ * arithmetic the two card types are now tuned to share.
+ *
+ * Same guarantee as `derivePreview`: pure, and the stored note is untouched —
+ * the detail sheet still renders `post.note` raw with the author's emoji and
+ * line breaks intact.
+ */
+export function flattenNote(note: string | null | undefined): string {
+  return flatten(note ?? "");
+}
+
 /** What the card renders. `title` is null when there is nothing worth leading with. */
 export interface PostPreview {
   /** Headline, or a first clause lifted from the note. Null when the note is its own title. */
@@ -57,7 +75,12 @@ const LEADING_MARK_RE = /^[\s\-–—*•·]+|^\d+[.)]\s*/;
  */
 const CLAUSE_END_RE = /[.!?…:；;]|\s[—–]\s/u;
 
-/** Strip emoji, flatten every whitespace run to one space, trim. */
+/**
+ * Strip emoji, flatten every whitespace run to one space, trim.
+ *
+ * Exported as `flattenNote` below, because the parcel card needs the same
+ * sanitisation without the title split — see that export for why.
+ */
 function flatten(text: string): string {
   return text
     .replace(EMOJI_RE, " ")

@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Locale, Translations, PostType } from "../types";
+import { Locale, Translations, PostType, ContactMethod } from "../types";
 import { COUNTRIES } from "../constants";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
-import { X, Briefcase, Package, Sparkles, Phone, Send, AlertCircle, ArrowRight } from "lucide-react";
-
-// Phone fields keep digits and the punctuation used by the +998/+82 formats
-// in the placeholder; letters and everything else are dropped as the user types.
-const sanitizePhone = (value: string) => value.replace(/[^\d+\-\s()]/g, "");
+import { X, Briefcase, Package, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
+import { ContactFields } from "./ContactFields";
+import { useDialog } from "../hooks/useDialog";
 
 type FieldName = "fromCity" | "toCity" | "date" | "weight" | "note" | "contact";
 type FieldErrors = Partial<Record<FieldName, string | undefined>>;
@@ -46,6 +44,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   onSubmitSuccess,
 }) => {
   const [postType, setPostType] = useState<PostType>(initialType);
+  const panelRef = useDialog<HTMLDivElement>(onClose);
   // Route countries (ISO codes). Picking on one side the country already on
   // the other side swaps them, so from ≠ to always holds.
   const [fromCountry, setFromCountry] = useState<string>("KR");
@@ -64,7 +63,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [toCity, setToCity] = useState<string>("");
   const [note, setNote] = useState("");
   const [contact, setContact] = useState("");
-  const [contactMethod, setContactMethod] = useState<"telegram" | "phone">("telegram");
+  const [contactMethod, setContactMethod] = useState<ContactMethod>("telegram");
   const [showContact2, setShowContact2] = useState(false);
   const [contact2, setContact2] = useState("");
   
@@ -322,18 +321,24 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div 
-        className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative"
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="post-form-title"
+        tabIndex={-1}
+        className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative outline-none"
       >
         {/* Notch pull-bar */}
-        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5"></div>
-        
+        <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5" aria-hidden="true"></div>
+
         {/* Close Button */}
-        <button 
+        <button
           onClick={onClose}
-          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-ink hover:bg-rule transition-colors"
+          aria-label={t.closeLabel || "Yopish"}
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-body hover:text-ink hover:bg-rule transition-colors"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
 
         {/* Tab Toggle between Traveler and Request — the active tab borrows the
@@ -367,7 +372,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         </div>
 
         {/* Header Title */}
-        <h2 className="text-2xl font-extrabold text-ink tracking-tight mb-6">{t.addPostTitle}</h2>
+        <h2 id="post-form-title" className="text-2xl font-extrabold text-ink tracking-tight mb-6">{t.addPostTitle}</h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Honeypot Spam Trap (Hidden for humans) */}
@@ -482,7 +487,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
                       selectedMonth === m.value && !dateFlexible
                         ? "bg-ink text-card"
-                        : "bg-paper text-[#6B7280] hover:bg-rule"
+                        : "bg-paper text-body hover:bg-rule"
                     }`}
                   >
                     {m.label}
@@ -495,7 +500,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
                       dateFlexible
                         ? "bg-gold text-card"
-                        : "bg-paper text-[#6B7280] hover:bg-rule"
+                        : "bg-paper text-body hover:bg-rule"
                     }`}
                   >
                     {t.dateFlexibleBtn}
@@ -582,7 +587,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button
                       type="button"
                       onClick={() => { setWeightLuggage(1); clearError("weight"); }}
-                      className={`font-mono text-xs font-semibold px-4 py-3 bg-card text-[#6B7280] border border-dashed rounded-lg hover:border-ink ${
+                      className={`font-mono text-xs font-semibold px-4 py-3 bg-card text-body border border-dashed rounded-lg hover:border-ink ${
                         errors.weight ? "border-red" : "border-field"
                       }`}
                     >
@@ -673,209 +678,77 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             <FieldError message={errors.note} />
           </div>
 
-          {/* Contact */}
-          <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold">
-                  {t.contactLabel} <span className="text-red-500">*</span>
-                </label>
-                
-                {/* Micro Tabs for Contact Choice */}
-                <div className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 scale-[0.9] origin-right">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setContactMethod("telegram");
-                      // Convert or auto-prepend if appropriate
-                      if (contact && !contact.startsWith("@") && !contact.includes("+") && contact.length < 15) {
-                        setContact("@" + contact.trim());
-                      } else if (!contact) {
-                        setContact("@");
-                      }
-                    }}
-                    className={`px-3 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${
-                      contactMethod === "telegram"
-                        ? "bg-blue text-white shadow-sm"
-                        : "text-body hover:text-ink"
-                    }`}
-                  >
-                    <Send className="w-2.5 h-2.5" />
-                    Telegram
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setContactMethod("phone");
-                      if (contact.startsWith("@")) {
-                        setContact(contact.replace("@", ""));
-                      }
-                    }}
-                    className={`px-3 py-1 rounded-md font-bold text-[10px] flex items-center gap-1 transition-all ${
-                      contactMethod === "phone"
-                        ? "bg-emerald-600 text-white shadow-sm"
-                        : "text-body hover:text-ink"
-                    }`}
-                  >
-                    <Phone className="w-2.5 h-2.5" />
-                    Telefon
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative">
-                {/* Prefix Icon/Text */}
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-faint">
-                  {contactMethod === "telegram" ? (
-                    <span className="font-mono text-sm font-bold text-blue mr-0.5">@</span>
-                  ) : (
-                    <Phone className="w-4 h-4 text-emerald-600" />
-                  )}
-                </div>
-
-                <input
-                  type="text"
-                  ref={(el) => { fieldRefs.current.contact = el; }}
-                  inputMode={contactMethod === "phone" ? "tel" : "text"}
-                  value={contactMethod === "telegram" && contact.startsWith("@") ? contact.substring(1) : contact}
-                  onChange={(e) => {
-                    const typed = e.target.value;
-                    if (contactMethod === "telegram") {
-                      // Always store with `@` in state
-                      setContact(typed.startsWith("@") ? typed : "@" + typed);
-                    } else {
-                      setContact(sanitizePhone(typed));
-                    }
-                    clearError("contact");
-                  }}
-                  placeholder={
-                    contactMethod === "telegram"
-                      ? "username"
-                      : "+998 90-123-4567 yoki +82 10-1234-5678"
-                  }
-                  maxLength={contactMethod === "telegram" ? 99 : 100}
-                  className={`w-full box-sizing-border-box p-3 pl-8.5 border rounded-lg text-sm bg-card text-ink font-mono transition-all ${
-                    errors.contact
-                      ? ERROR_INPUT_CLASS
-                      : contactMethod === "telegram"
-                        ? "border-field focus:border-blue focus:ring-1 focus:ring-blue"
-                        : "border-field focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                  }`}
-                  style={{ paddingLeft: "34px" }}
-                />
-              </div>
-
-              <FieldError message={errors.contact} />
-
-              {/* Dynamic Helper Link or Country Code Suggestions */}
-              {contactMethod === "telegram" ? (
-                contact.trim().replace("@", "") && (
-                  <div className="mt-1.5 font-mono text-[10.5px] text-blue flex items-center gap-1.5 bg-[#E8EEF8]/60 px-2.5 py-1.5 rounded-md border border-[#D5E2F4] w-fit">
-                    <Send className="w-3 h-3" />
-                    <span className="opacity-75">Telegram havola:</span>
-                    <a
-                      href={`https://t.me/${contact.trim().replace("@", "")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline text-gold font-bold hover:text-ink tracking-tight"
-                    >
-                      t.me/{contact.trim().replace("@", "")}
-                    </a>
-                  </div>
-                )
-              ) : (
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!contact.startsWith("+998")) {
-                        setContact("+998 " + contact.replace(/^\+?\d*/, "").trim());
-                      }
-                    }}
-                    className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
-                  >
-                    🇺🇿 +998
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!contact.startsWith("+82")) {
-                        setContact("+82 " + contact.replace(/^\+?\d*/, "").trim());
-                      }
-                    }}
-                    className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
-                  >
-                    🇰🇷 +82
-                  </button>
-                </div>
-              )}
-            </div>
-
-          {/* Secondary Contact (opposite method of primary) */}
-          <div>
-            {showContact2 ? (
-              <>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold">
-                    {t.secondaryContactLabel || "Qo'shimcha bog'lanish"}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => { setShowContact2(false); setContact2(""); }}
-                    className="text-faint hover:text-red"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-faint">
-                    {contactMethod === "telegram" ? (
-                      <Phone className="w-4 h-4 text-emerald-600" />
-                    ) : (
-                      <span className="font-mono text-sm font-bold text-blue mr-0.5">@</span>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    inputMode={contactMethod === "telegram" ? "tel" : "text"}
-                    value={contact2}
-                    onChange={(e) => {
-                      const typed = e.target.value;
-                      // Secondary is always the opposite method of the primary
-                      setContact2(contactMethod === "telegram" ? sanitizePhone(typed) : typed);
-                    }}
-                    placeholder={
-                      contactMethod === "telegram"
-                        ? "+998 90-123-4567 yoki +82 10-1234-5678"
-                        : "username"
-                    }
-                    maxLength={contactMethod === "telegram" ? 100 : 99}
-                    className="w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono border-field focus:border-blue focus:ring-1 focus:ring-blue"
-                    style={{ paddingLeft: "34px" }}
-                  />
-                </div>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowContact2(true)}
-                className="font-mono text-xs font-semibold px-4 py-3 bg-card text-[#6B7280] border border-dashed border-field rounded-lg hover:border-ink"
-              >
-                {contactMethod === "telegram" ? (t.addPhoneBtn || "+ Add phone number") : (t.addTelegramBtn || "+ Add Telegram")}
-              </button>
-            )}
-          </div>
+          {/* Contact — the shared block, same markup the note sheet renders.
+              This was an inline copy of ContactFields.tsx: same toggle, same
+              "@" prefix, same t.me preview, same +998/+82 shortcuts, and its
+              own duplicate sanitizePhone. The two had already drifted (the
+              toggle here was scaled to 90%), which is the whole argument for
+              the component. */}
+          <ContactFields
+            t={t}
+            label={<>{t.contactLabel} <span className="text-red-500">*</span></>}
+            method={contactMethod}
+            onMethodChange={(next) => {
+              setContactMethod(next);
+              // Carrying a half-typed value across the toggle, in the one
+              // direction ContactFields leaves to its caller. A bare "someone"
+              // becomes "@someone"; a value holding a "+" or running long is a
+              // phone number typed under the other tab and is left alone. An
+              // empty field is seeded with the "@" so the author types straight
+              // into a username — safe here because a parcel post requires a
+              // contact anyway, and unsafe on the note sheet, where it would
+              // turn a deliberately blank optional field into an error.
+              if (next !== "telegram") return;
+              if (!contact) {
+                setContact("@");
+              } else if (
+                !contact.startsWith("@") &&
+                !contact.includes("+") &&
+                contact.length < 15
+              ) {
+                setContact("@" + contact.trim());
+              }
+            }}
+            contact={contact}
+            onContactChange={(value) => { setContact(value); clearError("contact"); }}
+            contact2={contact2}
+            onContact2Change={setContact2}
+            showContact2={showContact2}
+            onShowContact2Change={(show) => {
+              setShowContact2(show);
+              if (!show) setContact2("");
+            }}
+            error={errors.contact}
+            inputRef={(el) => { fieldRefs.current.contact = el; }}
+          />
 
           {/* Submit-level error (API rejection, network failure) — not tied to
-              any single field, so it sits with the control that failed. */}
-          {submitError && (
-            <div
-              ref={submitErrorRef}
-              className="flex items-start gap-2 bg-[#FBEAEA] border border-red/30 rounded-lg px-3.5 py-3 text-red text-sm font-semibold"
-            >
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              {submitError}
-            </div>
-          )}
+              any single field, so it sits with the control that failed.
+
+              The container is always rendered and carries role="alert" for the
+              life of the form; only its contents are conditional. Wrapping the
+              whole thing in `{submitError && …}` is the obvious shape and the
+              one that does not announce: a live region has to exist *before*
+              the text lands in it, and that version created the region and the
+              message in the same paint. While empty it is `sr-only`, which is
+              absolutely positioned and therefore not a flex item — so it adds
+              no gap to the form's `gap-5` column. */}
+          <div
+            ref={submitErrorRef}
+            role="alert"
+            className={
+              submitError
+                ? "flex items-start gap-2 bg-[#FBEAEA] border border-red/30 rounded-lg px-3.5 py-3 text-red text-sm font-semibold"
+                : "sr-only"
+            }
+          >
+            {submitError ? (
+              <>
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                {submitError}
+              </>
+            ) : null}
+          </div>
 
           {/* Submit Button — tracks the selected post type's stamp colour */}
           <button

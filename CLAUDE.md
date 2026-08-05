@@ -71,6 +71,21 @@ enforced in SQL (`posts_shape_by_type_check`, the announcement triggers) — a c
 the server copy is the security boundary, the client copy is inline feedback. Change both, or
 change neither.
 
+**The browser client is assembled, not `createClient`ed.**
+[src/supabaseClient.ts](src/supabaseClient.ts) builds auth + PostgREST from `@supabase/auth-js`
+and `@supabase/postgrest-js` directly, because `createClient` also constructs realtime, storage
+and functions — none of which this app uses, none of which tree-shake, and together 86 kB of
+the entry chunk. Two things it does by hand must stay by hand: the `storageKey` derivation
+(auth-js's own default is a different string, so getting it wrong silently signs every existing
+user out) and the per-request `Authorization` header (a static one pins the anon role and makes
+`auth.uid()` null under RLS). Server code keeps the umbrella — bundle size is not a concern
+there, and `getSupabaseAdmin()` needs `auth.admin`.
+
+**Those three Supabase packages move together.** `@supabase/supabase-js` pins its
+sub-dependencies to an *exact* version, so `auth-js` and `postgrest-js` are pinned exactly too
+in [package.json](package.json). Bump one without the others and npm installs a second,
+divergent copy instead of deduping.
+
 **Adding a country is two edits, not one.** `COUNTRIES` in [src/constants.ts](src/constants.ts)
 *and* `ALLOWED_COUNTRIES` in [api/posts.ts](api/posts.ts). KZ/TJ/KG/TM are pre-written and
 commented out. No schema change needed.
@@ -86,8 +101,14 @@ strings in a component — `t.months` exists precisely because three components 
 **Errors are user-facing Uzbek.** API error strings go straight to the user. Keep new ones in
 Uzbek and generic (`'Xatolik yuz berdi'`) — don't leak DB detail.
 
-**Dev-only flags.** `REQUIRE_LOGIN_TO_POST` in [src/App.tsx](src/App.tsx) and `ELCHI_DEV_NO_AUTH`
-in [api/posts.ts](api/posts.ts) both relax the auth gate. Neither may be enabled in production.
+**The auth gate has no client-side switch.** Posting, deleting and revealing a contact all
+require a session, and the client gate must match the server's. `REQUIRE_LOGIN_TO_POST` in
+`App.tsx` used to turn the composer gate off; it is gone. Don't reintroduce one — a composer
+that opens without a session just walks the author into a 401 on submit.
+
+**Dev-only flag.** `ELCHI_DEV_NO_AUTH` in [api/posts.ts](api/posts.ts) relaxes the post auth
+gate. It self-disables when `VERCEL_ENV`/`NODE_ENV` is `production`, and still needs the
+service-role key to do anything, because RLS demands a real `auth.uid()`.
 
 ## Style
 

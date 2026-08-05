@@ -109,7 +109,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
                     <span className="text-[11px] text-faint">{c.city}</span>
                   </span>
                 </span>
-                <span className="font-mono text-[11px] font-bold tracking-[1px] text-gold">
+                <span className="font-mono text-[11px] font-bold tracking-[1px] text-gold-deep">
                   {c.code}
                 </span>
               </button>
