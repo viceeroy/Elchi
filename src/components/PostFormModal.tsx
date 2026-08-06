@@ -356,7 +356,17 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         <div className="flex bg-paper border border-edge rounded-xl p-1 mb-6 gap-1">
           <button
             type="button"
-            onClick={() => setPostType("traveler")}
+            onClick={() => {
+              setPostType("traveler");
+              // The flexible-date toggle only renders under the request tab
+              // below (line ~505) — a traveler always has a fixed departure.
+              // Without this reset, picking "Kelishiladi" on the request tab
+              // and then switching here left dateFlexible=true with no control
+              // left on screen to turn it back off: validation waves the date
+              // through unchecked (`selectedDay === null && !dateFlexible`),
+              // and the traveler post is submitted with date: null.
+              setDateFlexible(false);
+            }}
             className={`flex-1 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
               postType === "traveler"
                 ? "bg-blue text-card border border-dashed border-white/40 shadow-[0_3px_8px_rgba(27,42,74,0.15)] -rotate-[1.5deg]"

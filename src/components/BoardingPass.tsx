@@ -8,6 +8,7 @@ import { authorNameOf } from "../lib/authorName";
 import { parseWeightString } from "../../lib/weight";
 import { pluralizeChamadon } from "../translations";
 import { formatFlexibleDate } from "../../lib/formatDate";
+import { FLEXIBLE_DATE } from "../../lib/date";
 import {
   FeedCard,
   FeedCardBadgeRow,
@@ -77,19 +78,17 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     return parts.join(" + ");
   })();
 
-  // Human friendly date helper
-  const formatDate = (dateStr: string | null) => formatFlexibleDate(dateStr, "short", t.months);
-
-  // The two facts a reader scans for, on one line: when, and how much. They
-  // used to be a column apart — the date in the navy stub on the right, the
-  // weight buried at the head of the note paragraph on the left — which meant
-  // comparing two posts took two saccades in opposite directions.
-  //
-  // Joined here rather than by a separator element so the "·" can't survive one
-  // of the two halves being absent: physicalWeight is "" on a 0 kg post, and
-  // formatDate never returns "" but is filtered anyway so this holds if that
-  // ever changes.
-  const meta = [formatDate(post.date), physicalWeight].filter(Boolean).join(" · ");
+  // The card omits the date entirely when it's negotiable (post.date is NULL
+  // or the legacy FLEXIBLE_DATE sentinel) rather than printing "Kelishiladi" —
+  // that word on every other card was noise, not information; the traveler/
+  // request tab already tells you what kind of post this is. The detail sheet
+  // still shows it via formatFlexibleDate directly (see App.tsx), because
+  // there it's an answer to an explicit "Uchish sanasi" / "Kerak bo'lgan sana"
+  // label rather than a bare word competing with the route and weight.
+  const dateText =
+    post.date && post.date !== FLEXIBLE_DATE
+      ? formatFlexibleDate(post.date, "short", t.months)
+      : null;
 
   return (
     /* Silhouette, stripe, badge row and footer all come from ./FeedCard — this
@@ -127,22 +126,38 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         </div>
       </FeedCardBadgeRow>
 
-      {/* Actual city (where the traveler/parcel is really going, beyond the airport) */}
-      {showActualCities && (
-        <div className="font-mono text-[11px] text-faint tracking-wide leading-none">
-          {post.from_city} → {post.to_city}
+      {/* Actual city, and the date, on one row: the city line used to sit
+          alone with the date on its own line below, which read as two facts
+          stacked rather than one line the eye could scan across. Cities are
+          absent on plenty of posts (showActualCities is false whenever both
+          sides are just the hub the country name already implies) and dateText
+          is null on a negotiable date (see its definition above) — each half
+          renders independently so neither is required to get the other on
+          screen. justify-between only matters when both are present; a lone
+          date still sits left like a normal line, and a card with no fixed
+          date and only hub cities shows neither and jumps straight to weight. */}
+      {(showActualCities || dateText) && (
+        <div className="flex items-baseline justify-between gap-2">
+          {showActualCities && (
+            <span className="font-mono text-[11px] text-faint tracking-wide leading-none truncate">
+              {post.from_city} → {post.to_city}
+            </span>
+          )}
+          {dateText && (
+            <span className="font-bold text-[15px] text-ink leading-tight flex-shrink-0">
+              {dateText}
+            </span>
+          )}
         </div>
       )}
 
-      {/* Date and cargo. Deliberately the heaviest type on the card after the
-          route: bold ink against the grey note below it, so the two numbers a
-          reader is actually comparing between posts carry without an icon
-          propping them up. There were icons here in the first draft — a
-          calendar and a scale — and they turned one scannable line into three
-          competing glyphs. */}
-      {meta && (
+      {/* Cargo, on its own line below the city/date row — the row above is
+          "where and when", this is "how much", and joining all three with
+          "·" separators (the original single-line design) read as one long
+          fact rather than two. Keeps the same bold-ink treatment. */}
+      {physicalWeight && (
         <div className="font-bold text-[15px] text-ink leading-tight">
-          {meta}
+          {physicalWeight}
         </div>
       )}
 
@@ -150,13 +165,10 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
           note length; long URLs/words wrap instead of overflowing. Full text
           is in the detail sheet on click.
 
-          Two lines at every width, which is what set FEED_CARD_SHELL's
-          h-[220px]. The budget at sm (the tighter of the two, because p-6 costs
-          8px more than p-5 buys back in a shorter badge row): 48 inset + 24
-          badge row + 11 city line + 19 meta + 8×4 gaps + 40 footer = 174,
-          leaving 46px against the 43.5px two lines of 14.5px/1.5 need. Mobile
-          has ~12px more slack. Re-measure before changing the clamp, the inset,
-          the leading or the footer — three of those five have no give left. */}
+          Two lines again: putting the city and date back on one shared row
+          (instead of the date on its own line below the city) gave this line
+          its budget back. Measured at 218px of content in the 220px shell at
+          375px width — re-measure before adding another row above this one. */}
       {noteText && (
         <span className="line-clamp-2 text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0 [overflow-wrap:anywhere]">
           {noteText}
