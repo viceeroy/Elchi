@@ -1,5 +1,13 @@
 import { Locale, Translations } from "./types";
 
+// "chamadon" (luggage) pluralizes as singular vs "ta chamadon" — a rule, not
+// a fixed string, so it lives here as a function rather than a Translations
+// entry. Every component that renders a luggage count calls this instead of
+// carrying its own copy of the ternary.
+export function pluralizeChamadon(n: number): string {
+  return n === 1 ? "chamadon" : "ta chamadon";
+}
+
 export const translations: Record<Locale, Translations> = {
   uz: {
     metaTitle: "Elchi — Chamadoningizda joy bormi? | Bepul e'lon taxtasi",

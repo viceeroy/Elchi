@@ -6,6 +6,7 @@ import { isContactKind, isValidContact, type ContactKind } from '../lib/contact.
 import { ANNOUNCEMENT_HEADLINE_MAX, ANNOUNCEMENT_NOTE_MAX } from '../lib/announcementLimits.js';
 import { PARCEL_CITY_MAX, PARCEL_CATEGORY_OTHER_MAX, PARCEL_NOTE_MAX } from '../lib/parcelLimits.js';
 import { PARCEL_CATEGORY_IDS } from '../lib/parcelCategories.js';
+import { FLEXIBLE_DATE } from '../lib/date.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
@@ -556,11 +557,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Two shapes have no fixed date: an announcement never has one, and
-    // "flexible" means the requester negotiates it directly with the traveler.
-    // Both store NULL — the string "flexible" used to be passed straight into
-    // the DATE column, which failed the insert — and both get a flat 30-day
-    // expiry instead of one derived from a travel date.
-    const noFixedDate = isAnnouncement || date === 'flexible';
+    // FLEXIBLE_DATE means the requester negotiates it directly with the
+    // traveler. Both store NULL — the sentinel used to be passed straight
+    // into the DATE column, which failed the insert — and both get a flat
+    // 30-day expiry instead of one derived from a travel date.
+    const noFixedDate = isAnnouncement || date === FLEXIBLE_DATE;
     let dateValue: string | null;
     let expires_at: string;
 

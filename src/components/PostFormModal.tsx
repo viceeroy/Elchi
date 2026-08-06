@@ -9,6 +9,9 @@ import {
   PARCEL_NOTE_MAX,
 } from "../../lib/parcelLimits";
 import { PARCEL_CATEGORY_IDS } from "../../lib/parcelCategories";
+import { buildWeightString } from "../../lib/weight";
+import { pluralizeChamadon } from "../translations";
+import { FLEXIBLE_DATE } from "../../lib/date";
 import { X, Briefcase, Package, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
 import { ContactFields } from "./ContactFields";
 import { useDialog } from "../hooks/useDialog";
@@ -209,10 +212,11 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     setSubmitting(true);
 
     try {
-      // Build ISO Date string (YYYY-MM-DD), or "flexible" when the requester
-      // has no fixed date and it's left to be negotiated with the traveler.
+      // Build ISO Date string (YYYY-MM-DD), or FLEXIBLE_DATE when the
+      // requester has no fixed date and it's left to be negotiated with the
+      // traveler.
       const dateString = dateFlexible
-        ? "flexible"
+        ? FLEXIBLE_DATE
         : `${currentYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
 
       // Build Weight representation. 0 kg is valid: for a traveler it means
@@ -221,10 +225,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       // and App expand it to the right Uzbek form from the count at render time.
       let finalWeight: string;
       if (postType === "traveler") {
-        const parts: string[] = [];
-        if (weightKg > 0) parts.push(`${weightKg} kg`);
-        if (weightLuggage > 0) parts.push(`${weightLuggage} chamadon`);
-        finalWeight = parts.join(" + ") || "0 kg";
+        finalWeight = buildWeightString(weightKg, weightLuggage);
       } else {
         // Categories: comma-joined chip labels plus the free-text detail if given.
         // Weight string = "<kg> · <categories>"; the card shows only the kg part
@@ -319,7 +320,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     style: selectedItems.includes(it.id) ? itemChipActive : itemChipBase,
   }));
 
-  const luggageWordLabel = weightLuggage === 1 ? "chamadon" : "ta chamadon";
+  const luggageWordLabel = pluralizeChamadon(weightLuggage);
 
   const weekdays = ["Ya","Du","Se","Ch","Pa","Ju","Sh"];
   const monthShortNames = ["Yan","Fev","Mar","Apr","May","Iyun","Iyul","Avg","Sen","Okt","Noy","Dek"];

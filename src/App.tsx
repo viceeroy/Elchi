@@ -1,10 +1,17 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Post, PostContact, Locale, PostType, ContactMethod } from "./types";
 import { telegramUsername, phoneDialString } from "../lib/contact";
-import { translations, defaultLocale } from "./translations";
+import { replaceLuggageToken } from "../lib/weight";
+import { formatFlexibleDate } from "../lib/formatDate";
+import { translations, defaultLocale, pluralizeChamadon } from "./translations";
 import { COUNTRIES, getCountry, isHubCity } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
 import { AnnouncementCard } from "./components/AnnouncementCard";
+import {
+  FEED_CARD_SHELL,
+  FEED_CARD_INNER,
+  FEED_CARD_FOOTER_ROW,
+} from "./components/FeedCard";
 import { RouteSelector } from "./components/RouteSelector";
 import { PostFab } from "./components/PostFab";
 import { TypedHeadline } from "./components/TypedHeadline";
@@ -82,10 +89,7 @@ const SheetFallback: React.FC = () => (
 const PAGE_SIZE = 24;
 
 function localizeWeight(weight: string): string {
-  return weight.replace(/(\d+)\s*chamadon\b/gi, (_match, numStr: string) => {
-    const n = parseInt(numStr, 10);
-    return `${n} ${n === 1 ? "chamadon" : "ta chamadon"}`;
-  });
+  return replaceLuggageToken(weight, pluralizeChamadon);
 }
 
 export default function App() {
@@ -565,21 +569,7 @@ export default function App() {
   };
 
   // Human-friendly date inside detail modal
-  const formatDetailDate = (dateStr: string | null) => {
-    // Null is how "no fixed date" is stored. The "flexible" string is the older
-    // wire form, kept so rows written before that changed still read correctly.
-    if (!dateStr || dateStr === "flexible") {
-      return "Kelishiladi";
-    }
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-
-      return `${d.getDate()}-${t.months[d.getMonth()]}, ${d.getFullYear()}`;
-    } catch {
-      return dateStr;
-    }
-  };
+  const formatDetailDate = (dateStr: string | null) => formatFlexibleDate(dateStr, "long", t.months);
 
   // Route headline = localized country names from the stored ISO codes. The
   // registry entries come back alongside the names so the caller can also ask
@@ -712,18 +702,31 @@ export default function App() {
           {loading ? (
             <div className="flex flex-col gap-4">
               {Array.from({ length: 4 }).map((_, i) => (
+                /* Borrows the real cards' chrome by name rather than tracing it:
+                   a skeleton of a different silhouette makes the feed jump when
+                   the posts land, and a hand-copied one drifts (this was still
+                   drawing the retired two-column stub card long after the stub
+                   came off). Not a FeedCard — no click target, no stripe, no
+                   post — so it takes the class strings and adds the pulse. */
                 <div
                   key={i}
-                  className="grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] min-h-[148px] bg-card rounded-xl border border-edge overflow-hidden animate-pulse shadow-[var(--shadow-card)]"
+                  className={`${FEED_CARD_SHELL} overflow-hidden animate-pulse`}
                 >
-                  <div className="pt-8 pb-5 pl-5 pr-3 sm:pl-8 sm:pr-6 md:py-6 md:pl-10 md:pr-7 flex flex-col gap-3">
-                    <div className="h-5 w-2/3 bg-edge rounded" />
-                    <div className="h-3.5 w-1/3 bg-edge rounded" />
-                    <div className="h-3.5 w-4/5 bg-edge rounded mt-2" />
-                  </div>
-                  <div className="bg-[#EDEAE0] flex flex-col items-center justify-center gap-2 p-3">
-                    <div className="h-3 w-10 bg-[#DDD8C9] rounded" />
-                    <div className="h-4 w-14 bg-[#DDD8C9] rounded" />
+                  <div className={FEED_CARD_INNER}>
+                    {/* badge + route */}
+                    <div className="h-6 w-2/3 bg-edge rounded" />
+                    {/* city line */}
+                    <div className="h-3 w-1/3 bg-rule rounded" />
+                    {/* date · weight */}
+                    <div className="h-4 w-2/5 bg-edge rounded" />
+                    {/* note, two lines */}
+                    <div className="h-3.5 w-full bg-rule rounded" />
+                    <div className="h-3.5 w-4/5 bg-rule rounded" />
+
+                    <div className={FEED_CARD_FOOTER_ROW}>
+                      <div className="h-3.5 w-20 bg-rule rounded" />
+                      <div className="h-[27px] w-24 bg-edge rounded-md" />
+                    </div>
                   </div>
                 </div>
               ))}

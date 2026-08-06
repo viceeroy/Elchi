@@ -1,10 +1,19 @@
 import React from "react";
 import { Post, Locale, Translations } from "../types";
-import { Briefcase, Package, ArrowRight } from "lucide-react";
+import { Briefcase, Package } from "lucide-react";
 import { COUNTRIES, getCountry, isHubCity } from "../constants";
-import { useIsClamped } from "../lib/useIsClamped";
 import { stickerStyle } from "../lib/stickerStyle";
 import { flattenNote } from "../lib/postPreview";
+import { PLACEHOLDER_AUTHOR } from "../lib/placeholderAuthor";
+import { parseWeightString } from "../../lib/weight";
+import { pluralizeChamadon } from "../translations";
+import { formatFlexibleDate } from "../../lib/formatDate";
+import {
+  FeedCard,
+  FeedCardBadgeRow,
+  FeedCardFooter,
+  FEED_CARD_TITLE,
+} from "./FeedCard";
 
 interface BoardingPassProps {
   post: Post;
@@ -20,7 +29,6 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   onOpen,
 }) => {
   const isTraveler = post.type === "traveler";
-  const moreLabel = t.cardMoreLabel || "ko'proq";
 
   // Same sanitisation an announcement body gets, minus the title split: emoji
   // out, hard line breaks flattened to single spaces. Both would otherwise
@@ -31,11 +39,6 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   // Can come back empty where post.note was not (a note of nothing but emoji),
   // which is why the render below tests this and not post.note.
   const noteText = flattenNote(post.note);
-
-  // Same cue, same rule as an announcement: printed only when the note below
-  // was actually cut. A parcel note is often short enough to print whole, so
-  // this stays absent on most cards.
-  const { ref: noteRef, isClamped } = useIsClamped<HTMLSpanElement>(noteText);
 
   // Route = country names from the stored ISO codes (the registry falls back
   // to the first entry so a malformed row can't crash the card).
@@ -63,177 +66,103 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   // which Uzbek form to render.
   const physicalWeight = (() => {
     const parts: string[] = [];
-    // Optional chaining because a deep link can put an announcement — which has
-    // no cargo — in front of this component.
-    const kg = post.weight?.match(/(\d+)\s*kg/i);
-    const lug = post.weight?.match(/(\d+)\s*chamadon/i);
-    if (kg && parseInt(kg[1], 10) > 0) parts.push(`${kg[1]} kg`);
-    if (lug) {
-      const n = parseInt(lug[1], 10);
-      if (n > 0) {
-        const word = n === 1 ? "chamadon" : "ta chamadon";
-        parts.push(`${n} ${word}`);
-      }
+    // post.weight is optional because a deep link can put an announcement —
+    // which has no cargo — in front of this component.
+    const { kg, luggage } = parseWeightString(post.weight);
+    if (kg && kg > 0) parts.push(`${kg} kg`);
+    if (luggage && luggage > 0) {
+      parts.push(`${luggage} ${pluralizeChamadon(luggage)}`);
     }
     return parts.join(" + ");
   })();
 
   // Human friendly date helper
-  const formatDate = (dateStr: string | null) => {
-    // Null is how "no fixed date" is stored. The "flexible" string is the older
-    // wire form, kept so rows written before that changed still read correctly.
-    if (!dateStr || dateStr === "flexible") {
-      return "Kelishiladi";
-    }
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
+  const formatDate = (dateStr: string | null) => formatFlexibleDate(dateStr, "short", t.months);
 
-      return `${d.getDate()} ${t.months[d.getMonth()]}`;
-    } catch {
-      return dateStr;
-    }
-  };
+  // The two facts a reader scans for, on one line: when, and how much. They
+  // used to be a column apart — the date in the navy stub on the right, the
+  // weight buried at the head of the note paragraph on the left — which meant
+  // comparing two posts took two saccades in opposite directions.
+  //
+  // Joined here rather than by a separator element so the "·" can't survive one
+  // of the two halves being absent: physicalWeight is "" on a 0 kg post, and
+  // formatDate never returns "" but is filtered anyway so this holds if that
+  // ever changes.
+  const meta = [formatDate(post.date), physicalWeight].filter(Boolean).join(" · ");
 
   return (
-    <article
-      onClick={onOpen}
-      /* h-[200px] with grid-rows-[minmax(0,1fr)], the same pair AnnouncementCard
-         uses, so a row is exactly as tall as a row whichever card type fills it.
-         This was min-h-[200px], which happened to measure 200px because the note
-         below is clamped — but "happens to fit" is not the same as "cannot grow",
-         and a single post that outgrew it would have made the feed ragged. The
-         row needs minmax(0,...) because an auto row has a min-content floor and
-         would size to the content instead of to the card. */
-      className="group relative grid grid-cols-[1fr_88px] sm:grid-cols-[1fr_110px] md:grid-cols-[1fr_135px] grid-rows-[minmax(0,1fr)] h-[200px] bg-card rounded-xl border border-edge transition-all duration-300 cursor-pointer shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]"
-      id={`post-card-${post.id}`}
-    >
-      {/* Decorative Left Airmail Stripe */}
-      <div 
-        className="absolute left-0 top-0 bottom-0 w-2 rounded-l-xl opacity-90 pointer-events-none"
-        style={{
-          background: "repeating-linear-gradient(-45deg, var(--color-blue), var(--color-blue) 6px, var(--color-card) 6px, var(--color-card) 12px, var(--color-red) 12px, var(--color-red) 18px, var(--color-card) 18px, var(--color-card) 24px)",
-          borderRight: "1px solid var(--color-rule)"
-        }}
-      ></div>
+    /* Silhouette, stripe, badge row and footer all come from ./FeedCard — this
+       card is the body only. The stripe here is the airmail weave, picked from
+       post.type inside FeedCard.
 
-      {/* Main Boarding Pass Content. Top-anchored (justify-start), not
-          centred: the badge sits a fixed distance from the card's top on
-          every card, whether the note is one line or five — its position was
-          previously computed by centring the whole content block, so a short
-          post pulled the badge down toward the middle of the card.
-
-          p-5 sm:p-6 and gap-2, the same pair AnnouncementCard uses: one inset
-          on all four sides, one gap between every stacked child. The two card
-          types alternate in a single column, so copy that starts at a different
-          inset or stacks on a different rhythm reads as a misalignment. This
-          replaced a per-side ramp (pt-5/pb-5/pl-5/pr-3/sm:pl-8/sm:pr-6/md:py-6/
-          md:pl-10/md:pr-7) plus a wrapper div whose children carried their own
-          mt-2/mb-2/mt-0.5 — four different gaps down one panel. Children below
-          therefore set NO vertical margins. */}
-      <div className="p-5 sm:p-6 flex flex-col justify-start gap-2 min-w-0">
-        {/* Badge and route share a row, as the badge and title do on an
-            announcement. flex-wrap plus the route's min-w is the same trick:
-            beside the sticker where the column is wide enough, dropped to its
-            own line at 375px, where under 100px is left next to it. */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Traveler / Request Tag Badge — icon only; the post type reads from
-              the icon and the sticker colour. */}
-          <div style={stickerStyle(post.type)}>
-            {isTraveler ? (
-              <Briefcase className="w-3 h-3 text-card" />
-            ) : (
-              <Package className="w-3 h-3 text-card" />
-            )}
-          </div>
-
-          {/* Destination Header (flight route is always Korea/Uzbekistan). */}
-          <div className="min-w-[12rem] flex-1 flex items-center gap-2.5 font-bold text-[17px] sm:text-[19px] leading-[1.25] text-ink tracking-tight">
-            <span>{hubFrom}</span>
-            <span className="text-gold flex items-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </span>
-            <span>{hubTo}</span>
-          </div>
-        </div>
-
-        {/* Actual city (where the traveler/parcel is really going, beyond the airport) */}
-        {showActualCities && (
-          <div className="font-mono text-[11px] text-faint tracking-wide leading-none">
-            {post.from_city} → {post.to_city}
-          </div>
-        )}
-
-        {/* Post Details — description is clamped so the card height stays fixed
-            regardless of note length; long URLs/words wrap instead of overflowing.
-            Full text is shown in the detail modal on click. */}
-        <div className="text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0">
-          {physicalWeight && (
-            <span className="text-ink font-bold block mr-1">
-              {physicalWeight}
-            </span>
-          )}
-          {/* One line below sm, two at sm and up. Sized so that a clamped note
-              plus the "ko'proq" line below lands the same distance above the
-              bottom inset as an announcement's text does (~7px against its
-              ~4px). Three lines at sm looks like it should fit — it leaves 6px —
-              but the cue underneath needs 21, so the panel spills out of the
-              card. Don't raise this without re-measuring with a long note AND
-              the cue present. The full note is in the detail sheet either way. */}
-          {noteText && (
-            <span ref={noteRef} className="line-clamp-1 sm:line-clamp-2 [overflow-wrap:anywhere]">
-              · {noteText}
-            </span>
+       The card is one column at a fixed height. It was a two-column grid —
+       content plus an 88/110/135px navy ticket stub carrying the date and the
+       button — and on a 375px screen the stub took a quarter of the card, which
+       is what squeezed the note preview down to a single line. The stub, its
+       dashed perforation and its two punch notches are all gone; the date moved
+       up into the meta line and the button moved down into the footer. */
+    <FeedCard post={post} onOpen={onOpen}>
+      <FeedCardBadgeRow>
+        {/* Traveler / Request Tag Badge — icon only; the post type reads from
+            the icon and the sticker colour. */}
+        <div style={stickerStyle(post.type)}>
+          {isTraveler ? (
+            <Briefcase className="w-3 h-3 text-card" />
+          ) : (
+            <Package className="w-3 h-3 text-card" />
           )}
         </div>
 
-        {/* The "there is more of this in the detail sheet" cue, identical to the
-            announcement card's — same label, same weight, same rule for when it
-            shows. It also closes most of the gap this panel used to leave: with
-            the note clamped short, a parcel card's text stopped ~23px higher
-            above the bottom inset than an announcement's did. Not a button; the
-            whole card already opens the same sheet. */}
-        {isClamped && (
-          <span className="font-bold text-[13px] text-ink leading-none">
-            {moreLabel}
+        {/* Destination Header (flight route is always Korea/Uzbekistan). */}
+        <div className={`${FEED_CARD_TITLE} flex items-center gap-2.5`}>
+          <span>{hubFrom}</span>
+          <span className="text-gold flex items-center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
           </span>
-        )}
-      </div>
-
-      {/* Ticket Tear-off Divider and Punch Notches (all breakpoints, scaled to stub width) */}
-      <div className="absolute right-[88px] sm:right-[110px] md:right-[135px] top-3 bottom-3 w-0 border-l-2 border-dashed border-rule pointer-events-none"></div>
-
-      {/* Decorative Ticket Punch Holes (Notches) */}
-      <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -top-2.5 w-4 h-4 bg-paper border border-edge rounded-full pointer-events-none"></div>
-      <div className="absolute right-[80px] sm:right-[102px] md:right-[127px] -bottom-2.5 w-4 h-4 bg-paper border border-edge rounded-full pointer-events-none"></div>
-
-      {/* Right Ticket Stub (Date and Call to Action) */}
-      {/* md:py-5, matching AnnouncementCard's stub, so the two card types'
-          stubs stay visually identical. */}
-      <div className="rounded-r-xl bg-ink text-card px-2 py-4 sm:px-3 md:py-5 md:px-4 flex flex-col justify-between items-stretch relative min-w-0">
-        <div className="flex flex-col gap-0.5 text-center mt-1 md:mt-2">
-          <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-[1px] md:tracking-[1.5px] leading-none text-faint-on-ink">
-            {t.stubLabel}
-          </span>
-          <span className="font-mono text-[12px] sm:text-[13px] md:text-[15px] font-bold mt-0.5 text-card leading-tight">
-            {formatDate(post.date)}
-          </span>
-          <span className="font-sans text-[10px] md:text-[11px] font-semibold text-gold mt-1 flex items-center justify-center gap-1">
-            <ArrowRight className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{post.to_city}</span>
-          </span>
+          <span>{hubTo}</span>
         </div>
+      </FeedCardBadgeRow>
 
-        <button
-          onClick={(e) => { e.stopPropagation(); onOpen(); }}
-          className="font-mono text-[9px] sm:text-[10px] md:text-[11px] bg-gold text-ink border-none py-2 px-1 md:px-2 rounded-md font-bold cursor-pointer tracking-wider leading-none hover:bg-gold-lit transition-colors shadow-sm mt-3"
-          id={`stub-btn-${post.id}`}
-        >
-          {t.contactBtn.replace(" →", "")}
-        </button>
-      </div>
-    </article>
+      {/* Actual city (where the traveler/parcel is really going, beyond the airport) */}
+      {showActualCities && (
+        <div className="font-mono text-[11px] text-faint tracking-wide leading-none">
+          {post.from_city} → {post.to_city}
+        </div>
+      )}
+
+      {/* Date and cargo. Deliberately the heaviest type on the card after the
+          route: bold ink against the grey note below it, so the two numbers a
+          reader is actually comparing between posts carry without an icon
+          propping them up. There were icons here in the first draft — a
+          calendar and a scale — and they turned one scannable line into three
+          competing glyphs. */}
+      {meta && (
+        <div className="font-bold text-[15px] text-ink leading-tight">
+          {meta}
+        </div>
+      )}
+
+      {/* Post Details — clamped so the card height stays fixed regardless of
+          note length; long URLs/words wrap instead of overflowing. Full text
+          is in the detail sheet on click.
+
+          Two lines at every width, which is what set FEED_CARD_SHELL's
+          h-[220px]. The budget at sm (the tighter of the two, because p-6 costs
+          8px more than p-5 buys back in a shorter badge row): 48 inset + 24
+          badge row + 11 city line + 19 meta + 8×4 gaps + 40 footer = 174,
+          leaving 46px against the 43.5px two lines of 14.5px/1.5 need. Mobile
+          has ~12px more slack. Re-measure before changing the clamp, the inset,
+          the leading or the footer — three of those five have no give left. */}
+      {noteText && (
+        <span className="line-clamp-2 text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0 [overflow-wrap:anywhere]">
+          {noteText}
+        </span>
+      )}
+
+      <FeedCardFooter post={post} t={t} left={PLACEHOLDER_AUTHOR} onOpen={onOpen} />
+    </FeedCard>
   );
 };
