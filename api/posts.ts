@@ -490,6 +490,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Noto\'g\'ri sana' });
       }
 
+      // Store the date the author picked. This assignment was missing: the
+      // branch computed `expires_at` and nothing else, so `dateValue` stayed
+      // undefined, `row.date` was dropped by JSON serialisation on the way to
+      // PostgREST, and the column defaulted to NULL — which every reader
+      // renders as "no fixed date". Every post with a real travel date came
+      // out negotiable.
+      //
+      // Normalised through the parsed Date rather than passed through raw, so
+      // what lands in the DATE column is the same YYYY-MM-DD shape whatever
+      // the client sent. `new Date('YYYY-MM-DD')` parses as UTC midnight and
+      // toISOString reads back in UTC, so this round-trips without a
+      // timezone shift.
+      dateValue = postDate.toISOString().split('T')[0];
+
       postDate.setDate(postDate.getDate() + 1);
       expires_at = postDate.toISOString().split('T')[0];
     }
