@@ -4,6 +4,7 @@ import { X, LogOut, Send, Package } from "lucide-react";
 import { supabaseBrowser } from "../supabaseClient";
 import type { Session } from "@supabase/auth-js";
 import { useDialog } from "../hooks/useDialog";
+import { authorNameOf } from "../lib/authorName";
 
 interface ProfileSheetProps {
   t: Translations;
@@ -20,23 +21,6 @@ const providerOf = (session: Session): "telegram" | "google" | null => {
   return null;
 };
 
-// The provider's idea of the user's name, used only until the profile row
-// answers. `profiles.display_name` is the name the board actually prints (the
-// capture gate writes it there and never touches user_metadata), so a sheet
-// that read metadata alone would show a different name than the user's own
-// cards do.
-const metadataNameOf = (session: Session): string => {
-  const meta = session.user.user_metadata || {};
-  return (
-    meta.display_name ||
-    meta.full_name ||
-    meta.name ||
-    (meta.telegram_username ? `@${meta.telegram_username}` : null) ||
-    session.user.email ||
-    "—"
-  );
-};
-
 export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose, onSignOut }) => {
   const [postCount, setPostCount] = useState<number | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
@@ -51,9 +35,12 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
       .then(({ count }) => setPostCount(count ?? 0));
   }, [session.user.id]);
 
-  // Own row only, under the profiles SELECT policy. Falls back to the metadata
-  // name if the row has none — which, after the capture gate, means the lookup
-  // failed rather than that the name is missing.
+  // Own row only, under the profiles SELECT policy. This is the ONLY source of
+  // the name on this sheet. It used to fall back to session.user_metadata —
+  // Google's full_name, Telegram's first_name — which meant the sheet showed a
+  // provider's name the user had never chosen, and a different one from the
+  // name printed on their own cards. There is no fallback now: `display_name`
+  // is what the user typed into the capture gate or nothing at all.
   useEffect(() => {
     supabaseBrowser
       .from("profiles")
@@ -72,7 +59,10 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
   };
 
   const provider = providerOf(session);
-  const name = profileName?.trim() || metadataNameOf(session);
+  // Null only in the window before the lookup lands, or if it failed — the gate
+  // blocks the app until the name exists, so a signed-in user always has one.
+  // The same fallback the feed cards use, so the two never disagree.
+  const name = authorNameOf(profileName);
   const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null;
   const methodLabel = provider === "telegram" ? t.methodTelegram : provider === "google" ? t.methodGoogle : "—";
   const initial = name.replace(/^@/, "").charAt(0).toUpperCase() || "?";

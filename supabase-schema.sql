@@ -461,29 +461,18 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Populates profiles from auth.users on signup, regardless of provider.
 -- email comes from auth.users.email (the real gmail for Google; the synthetic
 -- telegram_<id>@elchi.local for the Telegram bridge), so Google rows are no
--- longer missing their address. display_name/avatar come from user metadata
--- (google: full_name/name + picture; telegram: display_name + avatar_url).
+-- longer missing their address. avatar_url comes from user metadata (google:
+-- picture; telegram: avatar_url). display_name deliberately does NOT — it is
+-- the one column the user fills in themselves.
 -- search_path is pinned because this is a SECURITY DEFINER function firing on
 -- every auth.users insert: without it, a role that can create objects in an
 -- earlier schema could shadow `profiles` and have its own table written to as
 -- the function owner. pg_temp comes last so a temp table can't shadow a real
 -- one either.
--- Collapses whitespace and returns NULL for anything the display-name CHECK
--- below would reject. Mirrors normalizeDisplayName() in lib/profileName.ts.
-CREATE OR REPLACE FUNCTION normalize_display_name(raw TEXT)
-RETURNS TEXT
-LANGUAGE sql
-IMMUTABLE
-SET search_path = pg_catalog
-AS $$
-    SELECT CASE
-        WHEN raw IS NULL THEN NULL
-        WHEN char_length(btrim(regexp_replace(raw, '\s+', ' ', 'g'))) BETWEEN 2 AND 40
-            THEN btrim(regexp_replace(raw, '\s+', ' ', 'g'))
-        ELSE NULL
-    END;
-$$;
-
+-- An earlier version of this file seeded display_name from provider metadata
+-- through a normalize_display_name() helper. Both are gone: see the trigger
+-- body below for why, and 2026-08-06-display-name-user-entered.sql for the
+-- migration that removed them from live databases.
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -495,14 +484,14 @@ BEGIN
     VALUES (
         NEW.id,
         COALESCE(NEW.email, NEW.raw_user_meta_data->>'email'),
-        -- Passed through normalize_display_name(), NOT raw. The value comes
-        -- from a provider, so it can be padded, blank, one character, or longer
-        -- than the CHECK below allows — and this trigger fires inside the
-        -- signup transaction, so a rejected row would fail the login itself.
-        -- Anything unusable becomes NULL, which the capture gate then asks for.
-        normalize_display_name(
-            COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name')
-        ),
+        -- NULL, deliberately, and never the provider's name. display_name is
+        -- what the user typed into the capture gate and nothing else, so this
+        -- column starts empty and the gate is what fills it. Seeding it here —
+        -- as this trigger used to — silently satisfied the gate's own check,
+        -- so a Telegram login (the bridge always sends first_name) was never
+        -- asked for a name and the profile sheet printed one the user never
+        -- chose. The provider's version is still in raw_user_meta_data.
+        NULL,
         COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
         COALESCE(NEW.raw_user_meta_data->>'provider', NEW.raw_app_meta_data->>'provider'),
         (NEW.raw_user_meta_data->>'telegram_id')::BIGINT,

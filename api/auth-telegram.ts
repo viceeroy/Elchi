@@ -85,6 +85,10 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
     user_metadata: {
       telegram_id: payload.id,
       telegram_username: payload.username || null,
+      // Recorded, but it does NOT become the profile's display_name — that
+      // column is the user's own answer to the capture gate and nothing else.
+      // handle_new_user() ignores this field on purpose; see
+      // migrations/2026-08-06-display-name-user-entered.sql.
       display_name: payload.first_name || payload.username || null,
       avatar_url: payload.photo_url || null,
       provider: 'telegram',
