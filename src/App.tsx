@@ -906,7 +906,16 @@ export default function App() {
           <NameGateModal
             t={t}
             userId={session.user.id}
-            onSaved={() => setNameState("ok")}
+            // Only ever called once the write came back with a row, so this is
+            // a confirmed state change rather than an optimistic one. The
+            // refetch is what puts the new name on the author's own cards —
+            // the feed effect is keyed on the viewer's id, not on their name,
+            // so already-rendered cards would otherwise keep the fallback
+            // until the next reload.
+            onSaved={() => {
+              setNameState("ok");
+              fetchPosts();
+            }}
           />
         </Suspense>
       )}

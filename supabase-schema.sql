@@ -493,7 +493,17 @@ BEGIN
         -- chose. The provider's version is still in raw_user_meta_data.
         NULL,
         COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
-        COALESCE(NEW.raw_user_meta_data->>'provider', NEW.raw_app_meta_data->>'provider'),
+        -- Derived, not copied. auth_provider is NOT NULL with a two-value
+        -- CHECK, but the metadata can say 'email' (the oldest accounts do) or
+        -- say nothing at all — and since this trigger runs inside the signup
+        -- transaction, a value the CHECK rejects fails the whole signup. The
+        -- synthetic address the Telegram bridge mints is what reliably tells
+        -- the two apart; everything else is the only other login on offer.
+        CASE
+            WHEN COALESCE(NEW.email, '') LIKE 'telegram\_%@elchi.local' THEN 'telegram'
+            WHEN NEW.raw_user_meta_data->>'telegram_id' IS NOT NULL THEN 'telegram'
+            ELSE 'google'
+        END,
         (NEW.raw_user_meta_data->>'telegram_id')::BIGINT,
         NEW.raw_user_meta_data->>'telegram_username'
     );
@@ -505,6 +515,30 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- The trigger above only fires on INSERT, so it cannot reach accounts that
+-- already existed when it was first created (2026-07-22) — and a missing
+-- profiles row is silent until something writes to it, at which point an
+-- own-row UPDATE matches nothing and PostgREST reports success anyway. This
+-- reconciles the two tables on every run. See
+-- migrations/2026-08-06-backfill-missing-profiles.sql.
+INSERT INTO profiles (id, email, display_name, avatar_url, auth_provider, telegram_id, telegram_username)
+SELECT
+    u.id,
+    COALESCE(u.email, u.raw_user_meta_data->>'email'),
+    NULL,
+    COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture'),
+    CASE
+        WHEN COALESCE(u.email, '') LIKE 'telegram\_%@elchi.local' THEN 'telegram'
+        WHEN u.raw_user_meta_data->>'telegram_id' IS NOT NULL THEN 'telegram'
+        ELSE 'google'
+    END,
+    (u.raw_user_meta_data->>'telegram_id')::BIGINT,
+    u.raw_user_meta_data->>'telegram_username'
+FROM auth.users u
+LEFT JOIN profiles p ON p.id = u.id
+WHERE p.id IS NULL
+ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 

@@ -60,11 +60,24 @@ export const NameGateModal: React.FC<NameGateModalProps> = ({
     setSaving(true);
     setError(null);
     try {
-      const { error: updateError } = await supabaseBrowser
+      // `.select()` is not decoration — it is the only way this write can be
+      // checked. Without it PostgREST answers a PATCH with `Prefer:
+      // return=minimal`, and a PATCH that matches ZERO rows is a 204 with an
+      // empty body and no error at all. That is indistinguishable from success
+      // here, and it is what actually happened: an account with no `profiles`
+      // row (every account predating the 2026-07-22 trigger had none) sailed
+      // through this block, closed the gate, and was asked again on the next
+      // reload because nothing had been stored. Asking for the row back turns
+      // "changed nothing" into a value we can test.
+      const { data, error: updateError } = await supabaseBrowser
         .from("profiles")
         .update({ display_name: name })
-        .eq("id", userId);
+        .eq("id", userId)
+        .select("display_name")
+        .maybeSingle();
       if (updateError) throw updateError;
+      // No row came back: the write matched nothing. Never report that as saved.
+      if (!data) throw new Error(`profiles row missing for ${userId}`);
       onSaved(name);
     } catch (err) {
       console.error("Error saving display name:", err);
