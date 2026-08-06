@@ -3,6 +3,11 @@ import { Locale, Translations, PostType, ContactMethod } from "../types";
 import { COUNTRIES } from "../constants";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
+import {
+  PARCEL_CITY_MAX,
+  PARCEL_CATEGORY_OTHER_MAX,
+  PARCEL_NOTE_MAX,
+} from "../../lib/parcelLimits";
 import { X, Briefcase, Package, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
 import { ContactFields } from "./ContactFields";
 import { useDialog } from "../hooks/useDialog";
@@ -440,7 +445,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   value={fromCity}
                   onChange={(e) => { setFromCity(e.target.value); clearError("fromCity"); }}
                   placeholder="Qayerdan (masalan: Seoul)"
-                  maxLength={100}
+                  maxLength={PARCEL_CITY_MAX}
                   className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink outline-none ${
                     errors.fromCity ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
                   }`}
@@ -459,7 +464,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   value={toCity}
                   onChange={(e) => { setToCity(e.target.value); clearError("toCity"); }}
                   placeholder="Qayerga (masalan: Toshkent)"
-                  maxLength={100}
+                  maxLength={PARCEL_CITY_MAX}
                   className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink outline-none ${
                     errors.toCity ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
                   }`}
@@ -627,7 +632,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   value={customItemType}
                   onChange={(e) => setCustomItemType(e.target.value)}
                   placeholder={t.itemTypeOtherPlaceholder}
-                  maxLength={100}
+                  maxLength={PARCEL_CATEGORY_OTHER_MAX}
                   className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-field rounded-lg text-sm bg-card text-ink"
                   style={{ padding: "10px 14px", border: "1.5px solid var(--color-field)", borderRadius: "8px" }}
                 />
@@ -667,7 +672,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               value={note}
               onChange={(e) => { setNote(e.target.value); clearError("note"); }}
               placeholder={t.notePlaceholder}
-              maxLength={1000}
+              maxLength={PARCEL_NOTE_MAX}
               className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink resize-y min-h-[72px] outline-none ${
                 errors.note ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
               }`}

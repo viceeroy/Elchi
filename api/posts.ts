@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js';
 import { checkRateLimit, clientIp } from '../lib/rate-limit.js';
 import { isContactKind, isValidContact, type ContactKind } from '../lib/contact.js';
 import { ANNOUNCEMENT_HEADLINE_MAX, ANNOUNCEMENT_NOTE_MAX } from '../lib/announcementLimits.js';
+import { PARCEL_CITY_MAX, PARCEL_CATEGORY_OTHER_MAX, PARCEL_NOTE_MAX } from '../lib/parcelLimits.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
@@ -433,12 +434,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Length caps — mirror the DB column widths and keep free-text fields sane
       // so a direct API caller can't store multi-MB blobs.
       const tooLong =
-        fromCity.length > 100 ||
-        toCity.length > 100 ||
+        fromCity.length > PARCEL_CITY_MAX ||
+        toCity.length > PARCEL_CITY_MAX ||
         contactVal.length > 100 ||
         contact2Val.length > 100 ||
-        noteVal.length > 1000 ||
-        categoryOtherVal.length > 100 ||
+        noteVal.length > PARCEL_NOTE_MAX ||
+        categoryOtherVal.length > PARCEL_CATEGORY_OTHER_MAX ||
         weightVal.length > 200;
       if (tooLong) {
         return res.status(400).json({ error: 'Maydon juda uzun' });
