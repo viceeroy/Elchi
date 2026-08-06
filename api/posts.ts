@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase.js';
 import { checkRateLimit, clientIp } from '../lib/rate-limit.js';
+import { verifyAccessToken } from '../lib/verify-token.js';
 import { isContactKind, isValidContact, type ContactKind } from '../lib/contact.js';
 import { PARCEL_CITY_MAX, PARCEL_CATEGORY_OTHER_MAX, PARCEL_NOTE_MAX } from '../lib/parcelLimits.js';
 import { PARCEL_CATEGORY_IDS } from '../lib/parcelCategories.js';
@@ -83,13 +84,18 @@ function postId(req: VercelRequest): string | null {
 
 // Resolves the caller's user id from a bearer token, or null when absent or
 // invalid. Never throws — an unauthenticated GET is a normal case.
+//
+// The verification itself is memoised per token on the warm instance — see
+// lib/verify-token.ts for why that is safe and what it saves. The token still
+// travels back out with the id, because every write path builds a user-scoped
+// PostgREST client from it and RLS, not this function, is the security
+// boundary.
 async function resolveUser(req: VercelRequest): Promise<{ id: string; token: string } | null> {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!token) return null;
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user?.id) return null;
-  return { id: data.user.id, token };
+  const id = await verifyAccessToken(token);
+  return id ? { id, token } : null;
 }
 
 // Marks which of the returned posts belong to the caller, so the client can

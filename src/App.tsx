@@ -418,14 +418,47 @@ export default function App() {
     }
   };
 
+  // What the feed has already loaded, per corridor and per viewer.
+  //
+  // Switching corridors used to drop everything and go back to the skeleton,
+  // then re-fetch a page the browser had already seen seconds earlier — the
+  // KR↔UZ toggle is two buttons side by side, so flipping back and forth is a
+  // completely ordinary thing to do and it re-paid for the same page every
+  // time. Holding the last page per corridor makes the return trip instant.
+  //
+  // Keyed on the viewer as well as the corridor because the payload is not
+  // viewer-independent: `is_mine` decides whether a card gets a delete button,
+  // so serving one account's page to another would show the wrong controls.
+  // A ref, not state — writing to it must never trigger a render, and it is
+  // deliberately per-tab and lost on reload rather than persisted, so nothing
+  // here can go stale across a session.
+  const feedCache = React.useRef(new Map<string, { posts: Post[]; hasMore: boolean }>());
+  const feedCacheKey = (corridor: string) => `${corridor}|${session?.user?.id ?? "anon"}`;
+
   // Fetch a page of posts. The route filter and the page bounds are applied in
   // SQL, so the client never holds — and the API never emits — the whole board.
   // The bearer token is sent when present purely so the API can flag which
   // posts are the viewer's own (is_mine); it is not required to read the feed.
+  //
+  // The cache above makes this stale-while-revalidate rather than a plain read:
+  // a known corridor paints from memory at once and the network answer replaces
+  // it when it lands. The request still goes out every time — the board is
+  // other people's posts and a minute-old page is a page missing posts — so
+  // this buys the wait, not the request.
   const fetchPosts = async (opts?: { append?: boolean }) => {
     const append = opts?.append ?? false;
-    if (append) setLoadingMore(true);
-    else setLoading(true);
+    const key = feedCacheKey(country);
+    const cached = append ? undefined : feedCache.current.get(key);
+
+    if (cached) {
+      setPosts(cached.posts);
+      setHasMore(cached.hasMore);
+      setLoading(false);
+    } else if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
 
     try {
       const params = new URLSearchParams({
@@ -444,8 +477,15 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         const page: Post[] = Array.isArray(data.posts) ? data.posts : [];
-        setPosts((prev) => (append ? [...prev, ...page] : page));
-        setHasMore(Boolean(data.hasMore));
+        // Built explicitly rather than through a setPosts updater because the
+        // cache needs the same array the state gets. `posts` is safe to read
+        // here: the append path already derives its offset from posts.length in
+        // this same closure, so both come from one render.
+        const next = append ? [...posts, ...page] : page;
+        const more = Boolean(data.hasMore);
+        setPosts(next);
+        setHasMore(more);
+        feedCache.current.set(key, { posts: next, hasMore: more });
       }
     } catch (err) {
       console.error("Error fetching posts:", err);
@@ -453,6 +493,18 @@ export default function App() {
       if (append) setLoadingMore(false);
       else setLoading(false);
     }
+  };
+
+  // Refetch after a write the viewer just made — a new post, a delete, a name
+  // change that has to appear on their own cards. The cache is dropped WHOLE
+  // rather than by key: a post is written into one corridor but the viewer may
+  // be looking at another, and a delete removes a row from whichever page holds
+  // it, so keeping any entry risks showing the author a board that contradicts
+  // the action they just took. This is the one thing a stale-while-revalidate
+  // feed must not do.
+  const refreshFeed = () => {
+    feedCache.current.clear();
+    fetchPosts();
   };
 
   // Refetch from page 1 whenever the corridor changes, and when the session
@@ -473,12 +525,41 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authResolved, country, session?.user?.id]);
 
+  // Handles this viewer has already revealed, keyed by viewer AND post.
+  //
+  // Closing the detail sheet clears revealedContact, so re-opening the same
+  // post fetched the same two strings again. That is not merely a wasted round
+  // trip: the reveal endpoint is the one path with a tight per-account cap (60
+  // per ten minutes), and browsing back to a post to re-read a phone number is
+  // exactly what someone comparing a few travellers does. Spending the budget
+  // on data already sitting in the tab is the wrong thing to charge for.
+  //
+  // Caching this does not weaken the gate. The server decided once, for this
+  // account, that this handle could be seen; the only thing kept is the answer
+  // it already sent to this tab. The viewer's id is in the key so a second
+  // account signing into the same tab starts from nothing, and it lives in a
+  // ref so nothing survives a reload.
+  const contactCache = React.useRef(new Map<string, PostContact>());
+
   // Pull the open post's contact handles. Logged-out viewers get nothing to
   // fetch — the reveal is gated server-side too, so this is UI only.
   useEffect(() => {
-    setRevealedContact(null);
     setContactError(null);
-    if (!selectedPost || !session) return;
+    if (!selectedPost || !session) {
+      setRevealedContact(null);
+      return;
+    }
+
+    // Resolved before the null write below, so a cached reveal paints on the
+    // first render of the sheet instead of flashing the un-revealed state.
+    const cacheKey = `${session.user.id}|${selectedPost.id}`;
+    const cachedContact = contactCache.current.get(cacheKey);
+    if (cachedContact) {
+      setRevealedContact(cachedContact);
+      setContactLoading(false);
+      return;
+    }
+    setRevealedContact(null);
 
     let cancelled = false;
     setContactLoading(true);
@@ -490,8 +571,10 @@ export default function App() {
         );
         const data = await res.json();
         if (cancelled) return;
-        if (res.ok) setRevealedContact(data as PostContact);
-        else setContactError(data.error || t.errorGeneral);
+        if (res.ok) {
+          setRevealedContact(data as PostContact);
+          contactCache.current.set(cacheKey, data as PostContact);
+        } else setContactError(data.error || t.errorGeneral);
       } catch (err) {
         console.error("Error fetching contact:", err);
         if (!cancelled) setContactError(t.errorGeneral);
@@ -543,7 +626,7 @@ export default function App() {
 
   const handlePostSubmitSuccess = () => {
     setFormOpen(false);
-    fetchPosts(); // Refresh feed with the new post
+    refreshFeed(); // Refresh feed with the new post
     setToast(t.toastPostCreated);
   };
 
@@ -562,7 +645,7 @@ export default function App() {
       });
       if (res.ok) {
         closeDetailModal();
-        fetchPosts();
+        refreshFeed();
         // Deleting is the one action with no confirmation of any kind: the
         // sheet closes and the feed silently reloads without the post. A
         // sighted user infers it from the row disappearing; this says it.
@@ -823,7 +906,7 @@ export default function App() {
             // until the next reload.
             onSaved={() => {
               setNameState("ok");
-              fetchPosts();
+              refreshFeed();
             }}
           />
         </Suspense>
