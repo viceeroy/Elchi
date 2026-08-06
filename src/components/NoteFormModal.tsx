@@ -3,13 +3,16 @@ import { X, Megaphone, AlertCircle } from "lucide-react";
 import { ContactMethod, Translations } from "../types";
 import { supabaseBrowser } from "../supabaseClient";
 import { isValidContact } from "../../lib/contact";
+import {
+  ANNOUNCEMENT_HEADLINE_MAX,
+  ANNOUNCEMENT_NOTE_MAX,
+} from "../../lib/announcementLimits";
 import { ContactFields } from "./ContactFields";
 import { useDialog } from "../hooks/useDialog";
 
-// Matches the server's cap on an announcement body (api/posts.ts). Long enough
-// to describe a service properly; still short enough that a note stays a
-// pointer to a conversation rather than the conversation.
-export const NOTE_MAX = 500;
+// Long enough to describe a service properly; still short enough that a note
+// stays a pointer to a conversation rather than the conversation.
+export const NOTE_MAX = ANNOUNCEMENT_NOTE_MAX;
 
 type FieldName = "text" | "contact";
 type FieldErrors = Partial<Record<FieldName, string | undefined>>;
@@ -37,8 +40,7 @@ interface NoteFormModalProps {
   onSubmitSuccess: () => void;
 }
 
-// Matches the server's cap on an announcement headline (api/posts.ts).
-const THEME_MAX = 80;
+const THEME_MAX = ANNOUNCEMENT_HEADLINE_MAX;
 
 /**
  * The note sheet — "E'lon" / "Заметка" / "Note".
