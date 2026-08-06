@@ -24,6 +24,7 @@ CREATE OR REPLACE FUNCTION normalize_display_name(raw TEXT)
 RETURNS TEXT
 LANGUAGE sql
 IMMUTABLE
+SET search_path = pg_catalog
 AS $$
     SELECT CASE
         WHEN raw IS NULL THEN NULL
