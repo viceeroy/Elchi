@@ -5,12 +5,14 @@ import { checkRateLimit, clientIp } from '../lib/rate-limit.js';
 import { isContactKind, isValidContact, type ContactKind } from '../lib/contact.js';
 import { ANNOUNCEMENT_HEADLINE_MAX, ANNOUNCEMENT_NOTE_MAX } from '../lib/announcementLimits.js';
 import { PARCEL_CITY_MAX, PARCEL_CATEGORY_OTHER_MAX, PARCEL_NOTE_MAX } from '../lib/parcelLimits.js';
+import { PARCEL_CATEGORY_IDS } from '../lib/parcelCategories.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 
-// Allowed request-parcel categories (mirrors the chips in PostFormModal).
-const ALLOWED_CATEGORIES = new Set(['docs', 'clothes', 'meds', 'food', 'phone', 'gift', 'other']);
+// Allowed request-parcel categories, plus 'other' — the sentinel the client
+// never sends as a category id, since a custom type goes in category_other.
+const ALLOWED_CATEGORIES = new Set<string>([...PARCEL_CATEGORY_IDS, 'other']);
 
 // Countries the board currently serves (ISO 3166-1 alpha-2). To open a new
 // route (e.g. Kazakhstan), add the code here and to COUNTRIES in

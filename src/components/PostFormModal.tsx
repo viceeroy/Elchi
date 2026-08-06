@@ -8,6 +8,7 @@ import {
   PARCEL_CATEGORY_OTHER_MAX,
   PARCEL_NOTE_MAX,
 } from "../../lib/parcelLimits";
+import { PARCEL_CATEGORY_IDS } from "../../lib/parcelCategories";
 import { X, Briefcase, Package, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
 import { ContactFields } from "./ContactFields";
 import { useDialog } from "../hooks/useDialog";
@@ -113,14 +114,16 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     if (submitError) submitErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [submitError]);
 
-  const itemTypes = [
-    { id: "docs", label: "Hujjatlar" },
-    { id: "clothes", label: "Kiyim-kechak" },
-    { id: "meds", label: "Dori-darmon" },
-    { id: "food", label: "Oziq-ovqat" },
-    { id: "phone", label: "Telefon/Texnika" },
-    { id: "gift", label: "Sovg'a" },
-  ];
+  // Labels are local — only the ids are shared with the server's allow-list.
+  const CATEGORY_LABELS: Record<(typeof PARCEL_CATEGORY_IDS)[number], string> = {
+    docs: "Hujjatlar",
+    clothes: "Kiyim-kechak",
+    meds: "Dori-darmon",
+    food: "Oziq-ovqat",
+    phone: "Telefon/Texnika",
+    gift: "Sovg'a",
+  };
+  const itemTypes = PARCEL_CATEGORY_IDS.map((id) => ({ id, label: CATEGORY_LABELS[id] }));
 
   // Helper: Get list of days in selected month
   const getDaysInMonth = (month: number) => {
