@@ -66,10 +66,13 @@ function userScopedClient(token: string) {
 
 // Columns the board renders. Read from the `public_posts` view, which omits the
 // contact values and user_id entirely — those never travel in a list response.
+// display_name is the author's chosen name, joined in by the view from
+// `profiles`; it is the one piece of author identity a list response carries,
+// and it carries no way to reach that author.
 const PUBLIC_COLUMNS =
   'id,type,direction,from_country,to_country,corridor_country,from_city,to_city,date,' +
   'weight_kg,luggage_count,categories,category_other,weight,headline,note,' +
-  'contact_type,contact2_type,has_contact2,created_at,expires_at';
+  'contact_type,contact2_type,has_contact2,display_name,created_at,expires_at';
 
 // What `?type=` narrows the list to. The default is deliberately `parcel`
 // rather than `all`: a browser holding an older bundle sends no type parameter

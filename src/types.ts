@@ -52,6 +52,11 @@ export interface Post {
   contact_type: ContactMethod | null;
   contact2_type: ContactMethod | null;
   has_contact2: boolean;
+  // The author's chosen name, joined into `public_posts` from `profiles`.
+  // Nullable: rows written before the capture gate belong to profiles that have
+  // no name yet, and posts predating user_id have no profile at all. Cards fall
+  // back to AUTHOR_FALLBACK (src/lib/authorName.ts).
+  display_name: string | null;
   created_at: string;
   expires_at: string;
   // Set by the API from the caller's bearer token. user_id itself is never
@@ -175,6 +180,17 @@ export interface Translations {
   methodGoogle?: string;
   contactLockedText: string;
   contactLockedBtn: string;
+
+  // Name gate — the blocking step after a login that lands on a profile with no
+  // display_name. Not optional in spirit: the sheet cannot be dismissed, so a
+  // missing string here would leave a user staring at an unlabelled dialog.
+  nameGateTitle?: string;
+  nameGateSubtitle?: string;
+  nameGateLabel?: string;
+  nameGatePlaceholder?: string;
+  nameGateSubmit?: string;
+  nameGateSaving?: string;
+  nameGateErrorInvalid?: string;
 
   // Screen-reader-only announcements. These are never painted — they exist so
   // that a state change with no visual equivalent in the accessibility tree

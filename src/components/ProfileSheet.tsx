@@ -20,7 +20,12 @@ const providerOf = (session: Session): "telegram" | "google" | null => {
   return null;
 };
 
-const displayNameOf = (session: Session): string => {
+// The provider's idea of the user's name, used only until the profile row
+// answers. `profiles.display_name` is the name the board actually prints (the
+// capture gate writes it there and never touches user_metadata), so a sheet
+// that read metadata alone would show a different name than the user's own
+// cards do.
+const metadataNameOf = (session: Session): string => {
   const meta = session.user.user_metadata || {};
   return (
     meta.display_name ||
@@ -34,6 +39,7 @@ const displayNameOf = (session: Session): string => {
 
 export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose, onSignOut }) => {
   const [postCount, setPostCount] = useState<number | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const panelRef = useDialog<HTMLDivElement>(onClose);
 
@@ -45,6 +51,20 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
       .then(({ count }) => setPostCount(count ?? 0));
   }, [session.user.id]);
 
+  // Own row only, under the profiles SELECT policy. Falls back to the metadata
+  // name if the row has none — which, after the capture gate, means the lookup
+  // failed rather than that the name is missing.
+  useEffect(() => {
+    supabaseBrowser
+      .from("profiles")
+      .select("display_name")
+      .eq("id", session.user.id)
+      .maybeSingle()
+      .then(({ data }) =>
+        setProfileName((data as { display_name: string | null } | null)?.display_name ?? null),
+      );
+  }, [session.user.id]);
+
   const handleSignOut = async () => {
     setSigningOut(true);
     await supabaseBrowser.auth.signOut();
@@ -52,7 +72,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
   };
 
   const provider = providerOf(session);
-  const name = displayNameOf(session);
+  const name = profileName?.trim() || metadataNameOf(session);
   const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null;
   const methodLabel = provider === "telegram" ? t.methodTelegram : provider === "google" ? t.methodGoogle : "—";
   const initial = name.replace(/^@/, "").charAt(0).toUpperCase() || "?";

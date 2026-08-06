@@ -303,47 +303,10 @@ CREATE POLICY "Users can delete own posts"
 ON posts FOR DELETE
 USING (auth.uid() = user_id);
 
--- ---------------------------------------------------------------------------
--- public_posts — the board's read model
--- ---------------------------------------------------------------------------
--- Everything the feed needs to render, minus the contact values and minus
--- user_id. Deliberately a SECURITY DEFINER view (security_invoker = false): it
--- runs as its owner and bypasses the `posts` RLS above, which is what lets anon
--- read the non-sensitive columns while having no access to the table itself.
--- The expires_at filter is reproduced here so the view cannot leak expired rows.
---
--- contact_type / contact2_type are exposed (telegram vs phone) but the handles
--- are not, so the UI can render the right icon before the viewer logs in.
--- Requires PostgreSQL 15+ for the security_invoker option.
-DROP VIEW IF EXISTS public_posts;
-CREATE VIEW public_posts
-WITH (security_invoker = false) AS
-SELECT
-    p.id,
-    p.type,
-    p.direction,
-    p.from_country,
-    p.to_country,
-    p.corridor_country,
-    p.from_city,
-    p.to_city,
-    p.date,
-    p.weight_kg,
-    p.luggage_count,
-    p.categories,
-    p.category_other,
-    p.weight,
-    p.headline,
-    p.note,
-    p.contact_type,
-    p.contact2_type,
-    (p.contact2 IS NOT NULL) AS has_contact2,
-    p.created_at,
-    p.expires_at
-FROM posts p
-WHERE p.expires_at >= CURRENT_DATE;
-
-GRANT SELECT ON public_posts TO anon, authenticated;
+-- public_posts — the board's read model — used to be defined here. It now
+-- joins `profiles` for the author's display_name, so it cannot be created
+-- until that table exists; it lives immediately after the profiles section
+-- below. get_post_contact() stays here because it reads `posts` only.
 
 -- The only route to a contact value: one post per call, authenticated callers
 -- only, so harvesting requires an account and is rate-limitable per user.
@@ -481,6 +444,12 @@ CREATE TRIGGER announcement_corridor_default
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT,
+    -- The name printed on every card this user posts. Seeded from provider
+    -- metadata on signup, but not trusted to be there: Google can hand back a
+    -- row with no name and the Telegram bridge only has a first name, so the
+    -- client shows a blocking capture step after login whenever this is NULL
+    -- (src/components/NameGateModal.tsx). Nullable on purpose — every row that
+    -- predates the gate is NULL until its owner next logs in.
     display_name TEXT,
     avatar_url TEXT,
     auth_provider TEXT NOT NULL CHECK (auth_provider IN ('google', 'telegram')),
@@ -499,6 +468,21 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- earlier schema could shadow `profiles` and have its own table written to as
 -- the function owner. pg_temp comes last so a temp table can't shadow a real
 -- one either.
+-- Collapses whitespace and returns NULL for anything the display-name CHECK
+-- below would reject. Mirrors normalizeDisplayName() in lib/profileName.ts.
+CREATE OR REPLACE FUNCTION normalize_display_name(raw TEXT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT CASE
+        WHEN raw IS NULL THEN NULL
+        WHEN char_length(btrim(regexp_replace(raw, '\s+', ' ', 'g'))) BETWEEN 2 AND 40
+            THEN btrim(regexp_replace(raw, '\s+', ' ', 'g'))
+        ELSE NULL
+    END;
+$$;
+
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -510,7 +494,14 @@ BEGIN
     VALUES (
         NEW.id,
         COALESCE(NEW.email, NEW.raw_user_meta_data->>'email'),
-        COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
+        -- Passed through normalize_display_name(), NOT raw. The value comes
+        -- from a provider, so it can be padded, blank, one character, or longer
+        -- than the CHECK below allows — and this trigger fires inside the
+        -- signup transaction, so a rejected row would fail the login itself.
+        -- Anything unusable becomes NULL, which the capture gate then asks for.
+        normalize_display_name(
+            COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name')
+        ),
         COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
         COALESCE(NEW.raw_user_meta_data->>'provider', NEW.raw_app_meta_data->>'provider'),
         (NEW.raw_user_meta_data->>'telegram_id')::BIGINT,
@@ -537,6 +528,82 @@ CREATE POLICY "Users can update own profile"
 ON profiles FOR UPDATE
 USING (auth.uid() = id)
 WITH CHECK (auth.uid() = id);
+
+-- The shape of a display name, and the only enforcement of it that matters:
+-- the capture gate writes through PostgREST under the policy above, with the
+-- bundled anon key, so api/posts.ts is not in that write path at all. The
+-- client copy in lib/profileName.ts is inline feedback — same split as
+-- lib/contact.ts. Bounds mirror DISPLAY_NAME_MIN / DISPLAY_NAME_MAX; the
+-- btrim equality rejects a name that is only padded whitespace away from blank.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_display_name_check') THEN
+        ALTER TABLE profiles DROP CONSTRAINT profiles_display_name_check;
+    END IF;
+    ALTER TABLE profiles ADD CONSTRAINT profiles_display_name_check
+        CHECK (
+            display_name IS NULL
+            OR (
+                char_length(btrim(display_name)) BETWEEN 2 AND 40
+                AND btrim(display_name) = display_name
+            )
+        );
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- public_posts — the board's read model
+-- ---------------------------------------------------------------------------
+-- Everything the feed needs to render, minus the contact values and minus
+-- user_id. Deliberately a SECURITY DEFINER view (security_invoker = false): it
+-- runs as its owner and bypasses the `posts` RLS above, which is what lets anon
+-- read the non-sensitive columns while having no access to the table itself.
+-- The expires_at filter is reproduced here so the view cannot leak expired rows.
+--
+-- contact_type / contact2_type are exposed (telegram vs phone) but the handles
+-- are not, so the UI can render the right icon before the viewer logs in.
+-- Requires PostgreSQL 15+ for the security_invoker option.
+--
+-- The join to `profiles` is what puts a real author name on a card. It rides on
+-- the same security_invoker = false: the view reads profiles as its owner, so
+-- the own-row-only SELECT policy above does not block an anonymous reader.
+-- Which also means every profiles column named here is world-readable —
+-- display_name is the only one, and adding email / telegram_id / avatar_url
+-- would publish them. LEFT JOIN because pre-auth rows carry no user_id and an
+-- inner join would drop them out of the feed.
+--
+-- Defined here rather than beside the `posts` policies because it now depends
+-- on the profiles table above.
+DROP VIEW IF EXISTS public_posts;
+CREATE VIEW public_posts
+WITH (security_invoker = false) AS
+SELECT
+    p.id,
+    p.type,
+    p.direction,
+    p.from_country,
+    p.to_country,
+    p.corridor_country,
+    p.from_city,
+    p.to_city,
+    p.date,
+    p.weight_kg,
+    p.luggage_count,
+    p.categories,
+    p.category_other,
+    p.weight,
+    p.headline,
+    p.note,
+    p.contact_type,
+    p.contact2_type,
+    (p.contact2 IS NOT NULL) AS has_contact2,
+    pr.display_name,
+    p.created_at,
+    p.expires_at
+FROM posts p
+LEFT JOIN profiles pr ON pr.id = p.user_id
+WHERE p.expires_at >= CURRENT_DATE;
+
+GRANT SELECT ON public_posts TO anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- rate_limits (API throttle)

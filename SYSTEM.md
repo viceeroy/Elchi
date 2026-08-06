@@ -114,10 +114,22 @@ values and `user_id`, with `expires_at >= CURRENT_DATE` reproduced inside it. `h
 computed. Granted to `anon` and `authenticated`. This is the only route anonymous readers have
 into post data.
 
+It `LEFT JOIN`s `profiles` for the author's `display_name`, which is what card footers print.
+The join rides on `security_invoker = false` — the view reads `profiles` as its owner, so that
+table's own-row-only RLS doesn't block an anonymous reader — which means anything added to the
+join is published. `display_name` is the only profiles column exposed.
+
 ### `profiles`
 
-Created by an `on_auth_user_created` trigger. Holds `auth_provider` (`google` | `telegram`).
-Posts carry `user_id` but no profile join — the board stays pseudonymous.
+Created by an `on_auth_user_created` trigger. Holds `auth_provider` (`google` | `telegram`) and
+`display_name`. Posts carry `user_id`, which is never exposed; the only thing that crosses from a
+profile onto a card is `display_name`, so the board stays pseudonymous.
+
+`display_name` is nullable, seeded from provider metadata through `normalize_display_name()`, and
+bounded by `profiles_display_name_check` (2–40 chars, no outer whitespace). When it is NULL the
+client shows a blocking capture sheet after login (`NameGateModal`) and writes the answer straight
+to `profiles` under the own-row UPDATE policy — the API is not in that path, which is why the CHECK
+is the real enforcement. There is no edit UI: capture-once.
 
 ### `rate_limits`
 

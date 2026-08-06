@@ -3,7 +3,7 @@ import { Megaphone } from "lucide-react";
 import { Post, Translations } from "../types";
 import { derivePreview } from "../lib/postPreview";
 import { stickerStyle } from "../lib/stickerStyle";
-import { PLACEHOLDER_AUTHOR } from "../lib/placeholderAuthor";
+import { authorNameOf } from "../lib/authorName";
 import { formatPostedDate } from "../../lib/formatDate";
 import {
   FeedCard,
@@ -95,7 +95,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
       <FeedCardFooter
         post={post}
         t={t}
-        left={`${PLACEHOLDER_AUTHOR} · ${postedDate}`}
+        left={`${authorNameOf(post.display_name)} · ${postedDate}`}
         onOpen={onOpen}
       />
     </FeedCard>

@@ -4,7 +4,7 @@ import { Plane, Briefcase } from "lucide-react";
 import { COUNTRIES, getCountry, isHubCity } from "../constants";
 import { stickerStyle } from "../lib/stickerStyle";
 import { flattenNote } from "../lib/postPreview";
-import { PLACEHOLDER_AUTHOR } from "../lib/placeholderAuthor";
+import { authorNameOf } from "../lib/authorName";
 import { parseWeightString } from "../../lib/weight";
 import { pluralizeChamadon } from "../translations";
 import { formatFlexibleDate } from "../../lib/formatDate";
@@ -162,7 +162,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         </span>
       )}
 
-      <FeedCardFooter post={post} t={t} left={PLACEHOLDER_AUTHOR} onOpen={onOpen} />
+      <FeedCardFooter post={post} t={t} left={authorNameOf(post.display_name)} onOpen={onOpen} />
     </FeedCard>
   );
 };
