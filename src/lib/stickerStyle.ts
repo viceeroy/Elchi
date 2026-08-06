@@ -3,19 +3,21 @@ import { PostType } from "../types";
 
 /**
  * The corner sticker every feed card wears — an icon chip now, one icon per
- * post type ("UCHISH" → plane, "POCHTA BOR" → suitcase, "E'LON" → megaphone).
+ * post type ("UCHISH" → plane, "POCHTA BOR" → suitcase).
  *
- * One definition for all three post types. This lived as a ~15-line object
- * literal copy-pasted into BoardingPass and AnnouncementCard, identical but for
- * the three colour lines, and the copies drifted: when the badges lost their
+ * One definition for both post types. This lived as a ~15-line object literal
+ * copy-pasted into BoardingPass and the announcement card, identical but for
+ * the colour lines, and the copies drifted: when the badges lost their
  * rotate() the same edit had to be made twice, in two files, and a miss would
- * have left one post type tilted against the others in the same column.
+ * have left one post type tilted against the other in the same column. The
+ * second call site went with the announcement type; the extraction stays,
+ * because this is also what keeps the variants readable side by side.
  *
  * Deliberately NOT tilted. Each type used to carry its own rotate() — -2.5deg
- * for a traveler, +2deg for a request, -1.5deg for an announcement — so a run of
- * cards didn't read as a repeating pattern. That threw the label's baseline off
- * level against the straight rules of the rest of the card, so the stickers are
- * flat and colour alone tells the types apart.
+ * for a traveler, +2deg for a request — so a run of cards didn't read as a
+ * repeating pattern. That threw the label's baseline off level against the
+ * straight rules of the rest of the card, so the stickers are flat and colour
+ * alone tells the types apart.
  *
  * In-flow, not absolutely positioned — it used to hang off the card's top edge;
  * this keeps it anchored inside the card at a fixed spot regardless of the
@@ -56,11 +58,6 @@ const STICKER_VARIANTS: Record<PostType, CSSProperties> = {
     border: "1px dashed rgba(255,255,255,0.4)",
     background: "var(--color-red)",
     color: "var(--color-card)",
-  },
-  announcement: {
-    border: "1px dashed rgba(27,42,74,0.25)",
-    background: "var(--color-gold)",
-    color: "var(--color-ink)",
   },
 };
 

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Plus, Plane, Briefcase, Megaphone } from "lucide-react";
+import { Plus, Plane, Briefcase } from "lucide-react";
 import { Translations } from "../types";
 
 interface PostFabProps {
@@ -8,20 +8,20 @@ interface PostFabProps {
   onToggle: (open: boolean) => void;
   onPickTraveler: () => void;
   onPickRequest: () => void;
-  onPickNote: () => void;
 }
 
 /**
  * The composer speed dial — a single "+" pinned to the bottom-right corner
- * that fans out into the three things a user can post: the two sides of a
- * parcel ad (a traveler offering free luggage space, a sender who needs
- * something carried), and a note.
+ * that fans out into the two sides of a parcel ad: a traveler offering free
+ * luggage space, and a sender who needs something carried.
  *
- * The two parcel sides open the same form and the dial only preselects which
- * side of it; the note opens its own, far shorter sheet. Asking here rather
- * than inside the form means the user states their intent once, with the same
- * blue/red/gold colour coding the feed already uses for the three stamps, so
- * the choice reads the same while composing as when browsing.
+ * Both open the same form and the dial only preselects which side of it.
+ * Asking here rather than inside the form means the user states their intent
+ * once, with the same blue/red colour coding the feed already uses for the two
+ * stamps, so the choice reads the same while composing as when browsing.
+ *
+ * A third arm (a gold "E'lon" note, opening its own far shorter sheet) sat
+ * under these until the announcement type was removed.
  */
 export const PostFab: React.FC<PostFabProps> = ({
   t,
@@ -29,7 +29,6 @@ export const PostFab: React.FC<PostFabProps> = ({
   onToggle,
   onPickTraveler,
   onPickRequest,
-  onPickNote,
 }) => {
   // Escape closes the dial. The options are focusable buttons, so a keyboard
   // user who fans it open needs a way out that isn't a mouse click on the
@@ -46,13 +45,13 @@ export const PostFab: React.FC<PostFabProps> = ({
   const options = [
     {
       key: "traveler",
-      // The same three lucide marks the feed and the detail sheet use for the
-      // three post types, so an icon means one thing across the whole board.
+      // The same two lucide marks the feed and the detail sheet use for the
+      // two post types, so an icon means one thing across the whole board.
       Icon: Plane,
       label: t.fabTravelerLabel || "Uchish",
-      // Blue, red and gold exactly as the traveler/request/note stamps on the
-      // cards (see BoardingPass, AnnouncementCard), so the dial is
-      // colour-readable before the label is, and tilted alternating ways.
+      // Blue and red exactly as the traveler/request stamps on the cards (see
+      // BoardingPass), so the dial is colour-readable before the label is, and
+      // tilted alternating ways.
       color: "var(--color-blue)",
       textColor: "var(--color-card)",
       tilt: "rotate(-2.5deg)",
@@ -66,17 +65,6 @@ export const PostFab: React.FC<PostFabProps> = ({
       textColor: "var(--color-card)",
       tilt: "rotate(2deg)",
       onPick: onPickRequest,
-    },
-    {
-      key: "note",
-      Icon: Megaphone,
-      // Gold carries dark text — the stamp colour is light enough that the
-      // cream used on the other two would not hold contrast.
-      label: t.fabNoteLabel || "E'lon",
-      color: "var(--color-gold)",
-      textColor: "var(--color-ink)",
-      tilt: "rotate(-2deg)",
-      onPick: onPickNote,
     },
   ];
 
@@ -122,8 +110,8 @@ export const PostFab: React.FC<PostFabProps> = ({
                 {opt.label}
               </span>
               {/* Solid disc in the type's stamp colour, carrying the type's
-                  icon — the same badge the board note's explainer uses, so the
-                  three kinds look identical wherever they are listed. */}
+                  icon — the same badge the board note's explainer uses, so both
+                  kinds look identical wherever they are listed. */}
               <span
                 style={{ background: opt.color, color: opt.textColor }}
                 className="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center shadow-lg transition-transform group-hover:scale-105"

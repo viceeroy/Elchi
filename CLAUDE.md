@@ -9,8 +9,10 @@ A free bulletin board pairing travelers (spare luggage space) with senders (parc
 Korea ↔ Uzbekistan corridor. No payments, no escrow, no messaging — the board hands over a
 contact handle and gets out of the way.
 
-Three post types: `traveler` (I'm flying, I have space), `request` (I have a parcel),
-`announcement` (a standing service ad — cargo company, agency).
+Two post types: `traveler` (I'm flying, I have space) and `request` (I have a parcel). A third,
+`announcement` (a standing service ad), was removed on 2026-08-07 — see
+[migrations/2026-08-07-remove-announcements.sql](migrations/2026-08-07-remove-announcements.sql).
+Rows written under it are kept in the table but filtered out of `public_posts`.
 
 ## Commands
 
@@ -64,7 +66,7 @@ which omits `contact`/`contact2` and `user_id`. Handles come one post at a time 
 
 **The API is not the only writer.** `authenticated` can INSERT through PostgREST with the
 bundled anon key, and cached bundles outlive a deploy. Every invariant that matters must be
-enforced in SQL (`posts_shape_by_type_check`, the announcement triggers) — a check in
+enforced in SQL (`posts_type_check`, `posts_shape_by_type_check`) — a check in
 [api/posts.ts](api/posts.ts) alone is advisory.
 
 **Validation is duplicated on purpose.** [lib/contact.ts](lib/contact.ts) runs on both sides;

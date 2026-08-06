@@ -4,13 +4,12 @@ import { Locale } from "../types";
 //
 // These are deliberately kept apart from `Post`: they are not user content,
 // never touch the API or the database, and are not filtered by the route
-// selector or the feed chips. Everything here is authored in this file, so the
-// copy lives with the component instead of in the shared translations
-// dictionary.
+// selector. Everything here is authored in this file, so the copy lives with
+// the component instead of in the shared translations dictionary.
 //
 // Only the intro card remains. The two worked examples ("this is what a
-// traveler ad looks like") were scaffolding for an empty board; real posts and
-// announcements now fill that role.
+// traveler ad looks like") were scaffolding for an empty board; real posts now
+// fill that role.
 export type NoteKind = "intro";
 
 export interface NoteContent {

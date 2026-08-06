@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase.js';
 import { checkRateLimit, clientIp } from '../lib/rate-limit.js';
 import { isContactKind, isValidContact, type ContactKind } from '../lib/contact.js';
-import { ANNOUNCEMENT_HEADLINE_MAX, ANNOUNCEMENT_NOTE_MAX } from '../lib/announcementLimits.js';
 import { PARCEL_CITY_MAX, PARCEL_CATEGORY_OTHER_MAX, PARCEL_NOTE_MAX } from '../lib/parcelLimits.js';
 import { PARCEL_CATEGORY_IDS } from '../lib/parcelCategories.js';
 import { FLEXIBLE_DATE } from '../lib/date.js';
@@ -25,10 +24,6 @@ const ALLOWED_COUNTRIES = new Set(['KR', 'UZ']);
 // Every corridor the board serves has Uzbekistan on one side, so the Uzbek side
 // is implied rather than requested. Mirrors HOME_COUNTRY in src/constants.ts.
 const HOME_COUNTRY = 'UZ';
-
-// The far countries — one per corridor, and what a corridor is named by. The
-// home country is on the near side of every one of them, so it never names one.
-const CORRIDOR_COUNTRIES = [...ALLOWED_COUNTRIES].filter((c) => c !== HOME_COUNTRY);
 
 // DEV ONLY — lets an unregistered visitor post while the composer is being
 // tested locally. Off unless ELCHI_DEV_NO_AUTH=1 AND a service-role key is
@@ -70,19 +65,9 @@ function userScopedClient(token: string) {
 // `profiles`; it is the one piece of author identity a list response carries,
 // and it carries no way to reach that author.
 const PUBLIC_COLUMNS =
-  'id,type,direction,from_country,to_country,corridor_country,from_city,to_city,date,' +
-  'weight_kg,luggage_count,categories,category_other,weight,headline,note,' +
+  'id,type,direction,from_country,to_country,from_city,to_city,date,' +
+  'weight_kg,luggage_count,categories,category_other,weight,note,' +
   'contact_type,contact2_type,has_contact2,display_name,created_at,expires_at';
-
-// What `?type=` narrows the list to. The default is deliberately `parcel`
-// rather than `all`: a browser holding an older bundle sends no type parameter
-// and has no card component for an announcement, so it must keep seeing exactly
-// what it saw before. The current client asks for `all` explicitly.
-const TYPE_FILTERS: Record<string, string[] | null> = {
-  parcel: ['traveler', 'request'],
-  announcement: ['announcement'],
-  all: null,
-};
 
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
@@ -242,27 +227,26 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
   // "N active posts" label that read it was deleted in cdfd528. Paging runs on
   // the fetch-one-extra `hasMore` above, which costs one row.
   //
-  // Which kind of ad the feed wants. The filter is applied to the same query
-  // the rows come from, so `hasMore` stays correct per filter.
-  const rawType = typeof req.query.type === 'string' ? req.query.type : 'parcel';
-  if (!(rawType in TYPE_FILTERS)) {
-    return res.status(400).json({ error: 'Noto\'g\'ri e\'lon turi' });
-  }
-  const typeFilter = TYPE_FILTERS[rawType];
-  if (typeFilter) {
-    query = query.in('type', typeFilter);
-  }
+  // `?type=` is gone with the announcement board — there is one kind of ad
+  // left, so there is nothing to narrow to. The parameter is deliberately
+  // IGNORED rather than validated: a browser holding a cached bundle still
+  // sends `type=parcel`, `type=announcement` or `type=all`, and rejecting those
+  // would turn the old notes tab into an error toast instead of a feed. Every
+  // one of them now means the same thing.
+  //
+  // The filter itself stays, applied to the same query the rows come from so
+  // `hasMore` stays correct: public_posts already hides the retired
+  // announcement rows, and this is the second half of that — the read model and
+  // the API agree on what a post is.
+  query = query.in('type', ['traveler', 'request']);
 
   // The country filter selects a CORRIDOR, not a direction: `?country=KR` means
   // the KR↔UZ corridor, so a Korea→Uzbekistan parcel and an Uzbekistan→Korea
   // one both match. Direction is content on each individual post, never a filter.
   //
-  // The two post types still read differently: a parcel travels FROM one country
-  // TO the other, so its route identifies its corridor. An announcement only
-  // sits somewhere, and where it sits cannot identify a corridor — every
-  // corridor has Uzbekistan on the near side, so a Tashkent note would match all
-  // of them. It therefore carries the corridor it was posted under
-  // (corridor_country) and matches on that alone.
+  // A post travels FROM one country TO the other, so its route identifies its
+  // corridor outright — which is why the corridor_country column that
+  // announcements needed is gone rather than merely unused.
   //
   // `from`/`to` are the legacy directional parameters, still accepted so a
   // browser holding an older bundle keeps getting a filtered feed. Either side
@@ -280,20 +264,10 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     }
     // Interpolation is safe here because the code has just been checked against
     // ALLOWED_COUNTRIES, so it can only ever be one of the literals in that set.
-    const parcelPair =
+    query = query.or(
       `and(from_country.eq.${country},to_country.eq.${HOME_COUNTRY}),` +
-      `and(from_country.eq.${HOME_COUNTRY},to_country.eq.${country})`;
-    if (rawType === 'announcement') {
-      query = query.eq('corridor_country', country);
-    } else if (rawType === 'parcel') {
-      query = query.or(parcelPair);
-    } else {
-      // Mixed feed: each type keeps its own rule.
-      query = query.or(
-        `and(type.in.(traveler,request),or(${parcelPair})),` +
-        `and(type.eq.announcement,corridor_country.eq.${country})`
-      );
-    }
+      `and(from_country.eq.${HOME_COUNTRY},to_country.eq.${country})`
+    );
   }
 
   // Same independence as the single-post branch above, and the same reason for
@@ -362,7 +336,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       direction,
       from_country,
       to_country,
-      corridor_country,
       from_city,
       to_city,
       date,
@@ -371,7 +344,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       categories,
       category_other,
       weight,
-      headline,
       note,
       contact,
       contact_type,
@@ -393,75 +365,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const toCity = str(to_city);
     const contactVal = str(contact);
     const contact2Val = str(contact2);
-    const headlineVal = str(headline);
     const noteVal = str(note);
     const categoryOtherVal = str(category_other);
     const weightVal = str(weight);
 
-    // The type gate runs before the required-field gate, because what counts as
-    // required depends on it: an announcement carries no city, date or cargo.
-    if (type !== 'traveler' && type !== 'request' && type !== 'announcement') {
+    // Two types left, and both carry the same required fields. `announcement`
+    // is rejected here like any other unknown value — an older cached bundle
+    // whose note composer is still on screen gets a 400 rather than writing a
+    // row the database would refuse anyway (posts_type_check).
+    if (type !== 'traveler' && type !== 'request') {
       return res.status(400).json({ error: 'Noto\'g\'ri e\'lon turi' });
     }
-    const isAnnouncement = type === 'announcement';
 
     // A parcel ad is a transaction — it is useless without a way to reach its
-    // author, so the contact stays required there. A note is just a notice, and
-    // may carry none at all.
-    if (!contactVal && !isAnnouncement) {
+    // author, so the contact is required.
+    if (!contactVal) {
       return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
     }
 
-    if (isAnnouncement) {
-      // A standing ad: body + country + contact, nothing else. The parcel
-      // fields are not read, so a caller can't smuggle a date or cargo onto one
-      // — the row literal below hard-codes them.
-      //
-      // The headline is optional. The composer is a single text box, so what
-      // the author writes is the body; a headline only exists on rows created
-      // by the older two-field form, and the card falls back to the body when
-      // there isn't one.
-      if (!noteVal) {
-        return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
-      }
-      if (
-        headlineVal.length > ANNOUNCEMENT_HEADLINE_MAX ||
-        noteVal.length > ANNOUNCEMENT_NOTE_MAX ||
-        contactVal.length > 100 ||
-        contact2Val.length > 100
-      ) {
-        return res.status(400).json({ error: 'Maydon juda uzun' });
-      }
-    } else {
-      if (!fromCity || !toCity || !date || !weightVal) {
-        return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
-      }
+    if (!fromCity || !toCity || !date || !weightVal) {
+      return res.status(400).json({ error: 'Majburiy maydonlar to\'ldirilmagan' });
+    }
 
-      // Length caps — mirror the DB column widths and keep free-text fields sane
-      // so a direct API caller can't store multi-MB blobs.
-      const tooLong =
-        fromCity.length > PARCEL_CITY_MAX ||
-        toCity.length > PARCEL_CITY_MAX ||
-        contactVal.length > 100 ||
-        contact2Val.length > 100 ||
-        noteVal.length > PARCEL_NOTE_MAX ||
-        categoryOtherVal.length > PARCEL_CATEGORY_OTHER_MAX ||
-        weightVal.length > 200;
-      if (tooLong) {
-        return res.status(400).json({ error: 'Maydon juda uzun' });
-      }
+    // Length caps — mirror the DB column widths and keep free-text fields sane
+    // so a direct API caller can't store multi-MB blobs.
+    const tooLong =
+      fromCity.length > PARCEL_CITY_MAX ||
+      toCity.length > PARCEL_CITY_MAX ||
+      contactVal.length > 100 ||
+      contact2Val.length > 100 ||
+      noteVal.length > PARCEL_NOTE_MAX ||
+      categoryOtherVal.length > PARCEL_CATEGORY_OTHER_MAX ||
+      weightVal.length > 200;
+    if (tooLong) {
+      return res.status(400).json({ error: 'Maydon juda uzun' });
+    }
 
-      // Categories must be a short array of known ids (the request-parcel chips).
-      if (categories !== undefined && categories !== null) {
-        if (!Array.isArray(categories) || categories.length > 10 ||
-            !categories.every((c) => typeof c === 'string' && ALLOWED_CATEGORIES.has(c))) {
-          return res.status(400).json({ error: 'Noto\'g\'ri toifa' });
-        }
+    // Categories must be a short array of known ids (the request-parcel chips).
+    if (categories !== undefined && categories !== null) {
+      if (!Array.isArray(categories) || categories.length > 10 ||
+          !categories.every((c) => typeof c === 'string' && ALLOWED_CATEGORIES.has(c))) {
+        return res.status(400).json({ error: 'Noto\'g\'ri toifa' });
       }
+    }
 
-      if (direction && direction !== 'k2u' && direction !== 'u2k') {
-        return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
-      }
+    if (direction && direction !== 'k2u' && direction !== 'u2k') {
+      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
     }
 
     // Route countries. New clients send them; older cached clients send only
@@ -469,77 +418,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // between two different supported countries.
     let fromCountry = typeof from_country === 'string' ? from_country.toUpperCase() : null;
     let toCountry = typeof to_country === 'string' ? to_country.toUpperCase() : null;
-    let corridorCountry =
-      typeof corridor_country === 'string' ? corridor_country.toUpperCase() : null;
 
-    if (isAnnouncement) {
-      // An announcement sits in one country — it is a standing service, not a
-      // delivery in a direction. The single country is stored in from_country
-      // and to_country is left null; anything the caller sent for it is
-      // discarded rather than trusted.
-      toCountry = null;
-      if (!fromCountry || !ALLOWED_COUNTRIES.has(fromCountry)) {
-        return res.status(400).json({ error: 'Noto\'g\'ri davlat' });
-      }
-
-      // Where it sits is NOT where it is listed. The board lists corridors and
-      // every corridor has Uzbekistan on the near side, so from_country alone
-      // cannot place a Tashkent note — it would have to belong to all of them.
-      // The composer sends the corridor the author was browsing.
-      //
-      // An older bundle sends no corridor at all, so one is derived: a note in
-      // the far country names its own corridor, and one at home falls back to
-      // the single live corridor. The moment a second corridor opens that
-      // fallback is genuinely ambiguous, and this returns 400 rather than
-      // picking a board for the author.
-      if (!corridorCountry) {
-        corridorCountry =
-          fromCountry !== HOME_COUNTRY ? fromCountry
-          : CORRIDOR_COUNTRIES.length === 1 ? CORRIDOR_COUNTRIES[0]
-          : null;
-      }
-      // The corridor is named by its far country, and the note must sit on one
-      // of that corridor's two ends.
-      if (
-        !corridorCountry ||
-        !CORRIDOR_COUNTRIES.includes(corridorCountry) ||
-        (fromCountry !== corridorCountry && fromCountry !== HOME_COUNTRY)
-      ) {
-        return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
-      }
-    } else {
-      // A parcel post's corridor is its route, so it stores no separate
-      // corridor — one fact, one column, and posts_shape_by_type_check requires
-      // the column to stay null here.
-      corridorCountry = null;
-      if (!fromCountry && direction) {
-        fromCountry = direction === 'k2u' ? 'KR' : 'UZ';
-        toCountry = direction === 'k2u' ? 'UZ' : 'KR';
-      }
-      if (
-        !fromCountry || !toCountry ||
-        !ALLOWED_COUNTRIES.has(fromCountry) || !ALLOWED_COUNTRIES.has(toCountry) ||
-        fromCountry === toCountry
-      ) {
-        return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
-      }
+    // A post's corridor is its route — one fact, one pair of columns. The
+    // separate corridor_country the announcement shape needed is gone from the
+    // table entirely, so anything a cached bundle still sends for it is
+    // discarded here by never being read.
+    if (!fromCountry && direction) {
+      fromCountry = direction === 'k2u' ? 'KR' : 'UZ';
+      toCountry = direction === 'k2u' ? 'UZ' : 'KR';
+    }
+    if (
+      !fromCountry || !toCountry ||
+      !ALLOWED_COUNTRIES.has(fromCountry) || !ALLOWED_COUNTRIES.has(toCountry) ||
+      fromCountry === toCountry
+    ) {
+      return res.status(400).json({ error: 'Noto\'g\'ri yo\'nalish' });
     }
 
     // Keep the legacy direction column coherent for old readers while both
-    // exist. Only meaningful for the KR↔UZ pair; other routes store null, and
-    // an announcement has no direction at all.
+    // exist. Only meaningful for the KR↔UZ pair; other routes store null.
     const legacyDirection =
-      isAnnouncement ? null
-      : fromCountry === 'KR' && toCountry === 'UZ' ? 'k2u'
+      fromCountry === 'KR' && toCountry === 'UZ' ? 'k2u'
       : fromCountry === 'UZ' && toCountry === 'KR' ? 'u2k'
       : null;
 
-    // A note may carry no contact at all; everything else must. When one IS
-    // given the checks below apply in full, whatever the type — an optional
-    // field is not an unvalidated one.
-    const hasContact = !!contactVal;
-
-    if ((hasContact && !isContactKind(contact_type)) || (contact2Val && !isContactKind(contact2_type))) {
+    if (!isContactKind(contact_type) || (contact2Val && !isContactKind(contact2_type))) {
       return res.status(400).json({ error: 'Noto\'g\'ri aloqa turi' });
     }
 
@@ -547,24 +450,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // length was checked, so `contact_type` and `contact` could disagree — and
     // the UI, which decided tel: vs t.me by sniffing a leading "@", would then
     // build a link that contradicted the stored type.
-    if (hasContact && !isValidContact(contactVal, contact_type)) {
+    if (!isValidContact(contactVal, contact_type)) {
       return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
     }
-    // A second handle with no first one would be reachable only through a
-    // column the UI never reads. Reject it rather than store an orphan.
-    if (!hasContact && contact2Val) {
-      return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
-    }
+    // The "second handle with no first one" guard that used to sit here is
+    // gone with the shape that made it reachable: a contact is required above,
+    // so contactVal is non-empty by the time control gets this far.
     if (contact2Val && !isValidContact(contact2Val, contact2_type as ContactKind)) {
       return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
     }
 
-    // Two shapes have no fixed date: an announcement never has one, and
-    // FLEXIBLE_DATE means the requester negotiates it directly with the
-    // traveler. Both store NULL — the sentinel used to be passed straight
-    // into the DATE column, which failed the insert — and both get a flat
-    // 30-day expiry instead of one derived from a travel date.
-    const noFixedDate = isAnnouncement || date === FLEXIBLE_DATE;
+    // FLEXIBLE_DATE means the requester negotiates the date directly with the
+    // traveler. It stores NULL — the sentinel used to be passed straight into
+    // the DATE column, which failed the insert — and gets a flat 30-day expiry
+    // instead of one derived from a travel date.
+    const noFixedDate = date === FLEXIBLE_DATE;
     let dateValue: string | null;
     let expires_at: string;
 
@@ -601,66 +501,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const safeWeightKg = clamp(weight_kg, 0, 100);
     const safeLuggage = clamp(luggage_count, 0, 20);
 
-    // Both shapes share the route and contact columns; they differ in whether
-    // the cargo half is populated at all. The announcement literal hard-codes
-    // the parcel fields rather than passing anything through, so the values
-    // match posts_shape_by_type_check no matter what the caller sent.
-    //
-    // `weight: ''` rather than null — the feed card matches on that string
-    // without a guard, so an older bundle that deep-links an announcement must
-    // not meet a null there.
-    const row = isAnnouncement
-      ? {
-          type,
-          direction: legacyDirection,
-          from_country: fromCountry,
-          to_country: null,
-          corridor_country: corridorCountry,
-          from_city: null,
-          to_city: null,
-          date: null,
-          weight_kg: 0,
-          luggage_count: 0,
-          categories: [],
-          category_other: null,
-          weight: '',
-          headline: headlineVal || null,
-          note: noteVal,
-          // `contact` is NOT NULL in the schema, so a note with no contact
-          // stores the empty string. `contact_type` is what the UI actually
-          // branches on — NULL there means "there is nobody to reach", and the
-          // reveal section is hidden rather than offered and then empty.
-          contact: contactVal,
-          contact_type: hasContact ? contact_type : null,
-          contact2: contact2Val || null,
-          contact2_type: contact2Val ? contact2_type : null,
-          user_id,
-          expires_at
-        }
-      : {
-          type,
-          direction: legacyDirection,
-          from_country: fromCountry,
-          to_country: toCountry,
-          corridor_country: null,
-          // The normalised values, so what was validated is what gets stored.
-          from_city: fromCity,
-          to_city: toCity,
-          date: dateValue,
-          weight_kg: safeWeightKg,
-          luggage_count: safeLuggage,
-          categories: Array.isArray(categories) ? categories : [],
-          category_other: categoryOtherVal || null,
-          weight: weightVal,
-          headline: null,
-          note: noteVal || null,
-          contact: contactVal,
-          contact_type,
-          contact2: contact2Val || null,
-          contact2_type: contact2Val ? contact2_type : null,
-          user_id,
-          expires_at
-        };
+    // One shape now, so one literal. `headline` is still written explicitly:
+    // the column survives the announcement type (it holds the retired rows'
+    // themes) and posts_shape_by_type_check requires it NULL on everything
+    // written from here, so hard-coding it is what keeps a caller from
+    // smuggling one in through PostgREST-shaped input.
+    const row = {
+      type,
+      direction: legacyDirection,
+      from_country: fromCountry,
+      to_country: toCountry,
+      // The normalised values, so what was validated is what gets stored.
+      from_city: fromCity,
+      to_city: toCity,
+      date: dateValue,
+      weight_kg: safeWeightKg,
+      luggage_count: safeLuggage,
+      categories: Array.isArray(categories) ? categories : [],
+      category_other: categoryOtherVal || null,
+      weight: weightVal,
+      headline: null,
+      note: noteVal || null,
+      contact: contactVal,
+      contact_type,
+      contact2: contact2Val || null,
+      contact2_type: contact2Val ? contact2_type : null,
+      user_id,
+      expires_at
+    };
 
     // Insert AS the authenticated user so the RLS insert policy
     // (user_id = auth.uid()) is satisfied and the author is provably theirs.
@@ -677,15 +545,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single();
 
     if (error) {
-      // 23505 is raised by the one_active_announcement trigger, not by a real
-      // unique constraint — `posts` has none besides the primary key. Hitting
-      // the per-author cap is a normal outcome, so it gets its own status and
-      // a message the form can show, rather than a generic failure.
-      if (error.code === '23505') {
-        return res.status(409).json({
-          error: 'Sizda allaqachon faol e\'lon bor. Avval eskisini o\'chiring.'
-        });
-      }
+      // The 23505 → 409 branch that used to sit here belonged to the
+      // one_active_announcement trigger, which was the only thing on this table
+      // that ever raised that code — `posts` has no unique constraint besides
+      // the primary key. Both are gone.
       console.error('Error creating post:', error);
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }

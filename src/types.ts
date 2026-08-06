@@ -1,9 +1,10 @@
 // Common TypeScript interfaces and types for Elchi
 
-// "announcement" is a standing ad — a cargo service, an agency — rather than
-// one trip. It carries a headline, a body, a route and a contact, and none of
-// the cities/date/cargo fields the parcel types use.
-export type PostType = "traveler" | "request" | "announcement";
+// The two sides of the same trade: someone flying with spare luggage space, and
+// someone with a parcel that needs carrying. A third arm, "announcement" (a
+// standing service ad), was removed on 2026-08-07 — see
+// migrations/2026-08-07-remove-announcements.sql.
+export type PostType = "traveler" | "request";
 
 export type Direction = "k2u" | "u2k";
 
@@ -17,18 +18,12 @@ export interface Post {
   // Nullable only for rows created before the countries migration.
   from_country: string | null;
   to_country: string | null;
-  // Which corridor an announcement is listed under — the far country of the
-  // corridor its author was browsing. Distinct from from_country (where the
-  // service sits), because every corridor has Uzbekistan on the near side and
-  // a note sitting there would otherwise belong to all of them. Null on parcel
-  // posts, whose corridor is their route.
-  corridor_country: string | null;
-  // Free-text cities — display only, never used for filtering. Null on
-  // announcements, which apply to a corridor rather than a city pair.
+  // Free-text cities — display only, never used for filtering. Nullable at the
+  // column level only: posts_shape_by_type_check requires both.
   from_city: string | null;
   to_city: string | null;
-  // YYYY-MM-DD, or null when there is no fixed date: an announcement, or a
-  // request whose date is negotiated directly with the traveler.
+  // YYYY-MM-DD, or null when there is no fixed date — a request whose date is
+  // negotiated directly with the traveler.
   date: string | null;
   // Structured cargo data — the source of truth for filtering and display logic.
   weight_kg: number;
@@ -36,13 +31,14 @@ export interface Post {
   categories: string[];
   category_other: string | null;
   // Pre-rendered display string built from the fields above, e.g.
-  // "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon". Empty on
-  // announcements, which carry no cargo.
+  // "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon".
   weight: string;
-  // Announcement headline; null on parcel posts.
-  headline: string | null;
-  // The free-text body of the ad: an optional remark on a parcel post, the
-  // required body copy on an announcement.
+  // `headline` is deliberately absent. The column still exists — it holds the
+  // retired announcements' themes — but it is NULL on every post the board can
+  // read, so the API stops selecting it (PUBLIC_COLUMNS in api/posts.ts) rather
+  // than shipping a field that is always null.
+  //
+  // The free-text body of the ad: an optional remark on the trip.
   note: string | null;
   // Contact VALUES are deliberately absent from this shape. The feed reads the
   // `public_posts` view, which omits them, so a scraper cannot pull every
@@ -211,57 +207,16 @@ export interface Translations {
   // so the dialog carries a static name instead.
   postDetailsTitle?: string;
 
-  // Composer speed dial — the floating "+" and the three things it opens: the
-  // two sides of a parcel ad, and a note.
+  // Composer speed dial — the floating "+" and the two things it opens: the
+  // two sides of a parcel ad.
   fabOpenLabel?: string;
   fabCloseLabel?: string;
   fabTravelerLabel?: string;
   fabRequestLabel?: string;
-  fabNoteLabel?: string;
-
-  // Feed tab switcher — Pochta (parcel posts) vs E'lonlar (board notes /
-  // announcements). Exclusive: only one of the two shows at a time.
-  feedTabParcelLabel?: string;
-  feedTabNotesLabel?: string;
-  // The announcements headline, split at its one colour boundary the same way
-  // `title`/`titleAccent` splits the parcel one: the brand word, then the rest
-  // of the sentence. Spacing lives inside the pieces, so the typing animation
-  // can concatenate them untouched.
-  notesTitleBrand?: string;
-  notesTitleRest?: string;
-  // Sticker label on an announcement card, alongside travelerTag/requestTag.
-  announcementTag?: string;
-  // Shown under a card's note when the note was too long to print whole — the
-  // card's "there is more of this in the detail sheet" cue. Only rendered when
-  // the text is actually cut, so it never promises a longer note than exists.
-  cardMoreLabel?: string;
-
-  // Announcement stub — the navy panel on the right of the card. A note has no
-  // travel date, so where a parcel card shows the trip its stub shows the date
-  // the ad went up.
-  stubPostedLabel: string;
 
   // Month names, January first. The single source for every date the board
   // renders: the two card stubs and the detail sheet all read this array, which
   // is why it is NOT optional — an absent key would have to be covered by an
   // Uzbek literal inside a component, and there used to be three such copies.
   months: string[];
-
-  // Body label on an announcement in the detail sheet.
-  announcementBodyLabel?: string;
-
-  // Note sheet ("E'lon" / "Заметка" / "Note") — one free-text field and a
-  // contact, and none of the parcel fields.
-  noteTitle?: string;
-  noteSubtitle?: string;
-  noteThemeLabel?: string;
-  noteThemePlaceholder?: string;
-  noteTextLabel?: string;
-  noteTextPlaceholder?: string;
-  // Contact is optional on a note, so its label differs from the parcel form's.
-  noteContactLabel?: string;
-  noteSubmitBtn?: string;
-  noteAutoDeleteLabel?: string;
-  errorFieldNoteText?: string;
-  toastNoteCreated?: string;
 }

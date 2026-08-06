@@ -30,8 +30,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
 }) => {
   const isTraveler = post.type === "traveler";
 
-  // Same sanitisation an announcement body gets, minus the title split: emoji
-  // out, hard line breaks flattened to single spaces. Both would otherwise
+  // Emoji out, hard line breaks flattened to single spaces. Both would otherwise
   // break the clamp arithmetic — an emoji inflates its line box, a newline
   // spends one of the two clamped lines on whitespace. The stored note is not
   // modified; the detail sheet still shows it exactly as typed.
@@ -47,8 +46,9 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
     getCountry(post.to_country) ?? COUNTRIES.find((c) => c.code !== fromCountry.code)!;
   const hubFrom = fromCountry.names[locale];
   const hubTo = toCountry.names[locale];
-  // Free-text cities are display-only detail under the country route. Absent
-  // entirely on an announcement, which is why the null check comes first.
+  // Free-text cities are display-only detail under the country route. The null
+  // check comes first because the columns are nullable — legacy rows predate
+  // the constraint that makes both mandatory.
   //
   // The second half hides the line when both cities are just the hubs the
   // country names already imply (Incheon → Toshkent under Koreya ✈
@@ -66,8 +66,9 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   // which Uzbek form to render.
   const physicalWeight = (() => {
     const parts: string[] = [];
-    // post.weight is optional because a deep link can put an announcement —
-    // which has no cargo — in front of this component.
+    // parseWeightString tolerates a missing/unparseable string: `weight` is a
+    // display cache, and a legacy row predating the structured columns can
+    // carry a shape it doesn't recognise.
     const { kg, luggage } = parseWeightString(post.weight);
     if (kg && kg > 0) parts.push(`${kg} kg`);
     if (luggage && luggage > 0) {

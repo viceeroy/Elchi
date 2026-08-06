@@ -6,7 +6,6 @@ import { formatFlexibleDate } from "../lib/formatDate";
 import { translations, defaultLocale, pluralizeChamadon } from "./translations";
 import { COUNTRIES, getCountry, isHubCity } from "./constants";
 import { BoardingPass } from "./components/BoardingPass";
-import { AnnouncementCard } from "./components/AnnouncementCard";
 import {
   FEED_CARD_SHELL,
   FEED_CARD_INNER,
@@ -23,7 +22,7 @@ import { supabaseBrowser } from "./supabaseClient";
 // umbrella at all (see supabaseClient.ts), and a type-only import back to it
 // invites someone to "tidy" it into a value import and quietly restore 86 kB.
 import type { Session } from "@supabase/auth-js";
-import { Send, ShieldAlert, Sparkles, MessageSquare, Plane, Briefcase, Megaphone, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
+import { Send, ShieldAlert, Sparkles, MessageSquare, Plane, Briefcase, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 // Every one of these is a modal or a bottom sheet: none of them is on screen at
@@ -38,12 +37,11 @@ import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 // throughout (see the component convention in CLAUDE.md), hence the
 // `.then(m => ({ default: m.X }))` on each. NoteSheet is imported from its own
 // module rather than the ./notes barrel so the chunk doesn't drag in
-// NotesCarousel and the notes data, which the first screen already needs.
+// NotesCarousel and the notes data, which the first screen already needs — and
+// despite the name it is an editorial card from ./notes, nothing to do with
+// posting.
 const PostFormModal = lazy(() =>
   import("./components/PostFormModal").then((m) => ({ default: m.PostFormModal })),
-);
-const NoteFormModal = lazy(() =>
-  import("./components/NoteFormModal").then((m) => ({ default: m.NoteFormModal })),
 );
 const LoginModal = lazy(() =>
   import("./components/LoginModal").then((m) => ({ default: m.LoginModal })),
@@ -58,17 +56,16 @@ const NoteSheet = lazy(() =>
   import("./notes/NoteSheet").then((m) => ({ default: m.NoteSheet })),
 );
 
-// Warms a lazy chunk before it is rendered. Splitting these sheets moves their
+// Warms the composer chunk before it is rendered. Splitting the sheet moves its
 // download from "before first paint" to "when tapped", and on a slow connection
 // that trades a faster feed for a sheet that hangs after the tap. The speed dial
 // gives us the gap to avoid it: opening it is a separate tap that always
-// precedes picking a composer, so the fetch starts while the user is still
+// precedes picking a side, so the fetch starts while the user is still
 // choosing. Calling this is fire-and-forget — the import is cached by the
 // bundler runtime, and a failed prefetch is not an error worth surfacing
 // because the real render retries the same import.
 function prefetchComposers() {
   void import("./components/PostFormModal").catch(() => {});
-  void import("./components/NoteFormModal").catch(() => {});
 }
 
 // The scrim every sheet renders behind itself, shown on its own while a chunk
@@ -114,12 +111,6 @@ export default function App() {
   // Which tab the composer opens on, set by the speed dial before the sheet
   // mounts. The user can still switch inside the form.
   const [composeType, setComposeType] = useState<PostType>("traveler");
-  // Feed filter — exactly one of the two kinds is always showing. There is no
-  // "everything" state: parcel ads and standing service ads read so differently
-  // that a mixed feed was mostly noise, and the cleared chip left the user on a
-  // list they hadn't asked for. So the chips are a two-way selector, not a pair
-  // of toggles, and picking the active one is a no-op rather than a clear.
-  const [feedFilter, setFeedFilter] = useState<"parcel" | "notes">("parcel");
   // Speed-dial state for the floating "+"
   const [fabOpen, setFabOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -364,16 +355,9 @@ export default function App() {
     // The contact handle is deliberately left out of the share text: it would
     // republish someone's phone number into whatever app the link is sent to.
     // The recipient opens the post and reveals it themselves.
-    //
-    // A note has no cities and no cargo, so it shares its own text rather than
-    // the parcel sentence, which would render as "undefined → …". Its theme is
-    // optional, so the body is the fallback — and the only text at all on a
-    // note whose author skipped it.
-    const shareText = selectedPost.type === "announcement"
-      ? `Elchi: ${selectedPost.headline || selectedPost.note || ""}`.trim()
-      : selectedPost.type === "traveler"
-        ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman.`
-        : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak.`;
+    const shareText = selectedPost.type === "traveler"
+      ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman.`
+      : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak.`;
 
     const shareTitle = t.shareTitle || "Elchi e'lon taxtasi";
 
@@ -446,11 +430,10 @@ export default function App() {
     try {
       const params = new URLSearchParams({
         country,
-        // Filtering happens in SQL so paging stays correct — a client-side
-        // filter would leave the offsets counting rows the user can't see.
-        // The chips are exhaustive, so "all" is never requested from here; the
-        // API still supports it for other callers.
-        type: feedFilter === "parcel" ? "parcel" : "announcement",
+        // No `type` any more: the board has one kind of post, so the API
+        // narrows to it unconditionally. The corridor filter still runs in SQL
+        // so paging stays correct — a client-side filter would leave the
+        // offsets counting rows the user can't see.
         limit: String(PAGE_SIZE),
         offset: String(append ? posts.length : 0),
       });
@@ -472,8 +455,8 @@ export default function App() {
     }
   };
 
-  // Refetch from page 1 whenever the corridor or the feed filter changes, and
-  // when the session changes so is_mine is recomputed for the new viewer.
+  // Refetch from page 1 whenever the corridor changes, and when the session
+  // changes so is_mine is recomputed for the new viewer.
   //
   // The wait on authResolved is what stops a returning visitor fetching the
   // whole feed twice on every load. `session` starts null, so this effect used
@@ -488,7 +471,7 @@ export default function App() {
     if (!authResolved) return;
     fetchPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authResolved, country, feedFilter, session?.user?.id]);
+  }, [authResolved, country, session?.user?.id]);
 
   // Pull the open post's contact handles. Logged-out viewers get nothing to
   // fetch — the reveal is gated server-side too, so this is UI only.
@@ -566,12 +549,6 @@ export default function App() {
 
   // Same refresh, its own confirmation — "your ad is up" reads wrong for
   // something the author thinks of as a note.
-  const handleNoteSubmitSuccess = () => {
-    setFormOpen(false);
-    fetchPosts();
-    setToast(t.toastNoteCreated || t.toastPostCreated);
-  };
-
   const [deleting, setDeleting] = useState(false);
 
   const handleDeletePost = async () => {
@@ -678,72 +655,28 @@ export default function App() {
         
         {/* Hero Section */}
         <section className="pt-6 pb-2">
-          {/* The headline belongs to the active tab and types itself out on
-              every switch. `key` is the whole replay mechanism: a new tab means
-              a new instance, which starts empty and types from zero. */}
+          {/* Types itself out once on mount. This used to be keyed on the feed
+              tab so the headline replayed on every switch; with one feed left
+              there is nothing to switch between, and an unkeyed instance types
+              exactly once. */}
           <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 mb-2 tracking-tight">
             <TypedHeadline
-              key={feedFilter}
-              segments={
-                feedFilter === "parcel"
-                  ? [
-                      { text: t.title, className: "text-red" },
-                      // Kept as its own line on phones, as before the animation.
-                      { text: t.titleAccent, className: "block sm:inline" },
-                    ]
-                  : [
-                      { text: t.notesTitleBrand || "Elchi", className: "text-red" },
-                      // Deep navy, the same ink the parcel headline's accent
-                      // carries — `text-blue` sat a shade too light next to it.
-                      {
-                        text: t.notesTitleRest || " - bepul e'lonlar taxtasi",
-                        className: "text-ink",
-                      },
-                    ]
-              }
+              segments={[
+                { text: t.title, className: "text-red" },
+                // Kept as its own line on phones, as before the animation.
+                { text: t.titleAccent, className: "block sm:inline" },
+              ]}
             />
           </h1>
         </section>
 
         {/* Posts Filter and Feed */}
         <section className="pt-2">
-          {/* Route line + feed filter chips. Picking a country filters the feed;
-              the chips pick which of the two kinds it shows. One is always
-              active — there is no "clear" affordance, because there is no
-              unfiltered feed to clear back to. */}
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div
-              role="radiogroup"
-              className="flex bg-paper border border-edge rounded-lg p-0.5 gap-0.5 flex-shrink-0"
-            >
-              <button
-                type="button"
-                role="radio"
-                onClick={() => setFeedFilter("parcel")}
-                aria-checked={feedFilter === "parcel"}
-                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all ${
-                  feedFilter === "parcel"
-                    ? "bg-ink text-card shadow-sm"
-                    : "text-body hover:text-ink"
-                }`}
-              >
-                {t.feedTabParcelLabel || "Pochta"}
-              </button>
-              <button
-                type="button"
-                role="radio"
-                onClick={() => setFeedFilter("notes")}
-                aria-checked={feedFilter === "notes"}
-                className={`px-3 py-1.5 rounded-md font-bold text-[11px] sm:text-xs transition-all ${
-                  feedFilter === "notes"
-                    ? "bg-gold text-ink shadow-sm"
-                    : "text-body hover:text-ink"
-                }`}
-              >
-                {t.feedTabNotesLabel || "E'lonlar"}
-              </button>
-            </div>
-
+          {/* Route line. The two-way parcel/notes chip selector that used to sit
+              beside it came off with the announcement board — one kind of post
+              means nothing to select between, and a lone always-active chip is
+              a label pretending to be a control. */}
+          <div className="mb-5 flex items-center justify-end gap-3">
             <RouteSelector
               locale={locale}
               countryCode={country}
@@ -752,8 +685,8 @@ export default function App() {
           </div>
 
           {/* The board's own explainer. Not a post: no author, no contact, and
-              unaffected by both the route filter and the feed chips — a new
-              visitor should meet it whichever view they land on. */}
+              unaffected by the route filter — a new visitor should meet it
+              whichever corridor they land on. */}
           <NotesCarousel locale={locale} onOpenNote={setSelectedNote} />
 
           {loading ? (
@@ -790,26 +723,15 @@ export default function App() {
             </div>
           ) : posts.length > 0 ? (
             <div className="flex flex-col gap-4">
-              {/* Both kinds of ad share the feed and the same card geometry;
-                  only the type decides which component renders. */}
-              {posts.map((post) =>
-                post.type === "announcement" ? (
-                  <AnnouncementCard
-                    key={post.id}
-                    post={post}
-                    t={t}
-                    onOpen={() => setSelectedPost(post)}
-                  />
-                ) : (
-                  <BoardingPass
-                    key={post.id}
-                    post={post}
-                    t={t}
-                    locale={locale}
-                    onOpen={() => setSelectedPost(post)}
-                  />
-                ),
-              )}
+              {posts.map((post) => (
+                <BoardingPass
+                  key={post.id}
+                  post={post}
+                  t={t}
+                  locale={locale}
+                  onOpen={() => setSelectedPost(post)}
+                />
+              ))}
 
               {hasMore ? (
                 <div className="mt-2 flex justify-center">
@@ -839,8 +761,7 @@ export default function App() {
         </section>
       </main>
 
-      {/* Floating composer — the "+" fans out into the two sides of a parcel ad
-          and the note */}
+      {/* Floating composer — the "+" fans out into the two sides of a parcel ad */}
       <PostFab
         t={t}
         open={fabOpen}
@@ -852,30 +773,18 @@ export default function App() {
         }}
         onPickTraveler={() => handleComposeClick("traveler")}
         onPickRequest={() => handleComposeClick("request")}
-        onPickNote={() => handleComposeClick("announcement")}
       />
 
-      {/* Post Creation Bottom Sheet Modal. A note has almost none of a parcel
-          ad's fields, so it gets its own sheet rather than a third tab that
-          would hide most of the form it sits in. */}
+      {/* Post Creation Bottom Sheet Modal */}
       {formOpen && session && (
         <Suspense fallback={<SheetFallback />}>
-          {composeType === "announcement" ? (
-            <NoteFormModal
-              t={t}
-              country={country}
-              onClose={() => setFormOpen(false)}
-              onSubmitSuccess={handleNoteSubmitSuccess}
-            />
-          ) : (
-            <PostFormModal
-              t={t}
-              locale={locale}
-              initialType={composeType}
-              onClose={() => setFormOpen(false)}
-              onSubmitSuccess={handlePostSubmitSuccess}
-            />
-          )}
+          <PostFormModal
+            t={t}
+            locale={locale}
+            initialType={composeType}
+            onClose={() => setFormOpen(false)}
+            onSubmitSuccess={handlePostSubmitSuccess}
+          />
         </Suspense>
       )}
 
@@ -978,97 +887,71 @@ export default function App() {
                   fontWeight: 700
                 }}
               >
-                {selectedPost.type === "announcement" ? (
-                  <Megaphone className="w-3.5 h-3.5 text-ink" />
-                ) : selectedPost.type === "traveler" ? (
+                {selectedPost.type === "traveler" ? (
                   <Plane className="w-3.5 h-3.5 text-ink" />
                 ) : (
                   <Briefcase className="w-3.5 h-3.5 text-ink" />
                 )}
-                {selectedPost.type === "announcement"
-                  ? (t.announcementTag || "E'lon")
-                  : selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
+                {selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
               </div>
 
-              {/* An announcement sits in one country, so it shows that country
-                  alone — no arrow, which would imply a delivery direction it
-                  doesn't have. Parcel posts keep the full route. */}
-              {selectedPost.type === "announcement" ? (
-                <div className="font-black text-2xl tracking-tight mt-3">
-                  {(getCountry(selectedPost.from_country) ?? COUNTRIES[0]).names[locale]}
-                </div>
-              ) : (
-                (() => {
-                  const { from, to, hubFrom, hubTo } = getHubRoute(selectedPost);
-                  // Same rule as the feed card: the city line is extra detail
-                  // under the country route, so it is hidden when both cities
-                  // are only the hubs those countries already imply.
-                  const showActualCities =
-                    Boolean(selectedPost.from_city && selectedPost.to_city) &&
-                    (!isHubCity(from, selectedPost.from_city) ||
-                     !isHubCity(to, selectedPost.to_city));
-                  return (
-                    <>
-                      <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">
-                        <span>{hubFrom}</span>
-                        <span className="text-gold flex items-center">
-                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="22" y1="2" x2="11" y2="13" />
-                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                          </svg>
-                        </span>
-                        <span>{hubTo}</span>
+              {(() => {
+                const { from, to, hubFrom, hubTo } = getHubRoute(selectedPost);
+                // Same rule as the feed card: the city line is extra detail
+                // under the country route, so it is hidden when both cities
+                // are only the hubs those countries already imply.
+                const showActualCities =
+                  Boolean(selectedPost.from_city && selectedPost.to_city) &&
+                  (!isHubCity(from, selectedPost.from_city) ||
+                   !isHubCity(to, selectedPost.to_city));
+                return (
+                  <>
+                    <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3">
+                      <span>{hubFrom}</span>
+                      <span className="text-gold flex items-center">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="22" y1="2" x2="11" y2="13" />
+                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                      </span>
+                      <span>{hubTo}</span>
+                    </div>
+                    {showActualCities && (
+                      <div className="font-mono text-xs opacity-70 mt-1 tracking-wider">
+                        {selectedPost.from_city} → {selectedPost.to_city}
                       </div>
-                      {showActualCities && (
-                        <div className="font-mono text-xs opacity-70 mt-1 tracking-wider">
-                          {selectedPost.from_city} → {selectedPost.to_city}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()
-              )}
-              {/* A note has no travel date. It leads with its theme when the
-                  author gave one; the rest carry their whole text in the body
-                  below. */}
-              {selectedPost.type === "announcement" ? (
-                selectedPost.headline ? (
-                  <div className="font-bold text-[15px] mt-2 [overflow-wrap:anywhere]">
-                    {selectedPost.headline}
-                  </div>
-                ) : null
-              ) : (
-                <div className="font-mono text-xs opacity-70 mt-1.5 tracking-wider">
-                  {selectedPost.type === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest} · {formatDetailDate(selectedPost.date)}
-                </div>
-              )}
+                    )}
+                  </>
+                );
+              })()}
+              <div className="font-mono text-xs opacity-70 mt-1.5 tracking-wider">
+                {selectedPost.type === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest} · {formatDetailDate(selectedPost.date)}
+              </div>
             </div>
 
             {/* Body of details */}
             <div className="px-6 pt-6">
-              {/* Cargo box is parcel-only — an announcement carries none. */}
-              {selectedPost.type !== "announcement" && (
-                <div className="bg-paper rounded-xl p-3.5 mb-5">
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-blue mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
-                  <div className="font-bold text-base text-ink">{localizeWeight(selectedPost.weight)}</div>
-                </div>
-              )}
+              <div className="bg-paper rounded-xl p-3.5 mb-5">
+                <div className="font-mono text-[10px] tracking-wider uppercase text-blue mb-1">{selectedPost.type === "traveler" ? t.weightLabelTraveler : t.weightLabelRequest}</div>
+                <div className="font-bold text-base text-ink">{localizeWeight(selectedPost.weight)}</div>
+              </div>
 
+              {/* The note reads as the post's body, so it is set as body copy and
+                  nothing else: no label above it, no panel around it, no accent
+                  rule down its left edge. All three were framing that made a
+                  remark look like a pull-quote sitting inside the sheet rather
+                  than part of it.
+
+                  No max-height and no overflow either. It used to cap at 40vh
+                  and scroll inside its own box, which put a second scrollbar
+                  inside a sheet that already scrolls (max-h-[88vh] on the panel)
+                  — a long note trapped the reader in an inner pane. It now runs
+                  its full length and the sheet scrolls it, like any other
+                  section here. */}
               {selectedPost.note && (
                 <div className="mb-5">
-                  <div className="font-mono text-[10px] tracking-wider uppercase text-blue mb-2">
-                    {selectedPost.type === "announcement"
-                      ? (t.announcementBodyLabel || t.noteLabel.replace(" (ixtiyoriy)", ""))
-                      : t.noteLabel.replace(" (ixtiyoriy)", "")}
-                  </div>
-                  {/* On an announcement this is the ad's body copy, not a remark
-                      on someone else's trip, so it drops the quotes and italics. */}
-                  <div
-                    className={`text-[14px] text-[#3A4256] leading-relaxed bg-card border border-edge border-l-4 border-l-gold p-4 rounded-r-lg [overflow-wrap:anywhere] whitespace-pre-wrap max-h-[40vh] overflow-y-auto ${
-                      selectedPost.type === "announcement" ? "" : "italic"
-                    }`}
-                  >
-                    {selectedPost.type === "announcement" ? selectedPost.note : `"${selectedPost.note}"`}
+                  <div className="text-[14px] text-body leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap italic">
+                    {`"${selectedPost.note}"`}
                   </div>
                 </div>
               )}

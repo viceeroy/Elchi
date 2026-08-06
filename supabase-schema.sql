@@ -15,34 +15,40 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- categories are the source of truth and are what queries and filters use.
 CREATE TABLE IF NOT EXISTS posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    -- 'announcement' is a standing ad (a cargo service, an agency) rather than
-    -- one trip: it carries a headline, a body, a route and a contact, and none
-    -- of the cities/date/cargo columns. See posts_shape_by_type_check below.
-    type VARCHAR(20) NOT NULL CHECK (type IN ('traveler', 'request', 'announcement')),
+    -- Two shapes, one table: 'traveler' (flying, has spare luggage space) and
+    -- 'request' (has a parcel). They share every column — the split is which
+    -- side of the same trade the author is on. See posts_shape_by_type_check
+    -- below, which is now a single predicate for exactly that reason.
+    --
+    -- A third type, 'announcement' (a standing service ad), lived here until
+    -- 2026-08-07. Rows written under it are kept but retired: public_posts
+    -- filters them out, and both CHECKs are NOT VALID so they are never
+    -- re-examined. See migrations/2026-08-07-remove-announcements.sql.
+    type VARCHAR(20) NOT NULL CHECK (type IN ('traveler', 'request')),
 
-    -- Route. Cities are NULL on announcements.
+    -- Route.
     direction VARCHAR(3) CHECK (direction IN ('k2u', 'u2k')),
     from_city VARCHAR(100),
     to_city VARCHAR(100),
-    -- NULL means "no fixed date" — an announcement, or a request whose date is
-    -- negotiated directly with the traveler.
+    -- NULL means "no fixed date" — a request whose date is negotiated directly
+    -- with the traveler.
     date DATE,
 
-    -- Capacity / cargo (structured). All zero/empty on announcements.
+    -- Capacity / cargo (structured).
     weight_kg NUMERIC(6,2) NOT NULL DEFAULT 0,
     luggage_count SMALLINT NOT NULL DEFAULT 0,
     categories TEXT[] NOT NULL DEFAULT '{}',
     category_other TEXT,
     -- Display cache, e.g. "5 kg + 2 chamadon" or "3 kg · Hujjatlar, Dori-darmon".
-    -- Stays NOT NULL: the feed card matches on it without a guard, so an
-    -- announcement stores '' rather than NULL.
+    -- Stays NOT NULL: the feed card matches on it without a guard.
     weight TEXT NOT NULL,
 
-    -- Announcement headline. NULL on parcel posts.
+    -- Retired announcement headline. Always NULL on a parcel post — the shape
+    -- constraint requires it — and kept only because the retired rows still
+    -- hold theirs.
     headline VARCHAR(120),
 
-    -- The free-text body of an ad: an optional remark on a parcel post, the
-    -- required body copy on an announcement.
+    -- The free-text body of an ad: an optional remark on a parcel post.
     note TEXT,
 
     -- Contacts. *_type records which channel the handle belongs to, so the UI
@@ -134,30 +140,28 @@ DROP TABLE IF EXISTS reports;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS from_country VARCHAR(2);
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS to_country VARCHAR(2);
--- Which corridor an announcement is listed under: the FAR country of the
--- corridor its author was browsing when they posted. An announcement sits in
--- one country (from_country) and that alone cannot place it on the board,
--- because every corridor has Uzbekistan on the near side — a Tashkent note
--- would otherwise belong to all of them at once. NULL on parcel posts, whose
--- corridor is already stated by from_country/to_country. See
--- migrations/2026-08-01-announcement-corridor.sql.
-ALTER TABLE posts ADD COLUMN IF NOT EXISTS corridor_country VARCHAR(2);
+-- corridor_country lived here until 2026-08-07. It existed solely so a standing
+-- announcement — which sits in ONE country, and so cannot name its own corridor
+-- when that country is Uzbekistan — could say which board it belonged to. A
+-- parcel post's corridor has always been its own route, so the column was
+-- required to be NULL on every surviving row. Dropped with the type. See
+-- migrations/2026-08-07-remove-announcements.sql.
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_corridor_country_check;
+ALTER TABLE posts DROP COLUMN IF EXISTS corridor_country;
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_posts_route ON posts(from_country, to_country);
--- The announcement feed filters on corridor_country alone, which a lookup
--- against idx_posts_route cannot use.
-CREATE INDEX IF NOT EXISTS idx_posts_corridor
-    ON posts (corridor_country) WHERE type = 'announcement';
--- Serves the notes board only: `type = 'announcement'` is a single value, so
--- this composite is scanned with created_at already ordered underneath it and
--- no sort node. The parcel board's `type IN ('traveler','request')` cannot use
--- it — a ScalarArrayOp scan orders rows only within each type value, so the
--- planner ignores the index and does a full scan plus top-N sort. That path
--- wants a plain (created_at DESC) index instead. See
--- migrations/2026-08-05-posts-created-at-index.sql for the measurements and for
--- why the view's expires_at filter cannot become a partial-index predicate.
-CREATE INDEX IF NOT EXISTS idx_posts_type_created
-    ON posts (type, created_at DESC);
+-- Every list request ends in ORDER BY created_at DESC LIMIT n OFFSET m, and
+-- this is the index that serves it: scanned in order, with `type` demoted to a
+-- filter. The old composite (type, created_at DESC) is dropped rather than
+-- kept — it only ever helped the single-value `type = 'announcement'` lookup.
+-- The surviving `type IN ('traveler','request')` is a ScalarArrayOp scan that
+-- orders rows only within each type value, so the planner ignored the composite
+-- and did a full scan plus top-N sort: 33,333 rows / 12.2 ms against 36 rows /
+-- 0.06 ms here, measured on 50k synthetic rows. See
+-- migrations/2026-08-05-posts-created-at-index.sql for those measurements and
+-- for why the view's expires_at filter cannot become a partial-index predicate.
+DROP INDEX IF EXISTS idx_posts_type_created;
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts (created_at DESC);
 
 DO $$
 BEGIN
@@ -171,88 +175,56 @@ BEGIN
         ALTER TABLE posts ADD CONSTRAINT posts_to_country_check
             CHECK (to_country IS NULL OR to_country ~ '^[A-Z]{2}$');
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'posts_corridor_country_check') THEN
-        ALTER TABLE posts ADD CONSTRAINT posts_corridor_country_check
-            CHECK (corridor_country IS NULL OR corridor_country ~ '^[A-Z]{2}$');
-    END IF;
 END $$;
 
--- Korea is the only corridor the board has ever served, so every announcement
--- written before the column existed belongs to it — including the Uzbek-side
--- ones, which is the point: they were written for the Korea board and must not
--- follow the next corridor that opens.
-UPDATE posts
-SET corridor_country = COALESCE(NULLIF(from_country, 'UZ'), 'KR')
-WHERE type = 'announcement' AND corridor_country IS NULL;
-
--- Announcements — see migrations/2026-08-01-announcements.sql for the reasoning
--- behind each statement in this block.
---
 -- The type CHECK is NOT wrapped in the pg_constraint guard used above: it was
 -- declared inline on the column in CREATE TABLE, so it already exists under the
 -- name `posts_type_check` in every deployed database. The guard would find it
--- and skip, silently leaving the old two-value list in place.
+-- and skip, silently leaving the older list in place.
+--
+-- NOT VALID because the retired announcement rows are kept: Postgres applies a
+-- NOT VALID CHECK to inserts and updates only and never re-scans the table, and
+-- `posts` has no UPDATE policy, so those rows can never be re-examined. New
+-- rows are gated in full.
 ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_type_check;
 ALTER TABLE posts ADD  CONSTRAINT posts_type_check
-    CHECK (type IN ('traveler', 'request', 'announcement'));
+    CHECK (type IN ('traveler', 'request')) NOT VALID;
 
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS headline VARCHAR(120);
 
--- An announcement has no cities and no date; `date` additionally covers a
--- parcel request whose date is negotiable, which previously tried to store the
--- string "flexible" in a DATE column and failed.
+-- `date` covers a parcel request whose date is negotiable, which previously
+-- tried to store the string "flexible" in a DATE column and failed. from_city /
+-- to_city were relaxed for the announcement shape and stay relaxed at the
+-- column level; the constraint below is what makes them mandatory again.
 ALTER TABLE posts ALTER COLUMN from_city DROP NOT NULL;
 ALTER TABLE posts ALTER COLUMN to_city   DROP NOT NULL;
 ALTER TABLE posts ALTER COLUMN date      DROP NOT NULL;
 
 -- Keeps the relaxation above from weakening parcel posts: cities and weight
--- stay mandatory for traveler/request, enforced in the database rather than
--- only in api/posts.ts. NOT VALID so it cannot fail on a legacy row.
+-- stay mandatory, enforced in the database rather than only in api/posts.ts.
+--
+-- No CASE any more — with announcements gone there is one shape, and
+-- posts_type_check above admits nothing else. NOT VALID for both the original
+-- reason (legacy rows predating the constraint) and the new one (the retired
+-- announcement rows, which this predicate would reject).
 ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_shape_by_type_check;
 ALTER TABLE posts ADD  CONSTRAINT posts_shape_by_type_check CHECK (
-    CASE type
-      WHEN 'announcement' THEN
-          -- The headline is optional: the composer is a single text box, so
-          -- only older two-field rows carry one.
-              note     IS NOT NULL AND btrim(note)     <> ''
-          AND date IS NULL
-          AND from_city IS NULL AND to_city IS NULL
-          AND weight = ''
-          AND weight_kg = 0 AND luggage_count = 0
-          AND categories = '{}'::TEXT[] AND category_other IS NULL
-          -- An announcement sits in ONE country: it is a standing service, not
-          -- a delivery in a direction.
-          AND from_country IS NOT NULL
-          AND to_country IS NULL
-          -- ...but the board lists corridors, not countries, and every corridor
-          -- has Uzbekistan on one side — so a note sitting at home cannot say
-          -- which corridor it is for. corridor_country records the answer
-          -- instead of the feed guessing it. See
-          -- migrations/2026-08-01-announcement-corridor.sql.
-          AND corridor_country IS NOT NULL
-          AND corridor_country <> 'UZ'
-          AND from_country IN (corridor_country, 'UZ')
-      ELSE
-              headline IS NULL
-          AND from_city IS NOT NULL AND btrim(from_city) <> ''
-          AND to_city   IS NOT NULL AND btrim(to_city)   <> ''
-          AND btrim(weight) <> ''
-          -- The route countries are the direction of a parcel post, not just
-          -- its filter key, and `authenticated` can insert through PostgREST
-          -- without going past api/posts.ts. A row with neither one renders
-          -- backwards (the card falls back to KR → UZ) and is invisible to
-          -- every corridor filter. See
-          -- migrations/2026-08-01-parcel-route-required.sql.
-          AND from_country IS NOT NULL
-          AND to_country   IS NOT NULL
-          AND from_country <> to_country
-          -- A parcel post's corridor is its route. One fact, one column.
-          AND corridor_country IS NULL
-    END
+        headline IS NULL
+    AND from_city IS NOT NULL AND btrim(from_city) <> ''
+    AND to_city   IS NOT NULL AND btrim(to_city)   <> ''
+    AND btrim(weight) <> ''
+    -- The route countries are the direction of a parcel post, not just its
+    -- filter key, and `authenticated` can insert through PostgREST without
+    -- going past api/posts.ts. A row with neither one renders backwards (the
+    -- card falls back to KR → UZ) and is invisible to every corridor filter.
+    -- See migrations/2026-08-01-parcel-route-required.sql.
+    AND from_country IS NOT NULL
+    AND to_country   IS NOT NULL
+    AND from_country <> to_country
 ) NOT VALID;
 
-CREATE INDEX IF NOT EXISTS idx_posts_user_announcement
-    ON posts (user_id) WHERE type = 'announcement';
+DROP INDEX IF EXISTS idx_posts_corridor;
+DROP INDEX IF EXISTS idx_posts_user_announcement;
 
 -- TODO: Add images column for v2 (e.g. image_url TEXT)
 -- ALTER TABLE posts ADD COLUMN image_url TEXT;
@@ -339,100 +311,21 @@ REVOKE ALL ON FUNCTION get_post_contact(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION get_post_contact(UUID) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
--- One active announcement per author
+-- Retired announcement machinery
 -- ---------------------------------------------------------------------------
--- Parcel ads are one-off; a standing service ad is not, so without a cap one
--- agency can paper the board with the same offer.
---
--- This cannot be a partial unique index: the predicate would need
--- `expires_at >= CURRENT_DATE`, and CURRENT_DATE is STABLE while index
--- predicates must be IMMUTABLE (Postgres rejects it with 42P17). Nor can it
--- live in api/posts.ts alone — `authenticated` can INSERT through PostgREST
--- with the bundled anon key, so the API is not in every writer's path.
--- A BEFORE INSERT trigger has neither problem.
-CREATE OR REPLACE FUNCTION has_active_announcement(p_user UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-STABLE
-AS $$
-    SELECT EXISTS (
-        SELECT 1 FROM posts p
-        WHERE p.user_id = p_user
-          AND p.type = 'announcement'
-          AND p.expires_at >= CURRENT_DATE
-    );
-$$;
-
--- Not granted to `authenticated`: it takes an arbitrary user id, so exposing it
--- would let any logged-in caller probe another user. The trigger calls it as
--- the definer and needs no grant.
-REVOKE ALL ON FUNCTION has_active_announcement(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION has_active_announcement(UUID) TO service_role;
-
--- SECURITY DEFINER is mandatory here, not stylistic. A trigger function runs
--- with the privileges of whoever fired it — `authenticated`, which holds only
--- GRANT SELECT (id, user_id) ON posts. Postgres requires SELECT on every column
--- a statement references, so an invoker-rights version reading `type` and
--- `expires_at` would fail with "permission denied for table posts" and turn
--- every announcement insert into a 500.
---
--- ERRCODE 23505 so supabase-js surfaces error.code and the API can answer 409
--- rather than 500; `posts` has no unique constraint besides the primary key.
-CREATE OR REPLACE FUNCTION enforce_one_active_announcement()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-    IF NEW.type = 'announcement'
-       AND NEW.user_id IS NOT NULL
-       AND has_active_announcement(NEW.user_id)
-    THEN
-        RAISE EXCEPTION 'user already has an active announcement'
-            USING ERRCODE = '23505';
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS one_active_announcement ON posts;
-CREATE TRIGGER one_active_announcement
-    BEFORE INSERT ON posts
-    FOR EACH ROW EXECUTE FUNCTION enforce_one_active_announcement();
-
--- ---------------------------------------------------------------------------
--- An announcement's corridor, when the writer omits it
--- ---------------------------------------------------------------------------
--- corridor_country is mandatory on announcements, but api/posts.ts is not every
--- writer: `authenticated` can INSERT through PostgREST with the bundled anon
--- key, and a cached bundle outlives a deploy. A note sitting in the corridor's
--- far country names its own corridor, so that case is derived rather than
--- refused. A note sitting in the home country is NOT guessed — Uzbekistan is on
--- the near side of every corridor, so there is no honest answer, and it fails
--- posts_shape_by_type_check instead. See
--- migrations/2026-08-02-announcement-corridor-default.sql.
---
--- Unlike the trigger above, this reads no table — it only edits the row being
--- inserted — so it needs no SECURITY DEFINER.
-CREATE OR REPLACE FUNCTION default_announcement_corridor()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    IF NEW.type = 'announcement' AND NEW.corridor_country IS NULL THEN
-        NEW.corridor_country := NULLIF(NEW.from_country, 'UZ');
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS announcement_corridor_default ON posts;
-CREATE TRIGGER announcement_corridor_default
-    BEFORE INSERT ON posts
-    FOR EACH ROW EXECUTE FUNCTION default_announcement_corridor();
+-- Two BEFORE INSERT triggers used to fire on every row written to this table:
+-- one_active_announcement (a one-standing-ad-per-author cap, raising SQLSTATE
+-- 23505 so the API could answer 409) and announcement_corridor_default (which
+-- derived a missing corridor_country from from_country). Both opened with
+-- `IF NEW.type = 'announcement'`, so with the type gone they are pure overhead
+-- on every parcel insert. Dropped along with the functions behind them —
+-- has_active_announcement() had no other caller.
+-- See migrations/2026-08-07-remove-announcements.sql.
+DROP TRIGGER  IF EXISTS one_active_announcement       ON posts;
+DROP TRIGGER  IF EXISTS announcement_corridor_default ON posts;
+DROP FUNCTION IF EXISTS enforce_one_active_announcement();
+DROP FUNCTION IF EXISTS default_announcement_corridor();
+DROP FUNCTION IF EXISTS has_active_announcement(UUID);
 
 -- ---------------------------------------------------------------------------
 -- profiles (Supabase Auth)
@@ -606,7 +499,6 @@ SELECT
     p.direction,
     p.from_country,
     p.to_country,
-    p.corridor_country,
     p.from_city,
     p.to_city,
     p.date,
@@ -625,7 +517,12 @@ SELECT
     p.expires_at
 FROM posts p
 LEFT JOIN profiles pr ON pr.id = p.user_id
-WHERE p.expires_at >= CURRENT_DATE;
+WHERE p.expires_at >= CURRENT_DATE
+  -- Announcement rows are kept but retired: no client has a card for them, and
+  -- the deep-link path (/api/posts?id=…) reads this view too, so hiding them
+  -- here is what stops an orphan arriving somewhere that would render it as a
+  -- parcel post with no cities and no date.
+  AND p.type <> 'announcement';
 
 GRANT SELECT ON public_posts TO anon, authenticated;
 

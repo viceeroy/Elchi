@@ -8,8 +8,7 @@ Full structural reference. For day-to-day conventions see [CLAUDE.md](CLAUDE.md)
 ## 1. What the system does
 
 Elchi is a bulletin board for the Korea ↔ Uzbekistan parcel corridor. Travelers advertise spare
-luggage space; senders advertise parcels needing a ride; agencies advertise standing services.
-The board matches nobody and handles no money — it stores an ad and, to logged-in viewers,
+luggage space; senders advertise parcels needing a ride. The board matches nobody and handles no money — it stores an ad and, to logged-in viewers,
 reveals a contact handle. Everything after that happens off-platform.
 
 Consequences that shape the whole design:
@@ -47,11 +46,11 @@ src/                    React SPA
   translations.ts       Uzbek dictionary
   index.css             Tailwind import + @theme design tokens
   supabaseClient.ts     Browser client (anon key, session persistence)
-  components/           BoardingPass, AnnouncementCard, PostFormModal,
-                        NoteFormModal, PostFab, RouteSelector, ContactFields,
-                        LoginModal, ProfileSheet, FlagIcon
+  components/           BoardingPass, FeedCard, PostFormModal, PostFab,
+                        RouteSelector, ContactFields, LoginModal,
+                        NameGateModal, ProfileSheet, FlagIcon
   notes/                Static editorial cards (data.ts, NoteCard, NotesCarousel, NoteSheet)
-  lib/postPreview.ts    Derives card title/body from free text
+  lib/postPreview.ts    Sanitises free text for a card's clamped note line
   assets/               Logo SVGs
 
 api/                    Vercel serverless functions
@@ -75,42 +74,43 @@ public/ dist/           Static assets / build output
 
 ## 4. Data model
 
-### `posts` — one table, three shapes
+### `posts` — one table, one shape, two sides
 
-A single table holds all three post types; a CHECK constraint keeps each type's columns
-coherent rather than splitting into three tables.
+A single table holds both post types. They share every column; `type` says which side of the
+trade the author is on, and a CHECK constraint keeps the columns coherent.
 
 | Group | Columns |
 |---|---|
-| Identity | `id` UUID PK, `type` (`traveler`/`request`/`announcement`), `user_id` |
-| Route | `from_country`, `to_country`, `corridor_country`, `from_city`, `to_city`, `direction` (legacy) |
-| Trip | `date` (nullable — "negotiable" or N/A) |
+| Identity | `id` UUID PK, `type` (`traveler`/`request`), `user_id` |
+| Route | `from_country`, `to_country`, `from_city`, `to_city`, `direction` (legacy) |
+| Trip | `date` (nullable — "negotiable") |
 | Cargo | `weight_kg`, `luggage_count`, `categories[]`, `category_other`, `weight` (display cache) |
-| Copy | `headline` (announcements), `note` (free text) |
+| Copy | `note` (free text), `headline` (retired — always NULL) |
 | Contact | `contact`, `contact_type`, `contact2`, `contact2_type` |
 | Lifecycle | `created_at`, `expires_at` |
 
 **Countries are structured; cities are free text.** Only ISO alpha-2 country codes are
 filterable. Cities are display-only strings the author typed.
 
-**`corridor_country` exists because every corridor has Uzbekistan on one side.** A parcel post's
-corridor is its route, so the column is NULL there. An announcement sits in *one* country — and
-a note sitting in Uzbekistan could belong to any corridor — so it records its corridor
-explicitly.
+**A post's corridor is its route.** `from_country`/`to_country` name it outright, which is why
+there is no separate corridor column. There used to be: a third type, `announcement` (a standing
+service ad), sat in *one* country, and a note sitting in Uzbekistan could belong to any corridor,
+so `corridor_country` recorded which board it was filed under. Type and column were both removed
+on 2026-08-07 — see [migrations/2026-08-07-remove-announcements.sql](migrations/2026-08-07-remove-announcements.sql).
 
-**`posts_shape_by_type_check`** enforces the split:
+**`posts_shape_by_type_check`** is a single predicate, no longer a `CASE` over the type: no
+`headline`; both cities and `weight` required; both route countries set and different.
 
-- *announcement*: `note` required; no date, no cities, no cargo; `from_country` set,
-  `to_country` NULL, `corridor_country` set and ≠ `UZ` and `from_country ∈ (corridor, UZ)`.
-- *traveler / request*: no headline; both cities and `weight` required; both route countries set
-  and different; `corridor_country` NULL.
-
-Declared `NOT VALID` so legacy rows don't block the migration.
+Declared `NOT VALID` — for legacy rows predating the constraint, and for the announcement rows
+kept in the table. Those rows are never re-checked (`posts` has no UPDATE policy) and never
+readable (`public_posts` filters them out), so they sit inert rather than being deleted.
 
 ### `public_posts` — the read model
 
 A `security_invoker = false` view exposing every column the feed renders **minus** the contact
-values and `user_id`, with `expires_at >= CURRENT_DATE` reproduced inside it. `has_contact2` is
+values and `user_id`, with `expires_at >= CURRENT_DATE` and `type <> 'announcement'` reproduced
+inside it — the latter is what retires the kept announcement rows from every read path,
+including the `?id=` deep link. `has_contact2` is
 computed. Granted to `anon` and `authenticated`. This is the only route anonymous readers have
 into post data.
 
@@ -156,13 +156,6 @@ raises on `auth.uid() IS NULL`, returns exactly one post's handles, and is grant
 `authenticated` and `service_role`. One post per call makes harvesting linear and rate-limitable
 per user.
 
-**Announcement cap.** A BEFORE INSERT trigger (`one_active_announcement`) allows one active
-announcement per author. It cannot be a partial unique index — the predicate needs
-`CURRENT_DATE`, which is STABLE while index predicates must be IMMUTABLE. It raises SQLSTATE
-`23505` so the API can answer 409 rather than 500. `default_announcement_corridor` derives a
-missing corridor from `from_country` when honestly possible, and lets the CHECK reject it
-otherwise.
-
 **Rate limiting** ([lib/rate-limit.ts](lib/rate-limit.ts)) runs through the SECURITY DEFINER
 `check_rate_limit()` so it works with the anon key. It **fails open** — a DB hiccup must not
 lock the board. Client IP prefers `x-vercel-forwarded-for`, then `x-real-ip`, then the
@@ -197,7 +190,7 @@ Two functions. `/api/posts` multiplexes on method and query.
 | Query | Behavior |
 |---|---|
 | — | Paged feed from `public_posts` |
-| `?type=parcel\|announcement\|all` | Type filter. **Default is `parcel`**, not `all`, so an older cached bundle with no announcement card keeps seeing exactly what it saw before |
+| `?type=…` | **Ignored.** One kind of post is left, so there is nothing to narrow to. Deliberately ignored rather than rejected: a cached bundle still sends `parcel`/`announcement`/`all`, and a 400 would turn its old notes tab into an error instead of a feed |
 | `?country=XX` | Corridor filter (the far country; UZ is implied) |
 | `?id=<uuid>` | One post — used for deep links, resolved against the API because a shared post may sit past page one |
 | `?id=<uuid>&fields=contact` | Contact handles. **401 unless authenticated** |
@@ -210,8 +203,7 @@ via a separate ownership query — `user_id` itself never reaches the client.
 Requires a bearer token; inserts through a **user-scoped client** so RLS sees the author's
 `auth.uid()`. Validates type, route countries, categories, date format and range, field lengths,
 spam heuristics, and both contact handles against their declared channel (not by sniffing a
-leading `@`, so the stored type and value can't disagree). Returns `201 {id}`, or `409` when the
-announcement trigger fires.
+leading `@`, so the stored type and value can't disagree). Returns `201 {id}`.
 
 ### `DELETE /api/posts?id=<uuid>`
 
@@ -237,21 +229,21 @@ built lazily for the same reason.
 ### Composition
 
 `App.tsx` is one component holding all page state: the post list and paging, the corridor
-filter (`country`, default `KR`), the feed chips (`parcel` | `notes` | `null`), the composer
-sheet and its initial tab, the selected post and its lazily-revealed contact, the auth session,
-and the toast. Children are presentational.
+filter (`country`, default `KR`), the composer sheet and its initial tab, the selected post and
+its lazily-revealed contact, the auth session, and the toast. Children are presentational.
+
+The `parcel | notes` feed chips are gone with the announcement board — one kind of post means
+nothing to select between, and a lone always-active chip is a label pretending to be a control.
 
 ### Rendering path
 
-`RouteSelector` picks the corridor → the feed fetches `/api/posts?type=all&country=…` → each row
-renders as `BoardingPass` (parcel, airmail-stripe card with a navy stub) or `AnnouncementCard`
-(standing ad, gold stamp, stub showing the posted date instead of a trip date). Tapping a card
-opens the detail sheet; tapping *Bog'lanish* fetches the contact and renders `t.me` / `tel:`
-links built by [lib/contact.ts](lib/contact.ts).
+`RouteSelector` picks the corridor → the feed fetches `/api/posts?country=…` → each row renders
+as `BoardingPass`, whose chrome (silhouette, airmail stripe, badge row, footer) comes from
+`FeedCard`. Tapping a card opens the detail sheet; tapping *Bog'lanish* fetches the contact and
+renders `t.me` / `tel:` links built by [lib/contact.ts](lib/contact.ts).
 
-`PostFab` is a speed dial opening the three composers: `PostFormModal` (traveler / request, two
-tabs, per-field inline validation) and `NoteFormModal` (announcement — one text box plus an
-optional contact).
+`PostFab` is a speed dial with two arms, both opening `PostFormModal` (traveler / request, two
+tabs, per-field inline validation) on the chosen side.
 
 `NotesCarousel` sits above the feed with static editorial cards from
 [src/notes/data.ts](src/notes/data.ts). These are **not** posts: no API, no DB, not filtered.
@@ -261,8 +253,8 @@ Dismissals persist in `localStorage`.
 
 [src/index.css](src/index.css) `@theme` defines the entire visual language: `paper`, `card`,
 `ink`, `blue`, `red`, `gold`, `gold-lit`, `edge`, `rule`, `body`, `faint`, `field`, plus
-`--shadow-card` / `--shadow-card-hover`. Blue marks travelers, red marks requests, gold marks
-announcements. Fonts: Inter Tight (sans), Space Mono (mono, used for stub/tag microcopy).
+`--shadow-card` / `--shadow-card-hover`. Blue marks travelers, red marks requests; gold is the
+board's accent (the contact button, the disclaimer rule). Fonts: Inter Tight (sans), Space Mono (mono, used for stub/tag microcopy).
 
 ### i18n
 
@@ -319,8 +311,12 @@ country codes are validated by regex, not enumeration.
 **A new locale.** Add the arm to `Locale`, fill `translations`, fill `names`/`cityNames` in
 `COUNTRIES`, and reintroduce a switcher. The per-locale shapes already exist everywhere.
 
-**A new post type.** Widen `posts_type_check`, add an arm to `posts_shape_by_type_check`, extend
-`PostType` and `TYPE_FILTERS`, and add a card component. The shape constraint is the contract —
+**A new post type.** Widen `posts_type_check`, turn `posts_shape_by_type_check` back into a
+`CASE` over the type, extend `PostType`, reintroduce a `?type=` filter in
+[api/posts.ts](api/posts.ts), and add a card component. The shape constraint is the contract —
 start there, not in the API.
+[migrations/2026-08-07-remove-announcements.sql](migrations/2026-08-07-remove-announcements.sql)
+is the reverse of that walk, and worth reading first: the third type also needed a feed chip, a
+per-author cap trigger, and a corridor column, none of which the schema hints at.
 
 **Images (planned).** A commented `image_url` column stub sits in the schema.

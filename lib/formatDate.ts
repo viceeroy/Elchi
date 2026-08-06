@@ -26,11 +26,3 @@ export function formatFlexibleDate(
   if (isNaN(d.getTime())) return dateStr;
   return formatDateParts(d, variant, months);
 }
-
-// Formats an announcement's created_at timestamp — always present, never the
-// flexible sentinel. Falls back to "" if it somehow doesn't parse.
-export function formatPostedDate(createdAt: string, months: string[]): string {
-  const d = new Date(createdAt);
-  if (isNaN(d.getTime())) return '';
-  return formatDateParts(d, 'short', months);
-}
