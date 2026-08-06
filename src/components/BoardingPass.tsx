@@ -1,6 +1,6 @@
 import React from "react";
 import { Post, Locale, Translations } from "../types";
-import { Briefcase, Package } from "lucide-react";
+import { Plane, Briefcase } from "lucide-react";
 import { COUNTRIES, getCountry, isHubCity } from "../constants";
 import { stickerStyle } from "../lib/stickerStyle";
 import { flattenNote } from "../lib/postPreview";
@@ -107,9 +107,9 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
             the icon and the sticker colour. */}
         <div style={stickerStyle(post.type)}>
           {isTraveler ? (
-            <Briefcase className="w-3 h-3 text-card" />
+            <Plane className="w-3 h-3 text-card" />
           ) : (
-            <Package className="w-3 h-3 text-card" />
+            <Briefcase className="w-3 h-3 text-card" />
           )}
         </div>
 

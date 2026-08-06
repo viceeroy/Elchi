@@ -1,13 +1,13 @@
 import React from "react";
-import { X, Briefcase, Package, Info, Megaphone } from "lucide-react";
+import { X, Plane, Briefcase, Info, Megaphone } from "lucide-react";
 import { Locale } from "../types";
 import { Note } from "./data";
 import { translations } from "../translations";
 import { useDialog } from "../hooks/useDialog";
 
 const TYPE_ICON = {
-  traveler: { Icon: Briefcase, bg: "var(--color-gold)" },
-  request: { Icon: Package, bg: "var(--color-red)" },
+  traveler: { Icon: Plane, bg: "var(--color-gold)" },
+  request: { Icon: Briefcase, bg: "var(--color-red)" },
   note: { Icon: Megaphone, bg: "var(--color-gold)" },
 } as const;
 

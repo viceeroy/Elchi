@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Plus, Briefcase, Package, Megaphone } from "lucide-react";
+import { Plus, Plane, Briefcase, Megaphone } from "lucide-react";
 import { Translations } from "../types";
 
 interface PostFabProps {
@@ -48,8 +48,8 @@ export const PostFab: React.FC<PostFabProps> = ({
       key: "traveler",
       // The same three lucide marks the feed and the detail sheet use for the
       // three post types, so an icon means one thing across the whole board.
-      Icon: Briefcase,
-      label: t.fabTravelerLabel || "Uchaman",
+      Icon: Plane,
+      label: t.fabTravelerLabel || "Uchish",
       // Blue, red and gold exactly as the traveler/request/note stamps on the
       // cards (see BoardingPass, AnnouncementCard), so the dial is
       // colour-readable before the label is, and tilted alternating ways.
@@ -60,7 +60,7 @@ export const PostFab: React.FC<PostFabProps> = ({
     },
     {
       key: "request",
-      Icon: Package,
+      Icon: Briefcase,
       label: t.fabRequestLabel || "Pochta",
       color: "var(--color-red)",
       textColor: "var(--color-card)",

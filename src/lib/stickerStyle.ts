@@ -3,7 +3,7 @@ import { PostType } from "../types";
 
 /**
  * The corner sticker every feed card wears — an icon chip now, one icon per
- * post type ("UCHAMAN" → briefcase, "POCHTA BOR" → parcel, "E'LON" → megaphone).
+ * post type ("UCHISH" → plane, "POCHTA BOR" → suitcase, "E'LON" → megaphone).
  *
  * One definition for all three post types. This lived as a ~15-line object
  * literal copy-pasted into BoardingPass and AnnouncementCard, identical but for
@@ -19,7 +19,7 @@ import { PostType } from "../types";
  *
  * In-flow, not absolutely positioned — it used to hang off the card's top edge;
  * this keeps it anchored inside the card at a fixed spot regardless of the
- * label's length ("Uchaman" vs "Pochta bor").
+ * label's length ("Uchish" vs "Pochta bor").
  */
 
 /** Geometry and type — identical for every post type, which is the point. */
@@ -29,7 +29,7 @@ const STICKER_BASE: CSSProperties = {
   fontSize: "10.5px",
   letterSpacing: "1px",
   textTransform: "uppercase",
-  // Squared up around a lone icon: the labels ("Uchaman", "Pochta bor") left the
+  // Squared up around a lone icon: the labels ("Uchish", "Pochta bor") left the
   // badge carrying copy, so the side padding had to clear two words; with the
   // word gone, that 12px shrank to 8px so the sticker reads as an icon chip.
   padding: "6px 8px",

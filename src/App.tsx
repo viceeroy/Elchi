@@ -23,7 +23,7 @@ import { supabaseBrowser } from "./supabaseClient";
 // umbrella at all (see supabaseClient.ts), and a type-only import back to it
 // invites someone to "tidy" it into a value import and quietly restore 86 kB.
 import type { Session } from "@supabase/auth-js";
-import { Send, ShieldAlert, Sparkles, MessageSquare, Briefcase, Package, Megaphone, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
+import { Send, ShieldAlert, Sparkles, MessageSquare, Plane, Briefcase, Megaphone, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 // Every one of these is a modal or a bottom sheet: none of them is on screen at
@@ -901,9 +901,9 @@ export default function App() {
                 {selectedPost.type === "announcement" ? (
                   <Megaphone className="w-3.5 h-3.5 text-ink" />
                 ) : selectedPost.type === "traveler" ? (
-                  <Briefcase className="w-3.5 h-3.5 text-ink" />
+                  <Plane className="w-3.5 h-3.5 text-ink" />
                 ) : (
-                  <Package className="w-3.5 h-3.5 text-ink" />
+                  <Briefcase className="w-3.5 h-3.5 text-ink" />
                 )}
                 {selectedPost.type === "announcement"
                   ? (t.announcementTag || "E'lon")

@@ -12,7 +12,7 @@ import { PARCEL_CATEGORY_IDS } from "../../lib/parcelCategories";
 import { buildWeightString } from "../../lib/weight";
 import { pluralizeChamadon } from "../translations";
 import { FLEXIBLE_DATE } from "../../lib/date";
-import { X, Briefcase, Package, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
+import { X, Plane, Briefcase, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
 import { ContactFields } from "./ContactFields";
 import { useDialog } from "../hooks/useDialog";
 
@@ -363,7 +363,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 : "border border-transparent text-body hover:text-blue"
             }`}
           >
-            <Briefcase className="w-4 h-4" />
+            <Plane className="w-4 h-4" />
             {t.tabTraveler}
           </button>
           <button
@@ -375,7 +375,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 : "border border-transparent text-body hover:text-red"
             }`}
           >
-            <Package className="w-4 h-4" />
+            <Briefcase className="w-4 h-4" />
             {t.tabRequest}
           </button>
         </div>
