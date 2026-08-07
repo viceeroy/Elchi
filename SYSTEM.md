@@ -61,6 +61,7 @@ lib/                    Shared server modules (some client-safe)
   supabase.ts           Anon-key server client
   supabase-admin.ts     Service-role client, lazily built, SERVER ONLY
   rate-limit.ts         Postgres-backed limiter + trustworthy client IP
+  verify-token.ts       Per-token memo over auth.getUser() (60s TTL, in-memory)
   contact.ts            Handle validation + tel:/t.me link builders (shared)
   contact.test.ts       node:test unit tests
 
@@ -177,7 +178,21 @@ Current buckets (max / window seconds):
 **Transport.** [vercel.json](vercel.json) sets a strict CSP (self + telegram.org + the Supabase
 project + Vercel insights), `X-Frame-Options: DENY`, HSTS, `Permissions-Policy` denying
 geolocation/mic/camera/payment/USB, and `Cache-Control: private, no-store` on every API
-response — post data is personal and must never sit in an intermediary cache.
+response — post data is personal and must never sit in an intermediary cache. This rules out any
+HTTP-level (shared/intermediary) cache; the caches below are all in-process or in-tab, never on
+the wire.
+
+**Token verification memo.** [lib/verify-token.ts](lib/verify-token.ts) sits in front of
+`auth.getUser()`, called from `resolveUser` in [api/posts.ts](api/posts.ts) on every authed
+route. A verified `{token → user id}` pair is kept in-memory on the warm instance for 60s (500
+entries, LRU-ish by insertion order), capped to never outlive the token's own `exp`. Only
+successful verifications are cached — a failed one might be a transient network error, not a bad
+token, and caching that would lock a real user out for the TTL. Safe because `auth.getUser` only
+checks JWT signature + expiry, not a revocation list — sign-out doesn't invalidate an
+already-issued access token upstream, so a token this memo still honours is one GoTrue would
+still honour too. Expired tokens are rejected locally from the `exp` claim, no round trip; that
+check only ever rejects, so a forged `exp` still needs to survive the signature check upstream on
+a cache miss.
 
 ---
 
@@ -248,6 +263,27 @@ tabs, per-field inline validation) on the chosen side.
 `NotesCarousel` sits above the feed with static editorial cards from
 [src/notes/data.ts](src/notes/data.ts). These are **not** posts: no API, no DB, not filtered.
 Dismissals persist in `localStorage`.
+
+### Client-side caches
+
+Two in-memory caches in `App.tsx`, both `React.useRef` (never trigger a render on write, never
+survive a reload — deliberately, since a stale feed or a stale contact 30 minutes from now is
+worse than a wasted fetch):
+
+- **`feedCache`** — last page per `corridor|viewerId`. The corridor toggle is two adjacent
+  buttons, so flipping it is routine, and `fetchPosts` used to blank to skeleton and re-fetch a
+  page just seen. Now it paints from cache immediately (stale-while-revalidate) and the network
+  request still fires underneath — the board is other people's posts, so staleness is bounded to
+  "until the in-flight request lands," not skipped. Keyed on viewer too, since `is_mine` decides
+  the delete button. Any write (`handlePostSubmitSuccess`, delete, name-gate save) calls
+  `refreshFeed()`, which clears the **whole** cache rather than one key — a post lands in one
+  corridor while the author may be viewing another.
+- **`contactCache`** — revealed handles per `viewerId|postId`. Closing the detail sheet used to
+  drop `revealedContact`, so re-opening a post re-hit `/api/posts?...&fields=contact`, the one
+  endpoint with a tight per-account cap (60/600s — see §5). Re-comparing a couple of posts is
+  ordinary browsing, not the scraping that cap defends against, so paying for it twice was the
+  wrong bill. Does not weaken the reveal gate: the server already decided once for this account,
+  and only its answer is retained.
 
 ### Design tokens
 
