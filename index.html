@@ -4,6 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- Webfonts. src/index.css names "Inter Tight" and "Space Mono" in
+         --font-sans/--font-mono, body, and three components' inline styles, but
+         nothing ever fetched them — no <link>, no @font-face, no @import, no
+         @fontsource dependency — so every glyph in the product silently fell
+         back to the system sans/mono. The CSP in vercel.json already whitelists
+         fonts.googleapis.com under style-src and fonts.gstatic.com under
+         font-src, i.e. it was written for exactly this pair of links; loading
+         them here is what the header was always waiting for.
+
+         Weight ranges match what the codebase actually asks for, not the full
+         family. Inter Tight carries 400 (body), 500, 600, 700, 800 and 900 —
+         it is a variable font, so 400..900 is one file, not six. Space Mono is
+         static and only ships 400 and 700, which is also all the mono elements
+         use; asking for anything else would silently synthesise.
+
+         display=swap so the board's text is readable during the font fetch.
+         Uzbek is Latin-script here, so no subset beyond the default is needed. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..900&family=Space+Mono:wght@400;700&display=swap"
+    />
+
     <title>Elchi — Chamadoningizda joy bormi? | Bepul e'lon taxtasi</title>
     <meta
       name="description"

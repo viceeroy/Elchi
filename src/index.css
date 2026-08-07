@@ -86,7 +86,14 @@ body {
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: var(--color-rule);
-  border-radius: 10px;
+  /* Was a one-off 10px, outside DESIGN.md's rounded scale. The track is 5px
+     tall, so anything past ~2.5px already reads fully rounded — this is
+     DESIGN.md's `pill` value (9999px), the same shape chips use via
+     Tailwind's rounded-full, rather than a second magic number that happens
+     to look the same. Tailwind has no --radius-full custom property to
+     reference (rounded-full compiles to a static literal), so this is
+     written the same way DESIGN.md's token table itself does. */
+  border-radius: 9999px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: var(--color-gold);
@@ -106,6 +113,17 @@ body {
 
 .animate-popin {
   animation: popin 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.15) forwards;
+}
+
+/* The 1.15 in that bezier's y2 is what overshoots — the curve runs past its
+   own endpoint before settling, which is what reads as a "bounce" on the
+   toast's translate and scale. Under reduced motion this swaps to the plain
+   fadein keyframe already declared below: opacity only, no transform, no
+   overshoot, still an entrance rather than an instant appear/disappear. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-popin {
+    animation: fadein 0.2s ease forwards;
+  }
 }
 
 /* Modal backdrop fade-in */

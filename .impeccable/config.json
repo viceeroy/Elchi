@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-08-07T15:56:11.949Z",
+        "reason": "User confirmed Inter Tight is intentional — documented type choice in DESIGN.md's Airmail Board pairing"
+      }
+    ]
+  }
+}

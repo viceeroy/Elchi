@@ -30,9 +30,22 @@ import { Post, Translations } from "../types";
  * ONE column, and a card that sizes to its own text makes that column ragged. It
  * is also the number the note clamp was measured against (see the arithmetic in
  * BoardingPass.tsx) — changing it here changes what fits there.
+ *
+ * overflow-hidden is the floor under that arithmetic, not a replacement for it.
+ * The note clamp was measured at 218px of content in this 220px shell at 375px
+ * — a 2px margin — and that margin evaporates at 200% browser text zoom, or
+ * once a longer country pair (KZ/TJ/KG/TM, commented out in src/constants.ts)
+ * makes the route line wrap to a second line the layout didn't budget for.
+ * Without this, overflow used to paint past the card's bottom edge and over
+ * the card stacked below it in the same column — silent corruption of the
+ * NEXT post's card, not just this one's. min-h instead of h would have let
+ * the card grow to absorb that, but a variable-height card re-opens the
+ * ragged-column problem h-[220px] exists to prevent (see above), and the
+ * Fixed Pass design rule treats 220px as an invariant, not a default. Clipping
+ * respects that invariant; growing the card would trade it away.
  */
 export const FEED_CARD_SHELL =
-  "relative flex flex-col h-[220px] bg-card rounded-xl border border-edge shadow-[var(--shadow-card)]";
+  "relative flex flex-col h-[220px] overflow-hidden bg-card rounded-xl border border-edge shadow-[var(--shadow-card)]";
 
 /**
  * The padded column inside the shell.
@@ -97,17 +110,62 @@ const AIRMAIL_WEAVE =
 
 interface FeedCardProps {
   post: Post;
+  t: Translations;
   onOpen: () => void;
   children: React.ReactNode;
 }
 
-/** Silhouette + stripe + padded column. `children` are the card's own body. */
-export const FeedCard: React.FC<FeedCardProps> = ({ post, onOpen, children }) => (
+/**
+ * Silhouette + stripe + padded column. `children` are the card's own body.
+ *
+ * role="button" + tabIndex + onKeyDown matches ../notes/NoteCard.tsx, the
+ * other click-to-open card in this feed column — that one already had it,
+ * this one didn't, and the two need to behave identically since they stack in
+ * the same list. Without it the whole card was reachable only by tabbing to
+ * the footer's "open" button and unreachable by Enter/Space anywhere else on
+ * its surface, despite the entire card being the visual click target.
+ *
+ * aria-label names the article the same way BoardingPass makes the type
+ * audible: type + route. A screen reader landing on this element with no
+ * name would announce "article" or "button" with nothing to identify which
+ * post it is.
+ */
+export const FeedCard: React.FC<FeedCardProps> = ({ post, t, onOpen, children }) => (
   <article
     onClick={onOpen}
-    className={`group ${FEED_CARD_SHELL} transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]`}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onOpen();
+      }
+    }}
+    aria-label={post.type === "traveler" ? t.travelerTag : t.requestTag}
+    /* motion-safe on the translate only, not the shadow: a user with
+       prefers-reduced-motion set still gets the lift shadow on hover — that
+       alone communicates "this is interactive and you're on it" without the
+       4px transform some motion-sensitive users react to. Gating the whole
+       hover behind motion-safe would silently drop hover feedback entirely
+       for them, which is worse than what it fixes. */
+    /* transition-[transform,box-shadow], not transition-all: those are the
+       only two properties the hover state actually changes (translate +
+       shadow). transition-all was animating every property on the element,
+       including ones nothing ever touches, for no visual difference — narrower
+       is strictly cheaper and documents what's actually meant to move. */
+    className={`group ${FEED_CARD_SHELL} transition-[transform,box-shadow] duration-300 cursor-pointer motion-safe:hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]`}
     id={`post-card-${post.id}`}
   >
+    {/* Inline style is an intentional exception here, not drift: the Token-
+        Or-Nothing rule (see DESIGN.md, Elevation & Depth) bans inline
+        box-shadow specifically, because an inline shadow silently outranks
+        the Tailwind hover shadow class sitting next to it. This is a
+        `background`, not a `shadow`, and it has no sibling utility class to
+        lose a specificity fight with — the repeating-gradient the rule is
+        built from can't be expressed as a Tailwind arbitrary value without
+        losing the token references (var(--color-blue) etc.) inside it, so it
+        stays as AIRMAIL_WEAVE, a single named constant, rather than a
+        literal repeated per call site. */}
     <div
       className="absolute left-0 top-0 bottom-0 w-2 rounded-l-xl opacity-90 pointer-events-none"
       style={{
@@ -159,7 +217,12 @@ export const FeedCardFooter: React.FC<FeedCardFooterProps> = ({
         e.stopPropagation();
         onOpen();
       }}
-      className="flex-shrink-0 font-mono text-[11px] bg-gold text-ink border-none py-2 px-3 rounded-md font-bold cursor-pointer tracking-wider leading-none hover:bg-gold-lit transition-colors shadow-sm"
+      /* py-2 (27px tall) cleared WCAG 2.5.8's 24px AA floor but sat well under
+         the 44px comfort target on a mobile-first board. py-2.5 buys 4px
+         (→31px) without visibly changing the footer row's proportions — the
+         whole card is the same click target regardless, so this is a comfort
+         bump, not a fix for something that was failing. */
+      className="flex-shrink-0 font-mono text-[11px] bg-gold text-ink border-none py-2.5 px-3 rounded-md font-bold cursor-pointer tracking-wider leading-none hover:bg-gold-lit transition-colors shadow-sm"
       id={`contact-btn-${post.id}`}
     >
       {t.contactBtn}

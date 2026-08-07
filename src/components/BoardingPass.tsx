@@ -101,22 +101,29 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
        is what squeezed the note preview down to a single line. The stub, its
        dashed perforation and its two punch notches are all gone; the date moved
        up into the meta line and the button moved down into the footer. */
-    <FeedCard post={post} onOpen={onOpen}>
+    <FeedCard post={post} t={t} onOpen={onOpen}>
       <FeedCardBadgeRow>
-        {/* Traveler / Request Tag Badge — icon only; the post type reads from
-            the icon and the sticker colour. */}
-        <div style={stickerStyle(post.type)}>
+        {/* Traveler / Request Tag Badge — icon only visually, so the type still
+            needs a spoken name: sighted users read colour + icon, but a screen
+            reader gets nothing from either. travelerTag/requestTag are the old
+            text labels the icon replaced ("Uchish" / "Pochta bor") — reused
+            here as the accessible name rather than inventing a second string. */}
+        <div style={stickerStyle(post.type)} role="img" aria-label={isTraveler ? t.travelerTag : t.requestTag}>
           {isTraveler ? (
-            <Plane className="w-3 h-3 text-card" />
+            <Plane className="w-3 h-3 text-card" aria-hidden="true" />
           ) : (
-            <Briefcase className="w-3 h-3 text-card" />
+            <Briefcase className="w-3 h-3 text-card" aria-hidden="true" />
           )}
         </div>
 
-        {/* Destination Header (flight route is always Korea/Uzbekistan). */}
+        {/* Destination Header (flight route is always Korea/Uzbekistan). The
+            arrow is decorative — the route is already spelled out in hubFrom/
+            hubTo either side of it — so it's aria-hidden. Colour moved off
+            `gold` (2.50:1 on card, background-only per the token's own rule)
+            onto `gold-deep`, which clears AA (5.35:1). */}
         <div className={`${FEED_CARD_TITLE} flex items-center gap-2.5`}>
           <span>{hubFrom}</span>
-          <span className="text-gold flex items-center">
+          <span className="text-gold-deep flex items-center" aria-hidden="true">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />

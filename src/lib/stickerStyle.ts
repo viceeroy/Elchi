@@ -40,7 +40,12 @@ const STICKER_BASE: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  boxShadow: "0 3px 8px rgba(27,42,74,0.15)",
+  // Was the literal rgba(27,42,74,0.15) — ink's own rgb() triple with alpha
+  // baked in by hand. color-mix expresses the same value off --color-ink
+  // instead of a second, driftable copy of it; if ink ever moves, this moves
+  // with it. Same technique Tailwind's own opacity utilities already compile
+  // to elsewhere in this app (e.g. bg-ink/30), so it isn't a new dependency.
+  boxShadow: "0 3px 8px color-mix(in srgb, var(--color-ink) 15%, transparent)",
 };
 
 /**
@@ -50,12 +55,16 @@ const STICKER_BASE: CSSProperties = {
  */
 const STICKER_VARIANTS: Record<PostType, CSSProperties> = {
   traveler: {
-    border: "1px dashed rgba(255,255,255,0.4)",
+    // Was the literal rgba(255,255,255,0.4). No token in the palette is
+    // plain white — the closest is --color-card (#FCFBF6, near-white by
+    // design) — so this reads as "card, translucent" rather than a raw
+    // white nobody named. Same color-mix technique as the shadow above.
+    border: "1px dashed color-mix(in srgb, var(--color-card) 40%, transparent)",
     background: "var(--color-blue)",
     color: "var(--color-card)",
   },
   request: {
-    border: "1px dashed rgba(255,255,255,0.4)",
+    border: "1px dashed color-mix(in srgb, var(--color-card) 40%, transparent)",
     background: "var(--color-red)",
     color: "var(--color-card)",
   },

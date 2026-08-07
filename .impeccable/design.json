@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T00:00:00.000Z",
+  "title": "Design System: Elchi",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Aged Cream",
+        "canonical": "#EDE9DC",
+        "tonalRamp": ["#2A2721", "#443F35", "#5F594B", "#7B7462", "#98907B", "#B5AD97", "#D3CCB8", "#F3EFE4"]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Letter Stock",
+        "canonical": "#FCFBF6",
+        "tonalRamp": ["#2B2A24", "#454338", "#605D4E", "#7C7866", "#99947F", "#B6B199", "#D4CFB6", "#F4F2E7"]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Envoy Navy",
+        "canonical": "#1B2A4A",
+        "tonalRamp": ["#0B1120", "#131E36", "#1B2A4A", "#284070", "#3A5B99", "#6484BC", "#9CB2D9", "#D6E0F0"]
+      },
+      "blue": {
+        "role": "primary",
+        "displayName": "Airmail Blue",
+        "canonical": "#2A4B8D",
+        "tonalRamp": ["#0D1830", "#152648", "#1F3866", "#2A4B8D", "#3C68B8", "#6B92D2", "#A2BDE6", "#DBE6F6"]
+      },
+      "red": {
+        "role": "secondary",
+        "displayName": "Postal Red",
+        "canonical": "#B53333",
+        "tonalRamp": ["#2E0D0D", "#4C1616", "#6D2020", "#8F2A2A", "#B53333", "#D06060", "#E49C9C", "#F6DCDC"]
+      },
+      "gold": {
+        "role": "tertiary",
+        "displayName": "Stamp Gold",
+        "canonical": "#C79A3E",
+        "tonalRamp": ["#2E2209", "#4B380F", "#684E16", "#87651D", "#A67D26", "#C79A3E", "#DFBE78", "#F4E6C4"]
+      },
+      "gold-lit": {
+        "role": "tertiary",
+        "displayName": "Stamp Gold, Lit",
+        "canonical": "#D9AC50",
+        "tonalRamp": ["#33260A", "#523E11", "#725619", "#936F21", "#B4892B", "#D9AC50", "#E9CB8B", "#F8EED2"]
+      },
+      "gold-deep": {
+        "role": "tertiary",
+        "displayName": "Deep Gold",
+        "canonical": "#816428",
+        "tonalRamp": ["#241B07", "#3B2D0C", "#534012", "#6B5219", "#816428", "#A88743", "#CCB183", "#EDE2C6"]
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Envelope Edge",
+        "canonical": "#E9E5D8",
+        "tonalRamp": ["#28261F", "#413E33", "#5C5847", "#787360", "#948F79", "#B1AC95", "#CFCBB4", "#EFECE1"]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Ruled Line",
+        "canonical": "#E4E0D2",
+        "tonalRamp": ["#26241D", "#3F3C31", "#595544", "#75705E", "#918C76", "#AEA992", "#CCC7B1", "#ECE9DE"]
+      },
+      "body": {
+        "role": "neutral",
+        "displayName": "Written Grey",
+        "canonical": "#5A6272",
+        "tonalRamp": ["#14171C", "#232830", "#343A45", "#464D5B", "#5A6272", "#828998", "#AFB4BF", "#DDDFE5"]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Docket Grey",
+        "canonical": "#64686F",
+        "tonalRamp": ["#17181A", "#26282C", "#37393E", "#4A4C52", "#5E6067", "#64686F", "#A0A3AA", "#DBDCDF"]
+      },
+      "faint-on-ink": {
+        "role": "neutral",
+        "displayName": "Docket Grey on Ink",
+        "canonical": "#9FA4AF",
+        "tonalRamp": ["#1B1D21", "#2C2F35", "#3F434A", "#545861", "#6A6F79", "#828892", "#9FA4AF", "#DCDEE3"]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Field Edge",
+        "canonical": "#D8D3C4",
+        "tonalRamp": ["#24221B", "#3B382D", "#54503F", "#6F6A54", "#8A856B", "#A7A186", "#C4BFA5", "#E6E3D6"]
+      },
+      "green": {
+        "role": "tertiary",
+        "displayName": "Dispatch Green",
+        "canonical": "#047857",
+        "tonalRamp": ["#02241A", "#033A2A", "#04513A", "#04684B", "#047857", "#0AA678", "#4FD3AB", "#BEF0DF"]
+      },
+      "green-deep": {
+        "role": "tertiary",
+        "displayName": "Dispatch Green, Deep",
+        "canonical": "#065F46",
+        "tonalRamp": ["#021D15", "#032F22", "#04412F", "#05503B", "#065F46", "#0A9670", "#43C79E", "#B8ECDA"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Route (large)", "purpose": "The card's country-to-country route line at sm and up." },
+      "headline": { "displayName": "Route (small)", "purpose": "The same route line below sm." },
+      "title": { "displayName": "Hard Fact", "purpose": "Flight date and cargo weight — always bold, always ink." },
+      "body": { "displayName": "Written Copy", "purpose": "Note previews and sheet copy. Clamped to two lines on a card." },
+      "meta": { "displayName": "Author Line", "purpose": "The card footer's left-hand author string." },
+      "label": { "displayName": "Stamped Label", "purpose": "Stamp chips, field labels, composer section headers. Mono, uppercase, wide-tracked." },
+      "stub": { "displayName": "Machine Fact", "purpose": "City line, chips, counters — small mono facts that are not labels." }
+    },
+    "shadows": [
+      {
+        "name": "card-rest",
+        "value": "0 1px 2px rgba(27, 42, 74, 0.04), 0 10px 28px -18px rgba(27, 42, 74, 0.18)",
+        "purpose": "Every card and note at rest. Navy-tinted, wide, negative spread — a diffusion under the stock, not an edge."
+      },
+      {
+        "name": "card-hover",
+        "value": "0 2px 6px rgba(27, 42, 74, 0.06), 0 18px 40px -20px rgba(27, 42, 74, 0.28)",
+        "purpose": "Hover lift, paired with a 4px upward translate over 300ms."
+      },
+      {
+        "name": "stamp",
+        "value": "0 3px 8px rgba(27, 42, 74, 0.15)",
+        "purpose": "The rubber-stamp chip's own shadow, so it reads as applied to the card rather than printed into it."
+      }
+    ],
+    "motion": [
+      { "name": "card-lift", "value": "all 300ms", "purpose": "Card hover: translate + shadow, together." },
+      { "name": "state-color", "value": "colors 150ms ease", "purpose": "Button and chip fill changes. Colour only; no transform." },
+      { "name": "sheet-in", "value": "slideup 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)", "purpose": "Bottom sheet and modal entrance." },
+      { "name": "toast-in", "value": "popin 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.15)", "purpose": "Toast entrance — the one overshoot in the system." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" }
+    ],
+    "containers": [
+      { "name": "column", "value": "680px", "purpose": "The single feed column, centred, 20px inset at every width." },
+      { "name": "sheet", "value": "560px", "purpose": "Bottom sheets and modals." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Feed Card",
+      "kind": "card",
+      "refersTo": "card-feed",
+      "description": "The board's signature object: a fixed 220px letter-stock rectangle with the airmail weave down its left edge.",
+      "html": "<article class=\"ds-feed-card\"><span class=\"ds-feed-card-stripe\"></span><div class=\"ds-feed-card-inner\"><div class=\"ds-feed-card-row\"><span class=\"ds-stamp ds-stamp-traveler\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z\"/></svg></span><span class=\"ds-feed-card-title\">Koreya <span class=\"ds-feed-card-arrow\">&#9992;</span> O&rsquo;zbekiston</span></div><div class=\"ds-feed-card-meta\"><span class=\"ds-feed-card-city\">Incheon &rarr; Samarqand</span><span class=\"ds-feed-card-fact\">12 avg</span></div><div class=\"ds-feed-card-fact\">8 kg + 1 chamadon</div><p class=\"ds-feed-card-note\">Hujjat va kichik sovg&rsquo;alar olib ketaman. Og&rsquo;ir narsa emas.</p><div class=\"ds-feed-card-footer\"><span class=\"ds-feed-card-author\">Bobur K.</span><button class=\"ds-btn-open\">ALOQA</button></div></div></article>",
+      "css": ".ds-feed-card { position: relative; display: flex; flex-direction: column; height: 220px; background: var(--color-card, #FCFBF6); border: 1px solid var(--color-edge, #E9E5D8); border-radius: 12px; box-shadow: 0 1px 2px rgba(27,42,74,0.04), 0 10px 28px -18px rgba(27,42,74,0.18); transition: all 300ms; cursor: pointer; } .ds-feed-card:hover { transform: translateY(-4px); box-shadow: 0 2px 6px rgba(27,42,74,0.06), 0 18px 40px -20px rgba(27,42,74,0.28); } .ds-feed-card-stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 8px; border-top-left-radius: 12px; border-bottom-left-radius: 12px; opacity: 0.9; border-right: 1px solid var(--color-rule, #E4E0D2); background: repeating-linear-gradient(-45deg, var(--color-blue, #2A4B8D), var(--color-blue, #2A4B8D) 6px, var(--color-card, #FCFBF6) 6px, var(--color-card, #FCFBF6) 12px, var(--color-red, #B53333) 12px, var(--color-red, #B53333) 18px, var(--color-card, #FCFBF6) 18px, var(--color-card, #FCFBF6) 24px); } .ds-feed-card-inner { display: flex; flex: 1; min-height: 0; flex-direction: column; justify-content: flex-start; gap: 8px; padding: 20px; } .ds-feed-card-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; } .ds-feed-card-title { flex: 1; min-width: 12rem; font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif; font-weight: 700; font-size: 17px; line-height: 1.25; letter-spacing: -0.015em; color: var(--color-ink, #1B2A4A); } .ds-feed-card-arrow { color: var(--color-gold, #C79A3E); } .ds-feed-card-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; } .ds-feed-card-city { font-family: 'Space Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.025em; line-height: 1; color: var(--color-faint, #64686F); } .ds-feed-card-fact { font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif; font-weight: 700; font-size: 15px; line-height: 1.25; color: var(--color-ink, #1B2A4A); } .ds-feed-card-note { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--color-body, #5A6272); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; } .ds-feed-card-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--color-rule, #E4E0D2); display: flex; align-items: center; justify-content: space-between; gap: 12px; } .ds-feed-card-author { font-size: 13px; color: var(--color-faint, #64686F); }"
+    },
+    {
+      "name": "Stamp Chip — Traveler",
+      "kind": "chip",
+      "refersTo": "stamp-traveler",
+      "description": "The rubber-stamp corner chip on a traveler post. Icon only; colour carries the type.",
+      "html": "<span class=\"ds-stamp ds-stamp-traveler\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z\"/></svg></span>",
+      "css": ".ds-stamp { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-family: 'Space Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 6px 8px; border-radius: 4px; border: 1px dashed rgba(255,255,255,0.4); box-shadow: 0 3px 8px rgba(27,42,74,0.15); } .ds-stamp-traveler { background: var(--color-blue, #2A4B8D); color: var(--color-card, #FCFBF6); }"
+    },
+    {
+      "name": "Stamp Chip — Request",
+      "kind": "chip",
+      "refersTo": "stamp-request",
+      "description": "The same chip on a parcel-request post. Identical geometry; only the fill differs.",
+      "html": "<span class=\"ds-stamp ds-stamp-request\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"7\" rx=\"2\"/><path d=\"M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/></svg></span>",
+      "css": ".ds-stamp-request { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-family: 'Space Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 6px 8px; border-radius: 4px; border: 1px dashed rgba(255,255,255,0.4); box-shadow: 0 3px 8px rgba(27,42,74,0.15); background: var(--color-red, #B53333); color: var(--color-card, #FCFBF6); }"
+    },
+    {
+      "name": "Open-Post Button",
+      "kind": "button",
+      "refersTo": "button-open",
+      "description": "The gold action in every card footer. Opens the post; it does not reveal a handle.",
+      "html": "<button class=\"ds-btn-open\">ALOQA</button>",
+      "css": ".ds-btn-open { flex-shrink: 0; font-family: 'Space Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; line-height: 1; background: var(--color-gold, #C79A3E); color: var(--color-ink, #1B2A4A); border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; box-shadow: 0 1px 2px rgba(27,42,74,0.06); transition: background-color 150ms ease; } .ds-btn-open:hover { background: var(--color-gold-lit, #D9AC50); } .ds-btn-open:focus-visible { outline: 2px solid var(--color-blue, #2A4B8D); outline-offset: 2px; }"
+    },
+    {
+      "name": "Submit Button",
+      "kind": "button",
+      "refersTo": "button-submit",
+      "description": "The full-width primary action at the bottom of the composer sheet.",
+      "html": "<button class=\"ds-btn-submit\">E&rsquo;lon berish</button>",
+      "css": ".ds-btn-submit { width: 100%; font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif; font-size: 16px; font-weight: 700; background: var(--color-blue, #2A4B8D); color: var(--color-card, #FCFBF6); border: none; padding: 14px 16px; border-radius: 8px; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-submit:hover { background: var(--color-ink, #1B2A4A); } .ds-btn-submit:focus-visible { outline: 2px solid var(--color-ink, #1B2A4A); outline-offset: 2px; } .ds-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action on paper — load-more, sign-in. Carries the system's one press affordance.",
+      "html": "<button class=\"ds-btn-ghost\">Ko&rsquo;proq</button>",
+      "css": ".ds-btn-ghost { font-family: 'Space Mono', ui-monospace, monospace; font-size: 12px; font-weight: 700; background: var(--color-card, #FCFBF6); color: var(--color-ink, #1B2A4A); border: 1px solid var(--color-field, #D8D3C4); padding: 12px 24px; border-radius: 12px; cursor: pointer; box-shadow: 0 1px 2px rgba(27,42,74,0.06); transition: all 150ms ease; } .ds-btn-ghost:hover { border-color: var(--color-blue, #2A4B8D); color: var(--color-blue, #2A4B8D); } .ds-btn-ghost:active { transform: scale(0.98); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--color-blue, #2A4B8D); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Composer field. Mono uppercase label above, hairline field, blue border on focus.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Qayerdan</span><input class=\"ds-input\" type=\"text\" placeholder=\"Incheon\" /></label>",
+      "css": ".ds-field { display: block; } .ds-field-label { display: block; font-family: 'Space Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-faint, #64686F); margin-bottom: 6px; } .ds-input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 14px; font-weight: 600; background: var(--color-card, #FCFBF6); color: var(--color-ink, #1B2A4A); border: 1px solid var(--color-field, #D8D3C4); border-radius: 8px; outline: none; transition: border-color 150ms ease; } .ds-input::placeholder { color: var(--color-faint, #64686F); font-weight: 400; } .ds-input:focus { border-color: var(--color-blue, #2A4B8D); } .ds-input[aria-invalid=\"true\"] { border-color: var(--color-red, #B53333); }"
+    },
+    {
+      "name": "Selectable Chip",
+      "kind": "chip",
+      "refersTo": "chip-unselected",
+      "description": "Category and option pills in the composer. Selection inverts the fill; the border never changes weight.",
+      "html": "<span><button class=\"ds-chip\">Hujjat</button> <button class=\"ds-chip ds-chip-selected\">Dori</button></span>",
+      "css": ".ds-chip { font-family: 'Space Mono', ui-monospace, monospace; font-size: 12px; padding: 8px 15px; border: 1px solid var(--color-field, #D8D3C4); border-radius: 100px; background: var(--color-card, #FCFBF6); color: var(--color-ink, #1B2A4A); cursor: pointer; transition: all 150ms ease; } .ds-chip:hover { border-color: var(--color-ink, #1B2A4A); } .ds-chip:focus-visible { outline: 2px solid var(--color-blue, #2A4B8D); outline-offset: 2px; } .ds-chip-selected { background: var(--color-ink, #1B2A4A); color: var(--color-card, #FCFBF6); border-color: var(--color-ink, #1B2A4A); }"
+    },
+    {
+      "name": "Airmail Header Stripe",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "The page's top edge — the same weave as the card stripe, at a different rhythm. The board's mark.",
+      "html": "<div class=\"ds-airmail\"></div><header class=\"ds-header\"><span class=\"ds-wordmark\">Elchi</span><button class=\"ds-btn-ghost\">Kirish</button></header>",
+      "css": ".ds-airmail { height: 8px; background: repeating-linear-gradient(-45deg, var(--color-red, #B53333) 0 12px, var(--color-card, #FCFBF6) 12px 17px, var(--color-blue, #2A4B8D) 17px 29px, var(--color-card, #FCFBF6) 29px 34px); } .ds-header { max-width: 680px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; background: var(--color-card, #FCFBF6); } .ds-wordmark { font-family: 'Inter Tight', ui-sans-serif, system-ui, sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.015em; color: var(--color-ink, #1B2A4A); }"
+    },
+    {
+      "name": "Intro Note Card",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The solid brick-red editorial card above the feed. Static copy, never a post, never touches the API.",
+      "html": "<article class=\"ds-note\"><div class=\"ds-note-stripe\"></div><div class=\"ds-note-body\"><div class=\"ds-note-tag\">ELCHI NIMA?</div><h3 class=\"ds-note-title\">Bepul e&rsquo;lon taxtasi</h3><p class=\"ds-note-copy\">Chamadonda bo&rsquo;sh joyi bor sayohatchilar va pochta yubormoqchi bo&rsquo;lganlar shu yerda uchrashadi.</p></div></article>",
+      "css": ".ds-note { position: relative; overflow: hidden; border-radius: 12px; background: var(--color-red, #B53333); color: #F6EFE2; cursor: pointer; box-shadow: 0 1px 2px rgba(27,42,74,0.06), 0 10px 28px -18px rgba(27,42,74,0.28); transition: all 300ms; } .ds-note:hover { transform: translateY(-4px); } .ds-note-stripe { height: 8px; background: repeating-linear-gradient(-45deg, var(--color-red, #B53333) 0 12px, var(--color-card, #FCFBF6) 12px 17px, var(--color-blue, #2A4B8D) 17px 29px, var(--color-card, #FCFBF6) 29px 34px); } .ds-note-body { padding: 16px 20px 20px; } .ds-note-tag { font-family: 'Space Mono', ui-monospace, monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(246,239,226,0.9); } .ds-note-title { margin: 6px 0 6px; font-size: 19px; font-weight: 700; letter-spacing: -0.015em; } .ds-note-copy { margin: 0; font-size: 14.5px; line-height: 1.5; color: rgba(246,239,226,0.92); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Airmail Board",
+    "overview": "Elchi looks like a par-avion envelope pinned to a wall. The page is cream stock, the type is navy ink, and the one piece of ornament in the whole product — a diagonal blue-and-red weave — is the airmail border lifted off the edge of an international letter. Every post is a small card of lighter stock sitting on that page, wearing a rubber-stamp chip in the corner that says what kind of thing it is. Nothing else decorates. The board is a place where two strangers read one fact each and then leave.\n\nThe system is deliberately post-industrial rather than product-shiny. Mono type does the labelling — small, uppercase, wide-tracked, the way a form or a customs declaration labels its fields — while the sans carries everything a human actually reads. Density is high but not tight: cards are a fixed 220px in a single 680px column, so scanning down the feed is a rhythm, not a hunt. The interface is quiet on purpose; the only saturated colour on screen is the stamp and the one gold button that opens a post.\n\nThis world was arrived at by subtraction, and the subtractions are load-bearing history. An earlier version had a navy boarding-pass stub with dashed perforation and two punch notches on every card; it ate a quarter of a 375px screen and it is gone. The stamp chips used to be tilted; the tilt threw their baseline off against the card's straight rules and it is gone. Announcements — a third post type with a solid gold stripe — are gone. What survived is the weave, the stamp, and the paper.",
+    "keyCharacteristics": [
+      "Cream paper (#EDE9DC) under near-white card stock (#FCFBF6), navy ink on both.",
+      "One ornament: the -45° blue/red/cream airmail weave, at the page top and on every card's left edge.",
+      "Rubber-stamp chips carry post type by colour: navy-blue = traveler, brick-red = request.",
+      "Mono for labels and machine facts, sans for human copy. No third font.",
+      "Gold is a background and a stamp, never a text colour on light stock.",
+      "Fixed-height cards in one narrow column; symmetric treatment for both post types.",
+      "Every text pairing is measured against WCAG AA on the background it actually lands on."
+    ],
+    "rules": [
+      { "name": "The Measured Pairing Rule", "body": "Every text colour clears WCAG AA (4.5:1) against the background it actually lands on, and the measured ratio is written into the comment beside the token in src/index.css. A colour that cannot clear AA in both roles ships as two tokens rather than being compromised into a muddy middle that serves neither.", "section": "colors" },
+      { "name": "The Gold-Is-A-Stamp Rule", "body": "gold is 2.50:1 on card stock. It may be a fill, a chip, or a button background. It may never be text or a border carrying meaning on paper or card. Use gold-deep when the colour must be read.", "section": "colors" },
+      { "name": "The Two Threads Rule", "body": "Blue and red are the two post types, and the weave is both of them at once. Never introduce a third stamp colour without a third post type to justify it — the gold stripe died with the announcement type and is not available for reuse.", "section": "colors" },
+      { "name": "The Two-Register Rule", "body": "Mono means 'the system is telling you a fact or naming a field'. Sans means 'a person wrote this'. A mono sentence or a sans field label is a bug, not a style choice.", "section": "typography" },
+      { "name": "The Uzbek-Only Rule", "body": "No copy is hardcoded in a component. All strings resolve through src/translations.ts, including month names (t.months).", "section": "typography" },
+      { "name": "The Fixed Pass Rule", "body": "A feed card is 220px. Adding a row inside one means re-measuring the note clamp, not letting the card grow.", "section": "layout" },
+      { "name": "The One Inset Rule", "body": "Spacing between siblings is declared once on the parent. A child that sets mt-* or mb-* inside a card is re-opening a bug that has already been fixed twice.", "section": "layout" },
+      { "name": "The Token-Or-Nothing Rule", "body": "Elevation ships as a @theme token applied through a utility. An inline style={{ boxShadow }} silently beats the Tailwind hover class sitting next to it.", "section": "elevation" },
+      { "name": "The Two-Step Rule", "body": "There are two elevations. A third one is a new idea about hierarchy, and this system does not express hierarchy through depth.", "section": "elevation" },
+      { "name": "The Ghost Ornament Rule", "body": "The perforation, the punch notches and the navy stub are removed and stay removed. Ticket-shaped ornament is an anti-reference here, not a motif to extend.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do take every colour and shadow from src/index.css @theme. Sixteen colours and two shadows are the whole system.",
+      "Do ship a second token when one value cannot clear AA in both of its roles, and write the measured ratio into the comment beside it.",
+      "Do keep both post types structurally identical. Colour and icon are the only permitted difference.",
+      "Do declare sibling spacing once on the container (gap-2).",
+      "Do re-measure the note clamp when adding any row to a feed card.",
+      "Do route every string through src/translations.ts, including month names.",
+      "Do keep the airmail weave as the sole ornament, at the page top and the card's left edge."
+    ],
+    "donts": [
+      "Don't write a hex literal in a component. #F6EFE2 inside NoteCard.tsx is the one surviving violation and is a defect, not a precedent.",
+      "Don't use style={{ boxShadow }}. An inline shadow silently beats the Tailwind hover class beside it.",
+      "Don't use gold as text or as a meaningful border on paper or card. Use gold-deep.",
+      "Don't reintroduce ticket ornament: the navy stub, the dashed perforation, the punch notches, or tilted stamp chips.",
+      "Don't give a feed card a variable height, or let a child inside one set its own vertical margin.",
+      "Don't add a third stamp colour without a third post type.",
+      "Don't design any surface that shows a contact handle in a list, a preview, a hover, or an aggregate. Handles arrive one at a time, authenticated.",
+      "Don't introduce a third typeface, or set a sentence in the mono."
+    ]
+  }
+}
