@@ -21,6 +21,8 @@ export interface NoteContent {
   title: string;
   /** Trimmed body shown on the card (clamped). */
   summary: string;
+  /** Optional image shown at the top of the expanded sheet. */
+  image?: string;
   /** Full body shown in the expanded sheet; falls back to `summary`. */
   detail?: string[];
   /** Icon-labeled breakdown of the three ad kinds, shown in the expanded sheet. */
@@ -35,24 +37,60 @@ export interface Note {
 
 export const NOTES: Note[] = [
   {
+    id: "who-uses-it",
+    kind: "intro",
+    content: {
+      uz: {
+        tag: "Kirish",
+        meta: "1/3",
+        title: "Elchi kimlar uchun?",
+        summary:
+          "Koreya va O'zbekiston orasida chamadonida bo'sh joyi bor yo'lovchilar hamda posilka jo'natmoqchi bo'lganlar uchun.",
+        image: "/who_uses_it.jpg",
+        detail: [
+          "Elchi — bu oddiy e'lonlar taxtasi.",
+          "Agar siz uchayotgan bo'lsangiz, bo'sh joyingizni sotib, yo'l xarajatingizni qoplashingiz mumkin.",
+          "Agar sizga Koreyadan O'zbekistonga (yoki teskarisi) posilka, hujjat yoki dori yuborish kerak bo'lsa, mos yo'lovchini shu yerdan topasiz.",
+        ],
+      },
+    },
+  },
+  {
     id: "how-it-works",
     kind: "intro",
     content: {
       uz: {
         tag: "Qanday ishlaydi",
-        meta: "",
-        title: "Yangimisiz?",
+        meta: "2/3",
+        title: "Ikki xil e'lon",
         summary:
-          "Joyi bor yo'lovchi orqali chet elga narsa yuboring, kerakli mahsulotni olib kelishni so'rang — yoki doimiy xizmatingizni e'lon qiling.",
+          "Yo'lovchilar joy taklif qiladi, jo'natuvchilar posilka e'lon qiladi. Mos e'lonni topib, to'g'ridan-to'g'ri bog'lanasiz.",
+        image: "/how_it_works.jpg",
         detail: [
-          "Elchi — e'lonlar taxtasi. Uch xil e'lon bor:",
-          "Mos e'lonni topsangiz, uni ochib egasi bilan Telegram yoki telefon orqali bog'laning. Kelishuv, narx va topshirish — to'g'ridan-to'g'ri o'zaro hal qilinadi.",
-          "Elchi to'lovni ushlab turmaydi va yuklarni tekshirmaydi. Notanish odam bilan ishlaganda ehtiyot bo'ling.",
+          "E'lonni oching va uning egasi bilan Telegram yoki telefon orqali bog'laning. Tizim orqali yozishmalar yo'q.",
         ],
         typesList: [
           { icon: "traveler", text: "Yo'lovchi — uchayotgan odam chamadonidagi bo'sh joyni taklif qiladi." },
           { icon: "request", text: "So'rov — kimdir olib kelinishi kerak bo'lgan narsani yozadi." },
-          { icon: "note", text: "E'lon — yangi qo'shildi. Yuk tashish xizmati yoki doimiy taklifingizni bitta matn bilan joylashtiring, masalan mavzu qo'shib." },
+        ],
+      },
+    },
+  },
+  {
+    id: "safety-and-payment",
+    kind: "intro",
+    content: {
+      uz: {
+        tag: "Xavfsizlik",
+        meta: "3/3",
+        title: "Ehtiyotkor bo'ling",
+        summary:
+          "Elchi to'lovlarni ushlab turmaydi va yuklarni tekshirmaydi. Kelishuv va topshirish — to'g'ridan-to'g'ri o'zaro hal qilinadi.",
+        image: "/safety.jpg",
+        detail: [
+          "Narxni o'zaro kelishasiz. To'lovni faqat ishonch hosil qilganingizdan so'ng, yoki yukni topshirayotganda amalga oshiring.",
+          "Notanish odamdan ichi yopiq va tekshirib bo'lmaydigan qutilarni olmang. Har doim yuk ichida nima borligini bilishingiz kerak.",
+          "Platforma sizning o'zaro kelishuvlaringizga aralashmaydi va javobgarlikni o'z bo'yniga olmaydi.",
         ],
       },
     },

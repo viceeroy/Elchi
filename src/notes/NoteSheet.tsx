@@ -70,6 +70,13 @@ export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) =
         </div>
 
         <div className="flex flex-col gap-3.5 px-6 pt-6">
+          {c.image && (
+            <img 
+              src={c.image} 
+              alt="" 
+              className="w-full aspect-[16/9] rounded-xl mb-1 object-cover shadow-sm ring-1 ring-ink/5" 
+            />
+          )}
           {body[0] && (
             <p className="m-0 text-[14.5px] leading-relaxed text-[#3A4256]">{body[0]}</p>
           )}

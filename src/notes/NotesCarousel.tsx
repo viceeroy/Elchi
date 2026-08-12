@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Locale } from "../types";
 import { Note, NOTES } from "./data";
 import { NoteCard } from "./NoteCard";
@@ -127,18 +126,17 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
         ))}
       </div>
 
-      {notes.length > 1 && active > 0 && (
-        <ChevronLeft
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40"
-        />
-      )}
-
-      {notes.length > 1 && active < notes.length - 1 && (
-        <ChevronRight
-          aria-hidden="true"
-          className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40"
-        />
+      {notes.length > 1 && (
+        <div className="mt-3 flex justify-center gap-1.5" aria-hidden="true">
+          {notes.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === active ? "w-4 bg-ink/50" : "w-1.5 bg-ink/15"
+              }`}
+            />
+          ))}
+        </div>
       )}
     </section>
   );
