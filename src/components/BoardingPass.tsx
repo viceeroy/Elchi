@@ -1,7 +1,7 @@
 import React from "react";
 import { Post, Locale, Translations } from "../types";
 import { Plane, Briefcase } from "lucide-react";
-import { COUNTRIES, getCountry, isHubCity } from "../constants";
+import { COUNTRIES, getCountry } from "../constants";
 import { stickerStyle } from "../lib/stickerStyle";
 import { flattenNote } from "../lib/postPreview";
 import { parseWeightString } from "../../lib/weight";
@@ -47,17 +47,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
   const hubFrom = fromCountry.names[locale];
   const hubTo = toCountry.names[locale];
   // Free-text cities are display-only detail under the country route. The null
-  // check comes first because the columns are nullable — legacy rows predate
-  // the constraint that makes both mandatory.
-  //
-  // The second half hides the line when both cities are just the hubs the
-  // country names already imply (Incheon → Toshkent under Koreya ✈
-  // O'zbekiston). It compares against the registry's hub CITY names — the
-  // earlier version compared them against hubFrom/hubTo, which are country
-  // names, so a city could never equal one and the line always showed.
-  const showActualCities =
-    Boolean(post.from_city && post.to_city) &&
-    (!isHubCity(fromCountry, post.from_city) || !isHubCity(toCountry, post.to_city));
+
 
   // The card shows only the physical weight (kg + luggage), stripping any
   // category labels baked into the weight string — categories are shown only in
@@ -132,16 +122,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         </div>
       </FeedCardBadgeRow>
 
-      {/* Actual city on its own row. Cities are absent on plenty of posts
-          (showActualCities is false whenever both sides are just the hub
-          the country name already implies). */}
-      {showActualCities && (
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-[11px] text-faint tracking-wide leading-none truncate">
-            {post.from_city} → {post.to_city}
-          </span>
-        </div>
-      )}
+
 
       {/* Cargo weight/items on its own row. */}
       {physicalWeight && (

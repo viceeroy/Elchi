@@ -45,7 +45,7 @@ import { Post, Translations } from "../types";
  * respects that invariant; growing the card would trade it away.
  */
 export const FEED_CARD_SHELL =
-  "relative flex flex-col h-[220px] overflow-hidden bg-card rounded-xl border border-edge shadow-[var(--shadow-card)]";
+  "relative flex flex-col h-[200px] overflow-hidden bg-card rounded-xl border border-edge shadow-[var(--shadow-card)]";
 
 /**
  * The padded column inside the shell.
@@ -56,6 +56,8 @@ export const FEED_CARD_SHELL =
  * feed, so copy that starts at a different inset reads as a misalignment. Each
  * card previously ran its own per-side ramp — four sides, three breakpoints —
  * and both had drifted.
+ *
+ * Reduced bottom padding (pb-4) to horizontally center the footer row content.
  *
  * Gaps between stacked children are a single gap-2 (8px), declared once here.
  * Children set NO vertical margins; they used to carry their own mt-2/mb-1/
@@ -70,7 +72,7 @@ export const FEED_CARD_SHELL =
  * without revisiting this.
  */
 export const FEED_CARD_INNER =
-  "p-5 sm:p-6 flex flex-1 min-h-0 flex-col justify-start gap-2 min-w-0";
+  "px-5 sm:px-6 pt-5 sm:pt-6 pb-4 flex flex-1 min-h-0 flex-col justify-start gap-2 min-w-0";
 
 /**
  * Footer row — author (plus whatever else the card puts beside it) on the left,
