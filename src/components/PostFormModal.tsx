@@ -71,8 +71,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [contact2, setContact2] = useState("");
   
   const today = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth());
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
 
   const [weightKg, setWeightKg] = useState<number>(0);
   const [weightLuggage, setWeightLuggage] = useState<number>(0);
@@ -107,30 +106,14 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   };
   const itemTypes = PARCEL_CATEGORY_IDS.map((id) => ({ id, label: CATEGORY_LABELS[id] }));
 
-  const getDaysInMonth = (month: number) => {
-    const currentYear = today.getFullYear();
-    const date = new Date(currentYear, month, 1);
-    const days = [];
-    while (date.getMonth() === month) {
-      days.push(new Date(date));
-      date.setDate(date.getDate() + 1);
-    }
-    return days;
-  };
-
-  const currentYear = today.getFullYear();
-  const nextMonth = (today.getMonth() + 1) % 12;
-  const monthOptions = [
-    { value: today.getMonth(), label: "Ushbu oy" },
-    { value: nextMonth, label: "Keyingi oy" },
-  ];
-
-  const daysList = getDaysInMonth(selectedMonth).filter(d => {
-    if (selectedMonth === today.getMonth()) {
-      return d.getDate() >= today.getDate();
-    }
-    return true;
+  const daysList = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    return d;
   });
+
+  const formatDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   const validateStep = (currentStep: number): boolean => {
     const nextErrors: FieldErrors = {};
@@ -143,7 +126,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       if (!fromCity.trim()) nextErrors.fromCity = t.errorFieldFromCity;
       if (!toCity.trim()) nextErrors.toCity = t.errorFieldToCity;
     } else if (currentStep === 4) {
-      if (selectedDay === null) nextErrors.date = t.errorFieldDate;
+      if (selectedDateStr === null) nextErrors.date = t.errorFieldDate;
     } else if (currentStep === 5) {
       if (postType === "traveler" && weightKg === 0 && weightLuggage === 0) {
         nextErrors.weight = t.errorFieldWeight;
@@ -204,8 +187,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     setSubmitting(true);
 
     try {
-      const dateString = `${currentYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
-
+      const dateString = selectedDateStr;
       let finalWeight: string;
       if (postType === "traveler") {
         finalWeight = buildWeightString(weightKg, weightLuggage);
@@ -490,31 +472,15 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 {postType === "traveler" ? t.dateLabelTraveler : t.dateLabelRequest}
               </label>
               <div className="flex flex-col gap-3">
-                <div className="flex gap-2">
-                  {monthOptions.map(m => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => { setSelectedMonth(m.value); setSelectedDay(null); }}
-                      className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
-                        selectedMonth === m.value
-                          ? "bg-ink text-card"
-                          : "bg-paper text-body hover:bg-rule"
-                      }`}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
                   {daysList.map(d => {
-                    const isSelected = d.getDate() === selectedDay;
+                    const dStr = formatDateStr(d);
+                    const isSelected = dStr === selectedDateStr;
                     return (
                       <button
-                        key={d.getDate()}
+                        key={dStr}
                         type="button"
-                        onClick={() => { setSelectedDay(d.getDate()); clearError("date"); }}
+                        onClick={() => { setSelectedDateStr(dStr); clearError("date"); }}
                         className={`font-mono flex flex-col items-center gap-0.5 min-w-[42px] p-2.5 rounded-lg border cursor-pointer transition-all ${
                           isSelected
                             ? "bg-ink text-card border-ink scale-105 shadow-sm"
