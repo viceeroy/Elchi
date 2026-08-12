@@ -660,6 +660,11 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-4">
+            <RouteSelector
+              locale={locale}
+              countryCode={country}
+              onChange={setCountry}
+            />
             <button
               onClick={() => {
                 if (session) {
@@ -700,18 +705,6 @@ export default function App() {
 
         {/* Posts Filter and Feed */}
         <section className="pt-2">
-          {/* Route line. The two-way parcel/notes chip selector that used to sit
-              beside it came off with the announcement board — one kind of post
-              means nothing to select between, and a lone always-active chip is
-              a label pretending to be a control. */}
-          <div className="mb-5 flex items-center justify-end gap-3">
-            <RouteSelector
-              locale={locale}
-              countryCode={country}
-              onChange={setCountry}
-            />
-          </div>
-
           {/* The board's own explainer. Not a post: no author, no contact, and
               unaffected by the route filter — a new visitor should meet it
               whichever corridor they land on. */}
