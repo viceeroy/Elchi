@@ -154,12 +154,10 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
           note length; long URLs/words wrap instead of overflowing. Full text
           is in the detail sheet on click.
 
-          Two lines again: putting the city and date back on one shared row
-          (instead of the date on its own line below the city) gave this line
-          its budget back. Measured at 218px of content in the 220px shell at
-          375px width — re-measure before adding another row above this one. */}
+          Now increased to 3 lines because removing the footer border line and
+          reducing its padding freed up enough vertical budget. */}
       {noteText && (
-        <span className="line-clamp-2 text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0 [overflow-wrap:anywhere]">
+        <span className="line-clamp-3 text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0 [overflow-wrap:anywhere]">
           {noteText}
         </span>
       )}

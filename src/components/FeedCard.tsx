@@ -84,7 +84,7 @@ export const FEED_CARD_INNER =
  * note its second line.
  */
 export const FEED_CARD_FOOTER_ROW =
-  "mt-auto pt-3 border-t border-rule flex items-center justify-between gap-3";
+  "mt-auto pt-1 flex items-center justify-between gap-3";
 
 /**
  * Title typography for the card's route line.
@@ -222,7 +222,7 @@ export const FeedCardFooter: React.FC<FeedCardFooterProps> = ({
          (→31px) without visibly changing the footer row's proportions — the
          whole card is the same click target regardless, so this is a comfort
          bump, not a fix for something that was failing. */
-      className="flex-shrink-0 font-mono text-[11px] bg-gold text-ink border-none py-2.5 px-3 rounded-md font-bold cursor-pointer tracking-wider leading-none hover:bg-gold-lit transition-colors shadow-sm"
+      className="flex-shrink-0 font-mono text-[11px] bg-gold text-ink border-none py-2 px-3 rounded-md font-bold cursor-pointer tracking-wider leading-none hover:bg-gold-lit transition-colors shadow-sm"
       id={`contact-btn-${post.id}`}
     >
       {t.contactBtn}
