@@ -96,6 +96,16 @@ export interface Translations {
   addPostTitle: string;
   addPostSubTraveler: string;
   addPostSubRequest: string;
+  stepAdType: string;
+  stepRoute: string;
+  stepCities: string;
+  stepDate: string;
+  stepCargo: string;
+  stepContact: string;
+  btnNext: string;
+  btnBack: string;
+  subtravelerDesc: string;
+  subrequestDesc: string;
   tabTraveler: string;
   tabRequest: string;
   fromToLabel: string;
