@@ -4,7 +4,6 @@ import { Plane, Briefcase } from "lucide-react";
 import { COUNTRIES, getCountry, isHubCity } from "../constants";
 import { stickerStyle } from "../lib/stickerStyle";
 import { flattenNote } from "../lib/postPreview";
-import { authorNameOf } from "../lib/authorName";
 import { parseWeightString } from "../../lib/weight";
 import { pluralizeChamadon } from "../translations";
 import { formatFlexibleDate } from "../../lib/formatDate";
@@ -133,38 +132,21 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         </div>
       </FeedCardBadgeRow>
 
-      {/* Actual city, and the date, on one row: the city line used to sit
-          alone with the date on its own line below, which read as two facts
-          stacked rather than one line the eye could scan across. Cities are
-          absent on plenty of posts (showActualCities is false whenever both
-          sides are just the hub the country name already implies) and dateText
-          is null on a negotiable date (see its definition above) — each half
-          renders independently so neither is required to get the other on
-          screen. justify-between only matters when both are present; a lone
-          date still sits left like a normal line, and a card with no fixed
-          date and only hub cities shows neither and jumps straight to weight. */}
-      {(showActualCities || dateText) && (
-        <div className="flex items-baseline justify-between gap-2">
-          {showActualCities && (
-            <span className="font-mono text-[11px] text-faint tracking-wide leading-none truncate">
-              {post.from_city} → {post.to_city}
-            </span>
-          )}
-          {dateText && (
-            <span className="font-bold text-[15px] text-ink leading-tight flex-shrink-0">
-              {dateText}
-            </span>
-          )}
+      {/* Actual city on its own row. Cities are absent on plenty of posts
+          (showActualCities is false whenever both sides are just the hub
+          the country name already implies). */}
+      {showActualCities && (
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-[11px] text-faint tracking-wide leading-none truncate">
+            {post.from_city} → {post.to_city}
+          </span>
         </div>
       )}
 
-      {/* Cargo, on its own line below the city/date row — the row above is
-          "where and when", this is "how much", and joining all three with
-          "·" separators (the original single-line design) read as one long
-          fact rather than two. Keeps the same bold-ink treatment. */}
+      {/* Cargo weight/items on its own row. */}
       {physicalWeight && (
-        <div className="font-bold text-[15px] text-ink leading-tight">
-          {physicalWeight}
+        <div className="flex items-center flex-wrap gap-1.5 font-bold text-[15px] text-ink leading-tight">
+          <span>{physicalWeight}</span>
         </div>
       )}
 
@@ -182,7 +164,7 @@ export const BoardingPass: React.FC<BoardingPassProps> = ({
         </span>
       )}
 
-      <FeedCardFooter post={post} t={t} left={authorNameOf(post.display_name)} onOpen={onOpen} />
+      <FeedCardFooter post={post} t={t} left={dateText} onOpen={onOpen} />
     </FeedCard>
   );
 };

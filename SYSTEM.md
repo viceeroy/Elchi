@@ -335,6 +335,13 @@ Vercel builds with `npm run build` → `dist`, rewrites `/api/*` to the function
 else to `index.html` (SPA fallback). Schema changes apply as a dated file in `migrations/`,
 mirrored into `supabase-schema.sql` for from-scratch installs.
 
+### Supabase MCP Server Integration
+
+The project environment is set up to support the **Supabase Model Context Protocol (MCP)** server, configured with the project reference `twxvbbwhjdjnwbxakopv`. This integration empowers AI tools to perform database tasks securely, including:
+- Executing SQL queries and database schema inspections.
+- Running migrations and viewing migration statuses.
+- Interacting with database structures dynamically during development.
+
 ---
 
 ## 10. Extension points

@@ -11,7 +11,6 @@ import {
 import { PARCEL_CATEGORY_IDS } from "../../lib/parcelCategories";
 import { buildWeightString } from "../../lib/weight";
 import { pluralizeChamadon } from "../translations";
-import { FLEXIBLE_DATE } from "../../lib/date";
 import { X, Plane, Briefcase, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
 import { ContactFields } from "./ContactFields";
 import { useDialog } from "../hooks/useDialog";
@@ -74,7 +73,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const today = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [dateFlexible, setDateFlexible] = useState(false);
 
   const [weightKg, setWeightKg] = useState<number>(0);
   const [weightLuggage, setWeightLuggage] = useState<number>(0);
@@ -145,7 +143,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       if (!fromCity.trim()) nextErrors.fromCity = t.errorFieldFromCity;
       if (!toCity.trim()) nextErrors.toCity = t.errorFieldToCity;
     } else if (currentStep === 4) {
-      if (selectedDay === null && !dateFlexible) nextErrors.date = t.errorFieldDate;
+      if (selectedDay === null) nextErrors.date = t.errorFieldDate;
     } else if (currentStep === 5) {
       if (postType === "traveler" && weightKg === 0 && weightLuggage === 0) {
         nextErrors.weight = t.errorFieldWeight;
@@ -206,9 +204,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     setSubmitting(true);
 
     try {
-      const dateString = dateFlexible
-        ? FLEXIBLE_DATE
-        : `${currentYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
+      const dateString = `${currentYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
 
       let finalWeight: string;
       if (postType === "traveler") {
@@ -367,7 +363,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             <div className="flex flex-col gap-3">
               <button
                 type="button"
-                onClick={() => { setPostType("traveler"); setDateFlexible(false); }}
+                onClick={() => setPostType("traveler")}
                 className={`p-4 rounded-xl border-[1.5px] text-left transition-all group ${
                   postType === "traveler"
                     ? "border-blue bg-blue/[0.03]"
@@ -499,9 +495,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button
                       key={m.value}
                       type="button"
-                      onClick={() => { setSelectedMonth(m.value); setSelectedDay(null); setDateFlexible(false); }}
+                      onClick={() => { setSelectedMonth(m.value); setSelectedDay(null); }}
                       className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
-                        selectedMonth === m.value && !dateFlexible
+                        selectedMonth === m.value
                           ? "bg-ink text-card"
                           : "bg-paper text-body hover:bg-rule"
                       }`}
@@ -509,22 +505,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                       {m.label}
                     </button>
                   ))}
-                  {postType === "request" && (
-                    <button
-                      type="button"
-                      onClick={() => { setDateFlexible(true); setSelectedDay(null); clearError("date"); }}
-                      className={`font-mono text-xs px-3.5 py-1.5 border-none rounded-full font-bold cursor-pointer transition-colors ${
-                        dateFlexible
-                          ? "bg-gold text-card"
-                          : "bg-paper text-body hover:bg-rule"
-                      }`}
-                    >
-                      {t.dateFlexibleBtn}
-                    </button>
-                  )}
                 </div>
 
-                {!dateFlexible && (
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
                   {daysList.map(d => {
                     const isSelected = d.getDate() === selectedDay;
@@ -548,7 +530,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     );
                   })}
                 </div>
-                )}
               </div>
               <FieldError message={errors.date} />
             </div>

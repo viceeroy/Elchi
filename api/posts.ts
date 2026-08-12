@@ -6,7 +6,6 @@ import { verifyAccessToken } from '../lib/verify-token.js';
 import { isContactKind, isValidContact, type ContactKind } from '../lib/contact.js';
 import { PARCEL_CITY_MAX, PARCEL_CATEGORY_OTHER_MAX, PARCEL_NOTE_MAX } from '../lib/parcelLimits.js';
 import { PARCEL_CATEGORY_IDS } from '../lib/parcelCategories.js';
-import { FLEXIBLE_DATE } from '../lib/date.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
@@ -223,6 +222,7 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
   let query = supabase
     .from('public_posts')
     .select(PUBLIC_COLUMNS)
+    .order('date', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit); // one extra row to detect a next page
 
@@ -466,53 +466,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
     }
 
-    // FLEXIBLE_DATE means the requester negotiates the date directly with the
-    // traveler. It stores NULL — the sentinel used to be passed straight into
-    // the DATE column, which failed the insert — and gets a flat 30-day expiry
-    // instead of one derived from a travel date.
-    const noFixedDate = date === FLEXIBLE_DATE;
-    let dateValue: string | null;
+    let dateValue: string;
     let expires_at: string;
 
-    if (noFixedDate) {
-      dateValue = null;
-      const flexibleExpiry = new Date();
-      flexibleExpiry.setHours(0, 0, 0, 0);
-      flexibleExpiry.setDate(flexibleExpiry.getDate() + 30);
-      expires_at = flexibleExpiry.toISOString().split('T')[0];
-    } else {
-      const postDate = new Date(date);
-      if (isNaN(postDate.getTime())) {
-        return res.status(400).json({ error: 'Noto\'g\'ri sana formati' });
-      }
-
-      // Reject dates in the past or absurdly far in the future — the latter would
-      // otherwise create a post that effectively never expires.
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      const maxFuture = new Date(startOfToday);
-      maxFuture.setDate(maxFuture.getDate() + 365);
-      if (postDate < startOfToday || postDate > maxFuture) {
-        return res.status(400).json({ error: 'Noto\'g\'ri sana' });
-      }
-
-      // Store the date the author picked. This assignment was missing: the
-      // branch computed `expires_at` and nothing else, so `dateValue` stayed
-      // undefined, `row.date` was dropped by JSON serialisation on the way to
-      // PostgREST, and the column defaulted to NULL — which every reader
-      // renders as "no fixed date". Every post with a real travel date came
-      // out negotiable.
-      //
-      // Normalised through the parsed Date rather than passed through raw, so
-      // what lands in the DATE column is the same YYYY-MM-DD shape whatever
-      // the client sent. `new Date('YYYY-MM-DD')` parses as UTC midnight and
-      // toISOString reads back in UTC, so this round-trips without a
-      // timezone shift.
-      dateValue = postDate.toISOString().split('T')[0];
-
-      postDate.setDate(postDate.getDate() + 1);
-      expires_at = postDate.toISOString().split('T')[0];
+    const postDate = new Date(date);
+    if (isNaN(postDate.getTime())) {
+      return res.status(400).json({ error: 'Noto\'g\'ri sana formati' });
     }
+
+    // Reject dates in the past or absurdly far in the future — the latter would
+    // otherwise create a post that effectively never expires.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const maxFuture = new Date(startOfToday);
+    maxFuture.setDate(maxFuture.getDate() + 365);
+    if (postDate < startOfToday || postDate > maxFuture) {
+      return res.status(400).json({ error: 'Noto\'g\'ri sana' });
+    }
+
+    // Store the date the author picked.
+    // Normalised through the parsed Date rather than passed through raw, so
+    // what lands in the DATE column is the same YYYY-MM-DD shape whatever
+    // the client sent. `new Date('YYYY-MM-DD')` parses as UTC midnight and
+    // toISOString reads back in UTC, so this round-trips without a
+    // timezone shift.
+    dateValue = postDate.toISOString().split('T')[0];
+
+    postDate.setDate(postDate.getDate() + 1);
+    expires_at = postDate.toISOString().split('T')[0];
 
     // Clamp numerics to sane bounds so an out-of-range value can't overflow the
     // DB column (NUMERIC(6,2) / SMALLINT) and throw a 500.

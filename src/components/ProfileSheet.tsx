@@ -36,11 +36,9 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
   }, [session.user.id]);
 
   // Own row only, under the profiles SELECT policy. This is the ONLY source of
-  // the name on this sheet. It used to fall back to session.user_metadata —
-  // Google's full_name, Telegram's first_name — which meant the sheet showed a
-  // provider's name the user had never chosen, and a different one from the
-  // name printed on their own cards. There is no fallback now: `display_name`
-  // is what the user typed into the capture gate or nothing at all.
+  // the name on this sheet. It is automatically populated on signup from the
+  // provider (Telegram/Google). Users cannot edit it, so this component simply
+  // displays whatever is stored in `display_name`.
   useEffect(() => {
     supabaseBrowser
       .from("profiles")

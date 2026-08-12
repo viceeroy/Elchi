@@ -46,6 +46,12 @@ vercel.json     Build + routing config
 2. Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as environment variables (Production + Preview).
 3. Deploy — `vercel.json` handles build output and API routing.
 
+## Supabase MCP Server
+
+This repository is integrated with the **Supabase Model Context Protocol (MCP)** server. This allows AI development tools (such as Claude, Cursor, and Antigravity) to securely manage database schemas, inspect tables, deploy Edge Functions, and run migrations in your Supabase workspace.
+
+To configure the Supabase MCP server, provide the project reference `twxvbbwhjdjnwbxakopv` and your Supabase Personal Access Token (PAT) to your AI client configuration.
+
 ## API
 
 | Endpoint | Method | Description |

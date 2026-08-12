@@ -366,6 +366,17 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- through a normalize_display_name() helper. Both are gone: see the trigger
 -- body below for why, and 2026-08-06-display-name-user-entered.sql for the
 -- migration that removed them from live databases.
+-- Re-added: we now want to auto-fill display_name again.
+CREATE OR REPLACE FUNCTION normalize_display_name(raw TEXT)
+RETURNS TEXT
+LANGUAGE sql IMMUTABLE
+AS $$
+    SELECT CASE 
+        WHEN raw IS NULL THEN 'Foydalanuvchi'
+        WHEN char_length(btrim(raw)) BETWEEN 2 AND 40 THEN btrim(raw)
+        ELSE 'Foydalanuvchi'
+    END;
+$$;
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -377,14 +388,7 @@ BEGIN
     VALUES (
         NEW.id,
         COALESCE(NEW.email, NEW.raw_user_meta_data->>'email'),
-        -- NULL, deliberately, and never the provider's name. display_name is
-        -- what the user typed into the capture gate and nothing else, so this
-        -- column starts empty and the gate is what fills it. Seeding it here —
-        -- as this trigger used to — silently satisfied the gate's own check,
-        -- so a Telegram login (the bridge always sends first_name) was never
-        -- asked for a name and the profile sheet printed one the user never
-        -- chose. The provider's version is still in raw_user_meta_data.
-        NULL,
+        normalize_display_name(COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', NEW.raw_user_meta_data->>'first_name')),
         COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
         -- Derived, not copied. auth_provider is NOT NULL with a two-value
         -- CHECK, but the metadata can say 'email' (the oldest accounts do) or
@@ -419,7 +423,7 @@ INSERT INTO profiles (id, email, display_name, avatar_url, auth_provider, telegr
 SELECT
     u.id,
     COALESCE(u.email, u.raw_user_meta_data->>'email'),
-    NULL,
+    normalize_display_name(COALESCE(u.raw_user_meta_data->>'display_name', u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', u.raw_user_meta_data->>'first_name')),
     COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture'),
     CASE
         WHEN COALESCE(u.email, '') LIKE 'telegram\_%@elchi.local' THEN 'telegram'
@@ -441,10 +445,8 @@ ON profiles FOR SELECT
 USING (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
-CREATE POLICY "Users can update own profile"
-ON profiles FOR UPDATE
-USING (auth.uid() = id)
-WITH CHECK (auth.uid() = id);
+-- The UPDATE policy has been removed because display_name is now auto-populated
+-- and immutable by the user.
 
 -- The shape of a display name, and the only enforcement of it that matters:
 -- the capture gate writes through PostgREST under the policy above, with the

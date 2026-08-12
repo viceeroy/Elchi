@@ -46,14 +46,11 @@ const PostFormModal = lazy(() =>
 const LoginModal = lazy(() =>
   import("./components/LoginModal").then((m) => ({ default: m.LoginModal })),
 );
-const NameGateModal = lazy(() =>
-  import("./components/NameGateModal").then((m) => ({ default: m.NameGateModal })),
+const NoteSheet = lazy(() =>
+  import("./notes/NoteSheet").then((m) => ({ default: m.NoteSheet })),
 );
 const ProfileSheet = lazy(() =>
   import("./components/ProfileSheet").then((m) => ({ default: m.ProfileSheet })),
-);
-const NoteSheet = lazy(() =>
-  import("./notes/NoteSheet").then((m) => ({ default: m.NoteSheet })),
 );
 
 // Warms the composer chunk before it is rendered. Splitting the sheet moves its
@@ -138,11 +135,6 @@ export default function App() {
   const [authResolved, setAuthResolved] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  // Whether the logged-in viewer still owes us a display name. Three states,
-  // not a boolean: "unknown" is the window between a session appearing and the
-  // profile lookup answering, and flashing a blocking name sheet at a user who
-  // already has a name would be worse than the short wait.
-  const [nameState, setNameState] = useState<"unknown" | "ok" | "needed">("unknown");
   // Which side of the form to open once login completes — posting is gated
   // behind auth, so the choice made at the speed dial has to survive the modal.
   const pendingComposeRef = React.useRef<PostType | null>(null);
@@ -170,50 +162,6 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Does this account have a display name yet? Runs on every login, not on
-  // signup: the column has existed for a while and every account that predates
-  // the capture gate has it NULL, so the only reliable moment to ask is when a
-  // session shows up. Once the name is stored the query answers "ok" and the
-  // gate never appears again.
-  //
-  // Read from `profiles` directly rather than from session.user_metadata: the
-  // metadata copy is whatever the provider handed over at signup and is not
-  // updated when the gate writes, so trusting it would re-prompt forever.
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId) {
-      setNameState("unknown");
-      return;
-    }
-    let cancelled = false;
-    supabaseBrowser
-      .from("profiles")
-      .select("display_name")
-      .eq("id", userId)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          // A failed lookup must not lock the board behind a name sheet the
-          // user cannot answer their way out of. Degrade to "has a name" — the
-          // next login asks again, and the card fallback covers the display.
-          console.error("Error reading profile name:", error);
-          setNameState("ok");
-          return;
-        }
-        const name = (data as { display_name: string | null } | null)?.display_name;
-        setNameState(name && name.trim() ? "ok" : "needed");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.user?.id]);
-
-  // The gate is up whenever a session exists and its profile has no name. It
-  // sits above every other sheet and has no dismissal, so this also stands in
-  // for "the app is blocked" wherever that matters (the scroll lock below).
-  const nameGateOpen = Boolean(session) && nameState === "needed";
-
   const openComposer = (kind: PostType) => {
     setComposeType(kind);
     setFormOpen(true);
@@ -221,8 +169,6 @@ export default function App() {
 
   // Signing out — or a refresh token that finally expires — while a composer or
   // the profile sheet is open leaves an authenticated-only surface on screen.
-  // The submit would come back 401 and the profile sheet reads its user off a
-  // session that no longer exists, so both close with the session.
   useEffect(() => {
     if (session) return;
     setFormOpen(false);
@@ -299,8 +245,7 @@ export default function App() {
       selectedNote !== null ||
       formOpen ||
       loginOpen ||
-      profileOpen ||
-      nameGateOpen;
+      profileOpen;
     if (!isModalOpen) return;
 
     const scrollY = window.scrollY;
@@ -323,7 +268,7 @@ export default function App() {
       body.style.paddingRight = "";
       window.scrollTo(0, scrollY);
     };
-  }, [selectedPost, selectedNote, formOpen, loginOpen, profileOpen, nameGateOpen]);
+  }, [selectedPost, selectedNote, formOpen, loginOpen, profileOpen]);
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -884,29 +829,6 @@ export default function App() {
                 pendingComposeRef.current = null;
                 openComposer(pending);
               }
-            }}
-          />
-        </Suspense>
-      )}
-
-      {/* Name gate — the one sheet in the app that cannot be dismissed. Last in
-          the overlay stack and at a higher z-index than the rest, because it
-          has to cover a composer that was opened by the same login that
-          triggered it. */}
-      {nameGateOpen && session && (
-        <Suspense fallback={<SheetFallback />}>
-          <NameGateModal
-            t={t}
-            userId={session.user.id}
-            // Only ever called once the write came back with a row, so this is
-            // a confirmed state change rather than an optimistic one. The
-            // refetch is what puts the new name on the author's own cards —
-            // the feed effect is keyed on the viewer's id, not on their name,
-            // so already-rendered cards would otherwise keep the fallback
-            // until the next reload.
-            onSaved={() => {
-              setNameState("ok");
-              refreshFeed();
             }}
           />
         </Suspense>

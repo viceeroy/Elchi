@@ -138,6 +138,80 @@ components:
 
 # Design System: Elchi
 
+## 1. Product Summary
+- Elchi is a free, mobile-first bulletin board for matching travelers and senders on the Korea ↔ Uzbekistan parcel corridor.
+- Travelers with booked flights post spare luggage capacity; senders post parcels needing transport.
+- The app reveals authenticated contact handles so users can arrange terms and handoff directly off-platform.
+
+## 2. Core User Flows / Screen List
+- **Feed (Main Screen)**:
+  - Single-column vertical list showing active traveler and request posts.
+  - Sticky top header showing the brand wordmark, Uzbek country flag indicator, and login/logout trigger.
+  - Static notes carousel pinned to the top of the feed containing editorial cards.
+  - Floating action button (FAB) with a "+" symbol to create a new post.
+- **Post Detail View (Bottom Sheet / Modal)**:
+  - Slides up from the bottom on mobile, opens as a centered modal on desktop.
+  - Formatted like a detailed boarding pass stub.
+  - Shows full post description and cargo details.
+  - Features a contact handle reveal button that requires authentication.
+  - Displays revealed Telegram handle or phone number with direct-action shortcuts (launch Telegram, call).
+- **Post Composer (Creation Flow)**:
+  - Multi-step bottom sheet form for creating a new post.
+  - Step 1: Post Type selector (Traveler vs. Request).
+  - Step 2: Flight Route direction selector (Korea to Uzbekistan, or Uzbekistan to Korea).
+  - Step 3: Date selector (flight date or target date).
+  - Step 4: Cargo Weight/Capacity selector in kilograms.
+  - Step 5: Textarea for a short optional description.
+  - Step 6: Text inputs for contact details (Telegram handle and/or phone number).
+- **Authentication Gate (Modal)**:
+  - Minimal popup overlay blocking action until authenticated.
+  - Offers login options via Telegram bridge or Google OAuth.
+- **Username Registration Gate (Modal)**:
+  - Form field showing on first login to capture user's display name.
+
+## 3. Visual Direction
+- **Theme and Mood**: "The Airmail Board" — retro-modern airmail envelope stock pinned to a notice board.
+- **Styling Aesthetic**: Warm, clean, high-contrast, post-industrial stationery look.
+- **Primary Color Accents**: A red-and-blue diagonal par-avion border weave on the left edge of cards and sticky header.
+- **Typography Tone**: Space Mono for typewriter-like system labels and dates; Inter Tight for readable body text.
+- **Reference Polish Level**: Highly polished boarding passes, postal stamps, and airport luggage tags.
+- **Anti-Reference**: No modern gradient fintech look, no complex interactive widgets, and no tilted stamps or perforations.
+
+## 4. Component / Card Anatomy
+- **Feed Card (Compact State)**:
+  - Left edge: 8px vertical red-and-blue diagonal airmail stripe.
+  - Header line: Post type stamp (Blue for traveler, Red for request) alongside the route title (e.g. "Koreya ✈ O'zbekiston").
+  - Data line: Monospaced travel dates, cities, and cargo weight limits.
+  - Body area: Max 2 lines of user-written note description.
+  - Footer line: User's display name on the left, gold "Open" button on the right.
+- **Boarding Pass Detail View (Expanded State)**:
+  - Expands post details into a clean full-height layout.
+  - Displays full, unclamped description text.
+  - Features a prominent button to reveal authenticated contact details.
+  - Once revealed, displays contact handles with direct icons for Telegram or phone.
+
+## 5. Layout and Content Constraints
+- **Feed Card Dimensions**: Fixed 220px tall, 680px maximum width.
+- **Grid Layout**: Always a single centered column. No grid or multi-column layout at any breakpoint.
+- **Images**: No images or photos are permitted anywhere in the post feed or details.
+- **Route Options**: Constrained exclusively to Korea (KR) and Uzbekistan (UZ).
+- **Text Length**: Note preview is clamped to exactly two lines.
+
+## 6. Language / Locale
+- **Uzbek Only (`uz`)**: The entire UI, form labels, success/error notices, and system-generated dates must be in Uzbek.
+- **No Hardcoded Copy**: All UI text is fed from a localized translation file.
+
+## 7. Explicit Non-Goals / Out-of-Scope Screens
+- **No Payments or Escrow**: No checkout screens, payment inputs, or transaction history.
+- **No In-App Messaging**: No chats, inbox lists, or real-time message screens.
+- **No Rating/Review System**: No star ratings, traveler reviews, or trust badges.
+- **No General Profiles**: No dedicated user profile pages or travel history feeds.
+- **No Search or Advanced Filter**: No search bars or complex database query filters.
+
+---
+
+# Developer Reference (Not for Design / Out of Scope for Stitch)
+
 ## Overview
 
 **Creative North Star: "The Airmail Board"**
@@ -350,7 +424,7 @@ motion. Nothing bounces; nothing is chunky.
 - **Disabled:** 60% opacity and `cursor-not-allowed`; no colour change.
 
 ### Chips
-- **Style:** full-pill, mono, 8×15px padding, `card` fill with a `field` hairline.
+- **Shape:** full-pill, mono, 8×15px padding, `card` fill with a `field` hairline.
 - **Selected:** inverts to `ink` fill with `card` text. Selection is a fill inversion, never a
   border weight change.
 
