@@ -41,13 +41,23 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Reject oversized bodies before any work. A legitimate Telegram auth
+  // payload is ~200 bytes; this stops multi-KB garbage from being parsed.
+  const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+  if (contentLength > 2_000) {
+    return res.status(413).json({ error: 'So\'rov juda katta' });
+  }
+
   // Throttle auth attempts per IP to slow abuse of the bridge. Forging the
   // payload is not the threat this stops — the HMAC below makes that
   // infeasible — so the cap is sized against hammering Supabase's admin API,
   // and left loose enough that a shared carrier-grade NAT address (common in
   // both corridors) doesn't lock out real users. It only became a real limit
   // at all once clientIp() stopped trusting a client-supplied header.
-  const allowed = await checkRateLimit('auth', clientIp(req), 60, 600);
+  //
+  // Fails closed: if the rate-limit DB is unreachable, denying auth is better
+  // than allowing unlimited session creation against Supabase admin API.
+  const allowed = await checkRateLimit('auth', clientIp(req), 60, 600, false);
   if (!allowed) {
     return res.status(429).json({ error: 'Juda ko\'p urinish. Birozdan keyin urinib ko\'ring' });
   }
@@ -106,7 +116,7 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
       err.code === 'email_exists' ||
       Boolean(err.message?.toLowerCase().includes('already'));
     if (!isAlreadyExists) {
-      console.error('Error creating Telegram user:', createError);
+      console.error('Error creating Telegram user:', { message: (createError as { message?: string }).message });
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }
   }
@@ -117,7 +127,7 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
   });
 
   if (linkError || !linkData?.properties?.hashed_token) {
-    console.error('Error generating Telegram session link:', linkError);
+    console.error('Error generating Telegram session link:', { message: linkError?.message });
     return res.status(500).json({ error: 'Xatolik yuz berdi' });
   }
 
@@ -131,7 +141,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     return await handleTelegramAuth(req, res);
   } catch (err) {
-    console.error('Unhandled error in auth-telegram:', err);
+    console.error('Unhandled error in auth-telegram:', err instanceof Error ? err.message : err);
     if (!res.headersSent) {
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }

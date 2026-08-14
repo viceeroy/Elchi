@@ -72,6 +72,10 @@ const PUBLIC_COLUMNS =
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
 
+// Reject request bodies larger than this before parsing. Vercel's default limit
+// is 4.5 MB, but no legitimate post or auth payload is larger than a few KB.
+const MAX_BODY_BYTES = 10_000;
+
 // Post ids are UUIDs. Checking the shape here turns a malformed id into a 400
 // instead of letting Postgres reject the cast and surface as a 500.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -114,7 +118,7 @@ async function markOwnership(
     .in('id', posts.map((p) => p.id as string));
 
   if (error) {
-    console.error('Error resolving post ownership:', error);
+    console.error('Error resolving post ownership:', { message: error.message, code: error.code });
     return posts.map((p) => ({ ...p, is_mine: false }));
   }
   const mine = new Set((data ?? []).map((row) => row.id as string));
@@ -156,8 +160,8 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     // cost of scraping, and it can be revoked. The per-IP cap is a backstop so
     // one host can't drive the reveal endpoint through a pile of throwaway
     // accounts — loose enough to survive shared/NAT addresses.
-    const perUser = await checkRateLimit('contact', `user:${user.id}`, 60, 600);
-    const perIp = perUser && await checkRateLimit('contact-ip', clientIp(req), 240, 600);
+    const perUser = await checkRateLimit('contact', `user:${user.id}`, 60, 600, false);
+    const perIp = perUser && await checkRateLimit('contact-ip', clientIp(req), 240, 600, false);
     if (!perUser || !perIp) {
       return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
     }
@@ -165,7 +169,7 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     const db = userScopedClient(user.token);
     const { data, error } = await db.rpc('get_post_contact', { p_id: id });
     if (error) {
-      console.error('Error fetching post contact:', error);
+      console.error('Error fetching post contact:', { message: error.message, code: error.code });
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }
     const row = Array.isArray(data) ? data[0] : data;
@@ -196,7 +200,7 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     ]);
 
     if (error) {
-      console.error('Error fetching post:', error);
+      console.error('Error fetching post:', { message: error.message, code: error.code });
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }
     if (!data) {
@@ -281,7 +285,7 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
   // returned, so nothing can be left in flight.
   const [{ data, error }, user] = await Promise.all([query, resolveUser(req)]);
   if (error) {
-    console.error('Error fetching posts:', error);
+    console.error('Error fetching posts:', { message: error.message, code: error.code });
     return res.status(500).json({ error: 'Xatolik yuz berdi' });
   }
 
@@ -304,6 +308,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     return handleGet(req, res);
   } else if (req.method === 'POST') {
+    // Reject oversized bodies before any work. No legitimate post payload
+    // exceeds a few KB; this stops multi-MB JSON bombs from being parsed.
+    const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+    if (contentLength > MAX_BODY_BYTES) {
+      return res.status(413).json({ error: 'So\'rov juda katta' });
+    }
+
     // Loose per-IP backstop before any work, so unauthenticated flooding is
     // turned away cheaply.
     const ipAllowed = await checkRateLimit('post-ip', clientIp(req), 40, 600);
@@ -550,7 +561,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // one_active_announcement trigger, which was the only thing on this table
       // that ever raised that code — `posts` has no unique constraint besides
       // the primary key. Both are gone.
-      console.error('Error creating post:', error);
+      console.error('Error creating post:', { message: error.message, code: error.code });
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }
 
@@ -587,7 +598,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('user_id', user_id);
 
     if (error) {
-      console.error('Error deleting post:', error);
+      console.error('Error deleting post:', { message: error.message, code: error.code });
       return res.status(500).json({ error: 'Xatolik yuz berdi' });
     }
 

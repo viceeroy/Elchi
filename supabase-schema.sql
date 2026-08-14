@@ -565,6 +565,11 @@ DECLARE
     v_window_start TIMESTAMPTZ := NOW() - make_interval(secs => p_window_sec);
     v_count        INTEGER;
 BEGIN
+    -- Serialise concurrent calls for the same (bucket, identifier). Different
+    -- keys hash differently and do not block each other. The lock is released
+    -- at function exit (transaction commit).
+    PERFORM pg_advisory_xact_lock(hashtext(p_bucket || '|' || p_identifier));
+
     DELETE FROM rate_limits
     WHERE bucket = p_bucket AND identifier = p_identifier AND created_at < v_window_start;
 

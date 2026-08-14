@@ -9,13 +9,18 @@ import { supabase } from './supabase.js';
 // table itself stays locked (RLS on, no anon policies; only the function writes it).
 //
 // Returns true when the request is allowed, false when the limit is exceeded.
-// Fails open: if the store errors we let the request through rather than lock
-// everyone out on a transient DB hiccup.
+//
+// `failOpen` controls what happens on a transient DB error:
+//   true  — allow the request (default; prefer availability over protection)
+//   false — deny the request (prefer protection over availability)
+// Sensitive buckets (contact reveal, auth) use failOpen = false so a DB hiccup
+// does not silently remove the one gate that prevents bulk scraping.
 export async function checkRateLimit(
   bucket: string,
   identifier: string,
   max: number,
   windowSec: number,
+  failOpen = true,
 ): Promise<boolean> {
   try {
     const { data, error } = await supabase.rpc('check_rate_limit', {
@@ -26,15 +31,15 @@ export async function checkRateLimit(
     });
 
     if (error) {
-      console.error('Rate limit check failed, allowing request:', error);
-      return true;
+      console.error('Rate limit check failed:', { message: error.message, code: error.code });
+      return failOpen;
     }
 
     // The function returns a boolean: true = allowed, false = limited.
     return data !== false;
   } catch (err) {
-    console.error('Rate limit check threw, allowing request:', err);
-    return true;
+    console.error('Rate limit check threw:', err instanceof Error ? err.message : err);
+    return failOpen;
   }
 }
 
