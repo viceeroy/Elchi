@@ -155,9 +155,18 @@ export const FeedCard: React.FC<FeedCardProps> = ({ post, t, onOpen, children })
        shadow). transition-all was animating every property on the element,
        including ones nothing ever touches, for no visual difference — narrower
        is strictly cheaper and documents what's actually meant to move. */
-    className={`group ${FEED_CARD_SHELL} transition-[transform,box-shadow] duration-300 cursor-pointer motion-safe:hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]`}
+    className={`group ${FEED_CARD_SHELL} transition-[transform,box-shadow] duration-300 cursor-pointer motion-safe:hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] relative`}
     id={`post-card-${post.id}`}
   >
+    <a
+      href={`/post/${post.id}`}
+      style={{ position: 'absolute', inset: 0, zIndex: 10 }}
+      aria-hidden="true"
+      tabIndex={-1}
+      onClick={(e) => e.preventDefault()}
+    >
+      <span className="sr-only">{post.type === "traveler" ? t.travelerTag : t.requestTag}</span>
+    </a>
     {/* Inline style is an intentional exception here, not drift: the Token-
         Or-Nothing rule (see DESIGN.md, Elevation & Depth) bans inline
         box-shadow specifically, because an inline shadow silently outranks

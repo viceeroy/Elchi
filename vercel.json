@@ -3,8 +3,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/post/:id", "destination": "/api/post-page?postId=:id" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/((?!api/|src/|lib/|@vite/|@react-refresh|node_modules/|assets/|favicon.ico).*)", "destination": "/index.html" }
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/((?!api/|post/|src/|lib/|@vite/|@react-refresh|node_modules/|assets/|favicon.ico).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

@@ -209,8 +209,21 @@ export default function App() {
   useEffect(() => {
     if (deepLinkHandled.current) return;
     const params = new URLSearchParams(window.location.search);
-    const postIdParam = params.get("postId") || params.get("post");
+    let postIdParam = params.get("postId") || params.get("post");
+
+    // Check path for /post/:id
+    const pathMatch = window.location.pathname.match(/^\/post\/([^\/]+)$/);
+    if (pathMatch) {
+      postIdParam = pathMatch[1];
+    }
+
     if (!postIdParam) return;
+
+    // Redirect legacy ?postId=X to /post/X on load
+    if (params.has("postId") || params.has("post")) {
+      window.history.replaceState({}, "", `/post/${postIdParam}`);
+    }
+
     deepLinkHandled.current = true;
 
     (async () => {
@@ -276,14 +289,9 @@ export default function App() {
     setContactCopied(false);
     setRevealedContact(null);
     setContactError(null);
-    // Clean up query param if present to keep URL neat
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("postId") || params.has("post")) {
-      params.delete("postId");
-      params.delete("post");
-      const newQuery = params.toString();
-      const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : "");
-      window.history.replaceState({}, "", newUrl);
+    // Clean up path to keep URL neat
+    if (window.location.pathname.startsWith('/post/')) {
+      window.history.replaceState({}, "", "/");
     }
   };
 
@@ -295,7 +303,7 @@ export default function App() {
   const handleShare = async () => {
     if (!selectedPost) return;
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}?postId=${selectedPost.id}`;
+    const shareUrl = `${window.location.origin}/post/${selectedPost.id}`;
     const shareWeight = localizeWeight(selectedPost.weight);
     // The contact handle is deliberately left out of the share text: it would
     // republish someone's phone number into whatever app the link is sent to.
