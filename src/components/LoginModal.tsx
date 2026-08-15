@@ -31,6 +31,7 @@ const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "";
 export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSuccess }) => {
   const [loading, setLoading] = useState<"telegram" | "google" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tgUser, setTgUser] = useState<TelegramAuthUser | null>(null);
   const panelRef = useDialog<HTMLDivElement>(onClose);
   // Telegram renders a fixed-width iframe button we can't restyle. Measure it
   // once it mounts and match the Google button + divider to the same width so
@@ -40,10 +41,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
   // async, leaving a blank gap on slow connections. Track when the iframe
   // actually paints so we can show a skeleton placeholder until then.
   const [tgReady, setTgReady] = useState(false);
+  // Bumped to force the Telegram widget useEffect to re-run, which tears
+  // down the old iframe and injects a fresh script+iframe. Used when the
+  // cached tgUser.auth_date has expired and the widget must produce a new
+  // auth payload with a current timestamp.
+  const [widgetKey, setWidgetKey] = useState(0);
 
   const handleGoogleLogin = async () => {
     setLoading("google");
     setError(null);
+    setTgUser(null);
     try {
       // Supabase redirects to Google, then back to the app; detectSessionInUrl
       // (supabaseClient) picks up the session and onAuthStateChange fires.
@@ -58,6 +65,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
     }
   };
 
+  // Retry handler that guards against re-sending an expired Telegram auth
+  // payload. The server enforces a 300 s TTL on auth_date
+  // (AUTH_DATE_MAX_AGE_SECONDS in auth-telegram.ts). This client-side check
+  // is a UX optimisation, not a correctness guarantee — a skewed client
+  // clock can produce false positives (extra click) or false negatives
+  // (retry fails on the server anyway), but the worst case is one wasted
+  // round-trip. 270 s gives 30 s of headroom before the server's hard cutoff.
+  const handleRetry = () => {
+    if (!tgUser) return;
+    const ageSeconds = Math.floor(Date.now() / 1000) - tgUser.auth_date;
+    if (ageSeconds > 270) {
+      setTgUser(null);
+      setError(t.loginSessionExpired || "Sessiya muddati o'tgan. Iltimos qaytadan kiring.");
+      // Force a fresh Telegram widget so the user gets a new auth_date.
+      // The old iframe *might* still be clickable — Telegram's widget isn't
+      // documented as single-fire — but re-injecting the script removes any
+      // doubt and guarantees Telegram's servers produce a current timestamp.
+      setTgReady(false);
+      setWidgetKey((k) => k + 1);
+      return;
+    }
+    window.onTelegramAuth?.(tgUser);
+  };
+
   const telegramContainerRef = useRef<HTMLDivElement>(null);
 
   // Inject the Telegram Login Widget script once on mount
@@ -65,6 +96,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
     if (!TELEGRAM_BOT_USERNAME || !telegramContainerRef.current) return;
 
     window.onTelegramAuth = async (user: TelegramAuthUser) => {
+      setTgUser(user);
       setLoading("telegram");
       setError(null);
       try {
@@ -120,7 +152,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
       observer.disconnect();
       window.onTelegramAuth = undefined;
     };
-  }, []);
+  }, [widgetKey]);
 
   return (
     <div
@@ -165,6 +197,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
               <div className="absolute inset-0 h-10 rounded-lg bg-rule animate-pulse" />
             )}
             <div className="flex justify-center w-full" ref={telegramContainerRef} />
+
+            {(loading === "telegram" || (error && tgUser)) && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-card rounded-lg">
+                {loading === "telegram" ? (
+                  <div className="flex w-full h-full items-center justify-center gap-2 border border-field rounded-lg text-sm font-bold text-ink">
+                    <svg className="animate-spin w-4 h-4 text-ink" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Tekshirilmoqda...</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleRetry}
+                    className="flex w-full h-full items-center justify-center gap-2 border border-field rounded-lg text-sm font-bold text-ink bg-card hover:bg-paper transition-colors"
+                  >
+                    Qayta urinish
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           {!TELEGRAM_BOT_USERNAME && (
             <p className="text-red text-xs text-center">
@@ -196,7 +249,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
             {t.continueWithGoogle}
           </button>
 
-          {(loading === "telegram" || loading === "google") && <p className="text-body text-sm mt-2 text-center">...</p>}
+          {loading === "google" && <p className="text-body text-sm mt-2 text-center">...</p>}
           {error && <p className="text-red text-sm mt-4 text-center">{error}</p>}
         </div>
       </div>

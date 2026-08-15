@@ -108,6 +108,7 @@ export const translations: Record<Locale, Translations> = {
     useAnotherEmail: "Boshqa email kiritish",
     loginErrorGeneral: "Xato yuz berdi. Iltimos qaytadan urining.",
     loginErrorInvalidCode: "Kod noto'g'ri yoki muddati o'tgan.",
+    loginSessionExpired: "Sessiya muddati o'tgan. Iltimos qaytadan kiring.",
     signedInAs: "Kirgan:",
     signOut: "Chiqish",
     profileMenuLabel: "Profil",

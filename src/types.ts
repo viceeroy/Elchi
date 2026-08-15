@@ -176,6 +176,7 @@ export interface Translations {
   useAnotherEmail?: string;
   loginErrorGeneral?: string;
   loginErrorInvalidCode?: string;
+  loginSessionExpired?: string;
   signedInAs?: string;
   signOut?: string;
   profileMenuLabel?: string;
