@@ -37,7 +37,7 @@
     />
     <meta
       name="keywords"
-      content="pochta yuborish, chamadonda joy, sayohatda yordam, yuk tashish e'lonlari, hujjat yuborish, dori yuborish, sovg'a yuborish, elchi, посылка, передать посылку, попутчик, место в чемодане, courier, luggage space, send parcel with traveler"
+      content="pochta yuborish, chamadonda joy, sayohatda yordam, yuk tashish e'lonlari, hujjat yuborish, dori yuborish, sovg'a yuborish, elchi"
     />
     <meta name="theme-color" content="#1B2A4A" />
     <link rel="canonical" href="https://elchi.org/" />
@@ -70,14 +70,14 @@
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Structured data: what the site is, and the three languages it serves -->
+    <!-- Structured data: what the site is, and its supported language -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
         "name": "Elchi",
         "url": "https://elchi.org/",
-        "inLanguage": ["uz", "ru", "en"],
+        "inLanguage": ["uz"],
         "description": "Sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi.",
         "publisher": {
           "@type": "Organization",
@@ -88,8 +88,7 @@
       }
     </script>
 
-    <!-- FAQ in all three languages: real indexable text that also answers the
-         questions people actually type into search. -->
+    <!-- FAQ in Uzbek: real indexable text that answers the questions people actually type into search. -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -118,38 +117,6 @@
               "@type": "Answer",
               "text": "Telegram, Google yoki email orqali kiring, \"E'lon berish\" tugmasini bosing, yo'nalish, sana, bo'sh joy va aloqa ma'lumotlaringizni kiriting. E'lon darhol taxtada paydo bo'ladi."
             }
-          },
-          {
-            "@type": "Question",
-            "name": "Что такое Elchi?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Elchi — бесплатная доска объявлений. Путешественники со свободным местом в чемодане и те, кому нужно передать посылку, находят друг друга здесь. Мы не участвуем в оплате и доставке — пользователи договариваются напрямую."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Сколько стоит размещение объявления?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Нисколько. Размещение и просмотр объявлений полностью бесплатны."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "What is Elchi?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Elchi is a free notice board. Travelers with spare luggage space and people who need to send a parcel find each other here. We take no part in payment or delivery — users arrange everything directly."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Is posting free?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Yes. Posting an ad and browsing the board are both completely free."
-            }
           }
         ]
       }
@@ -158,9 +125,8 @@
   <body>
     <div id="root"></div>
 
-    <!-- Static copy in all three languages so the raw HTML carries real text
-         before React mounts. Hidden once the app renders; crawlers and
-         no-JS visitors still read it. -->
+    <!-- Static copy in Uzbek so the raw HTML carries real text before React mounts.
+         Hidden once the app renders; crawlers and no-JS visitors still read it. -->
     <noscript>
       <h1>Elchi — chamadoningizda joy bormi?</h1>
       <p>
@@ -170,23 +136,7 @@
         Elchi to'lov va yetkazib berishga aralashmaydi — foydalanuvchilar o'zaro
         bevosita kelishadi.
       </p>
-      <h2>Elchi — есть место в чемодане?</h2>
-      <p>
-        Elchi — бесплатная доска объявлений для путешественников и тех, кому
-        нужно передать посылку. Есть свободное место в чемодане — разместите
-        объявление; нужно отправить документы, лекарства, одежду или подарок —
-        найдите попутчика. Elchi не участвует в оплате и доставке: пользователи
-        договариваются напрямую.
-      </p>
-      <h2>Elchi — is there room in your suitcase?</h2>
-      <p>
-        Elchi is a free notice board for travelers and people who need to send a
-        parcel. Have spare luggage space — post an ad; need to send documents,
-        medicine, clothes or a gift — find someone already making the trip.
-        Elchi takes no part in payment or delivery: users arrange everything
-        directly.
-      </p>
-      <p>Bepul · Бесплатно · Free</p>
+      <p>Bepul e'lon taxtasi</p>
     </noscript>
 
     <script type="module" src="/src/main.tsx"></script>

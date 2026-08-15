@@ -623,7 +623,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             <>
               <div>
                 <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold mb-1.5">
-                  {t.noteLabel.replace(" (ixtiyoriy)", "").replace(" (опционально)", "").replace(" (optional)", "")} <span className="text-red-500">*</span>
+                  {t.noteLabel.replace(" (ixtiyoriy)", "")} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   ref={(el) => { fieldRefs.current.note = el; }}

@@ -28,7 +28,7 @@ const HTML_SHELL = `<!doctype html>
     />
     <meta
       name="keywords"
-      content="pochta yuborish, chamadonda joy, sayohatda yordam, yuk tashish e'lonlari, hujjat yuborish, dori yuborish, sovg'a yuborish, elchi, посылка, передать посылку, попутчик, место в чемодане, courier, luggage space, send parcel with traveler"
+      content="pochta yuborish, chamadonda joy, sayohatda yordam, yuk tashish e'lonlari, hujjat yuborish, dori yuborish, sovg'a yuborish, elchi"
     />
     <meta name="theme-color" content="#1B2A4A" />
     <link rel="canonical" href="__META_URL__" />
@@ -66,7 +66,7 @@ const HTML_SHELL = `<!doctype html>
         "@type": "WebSite",
         "name": "Elchi",
         "url": "https://elchi.org/",
-        "inLanguage": ["uz", "ru", "en"],
+        "inLanguage": ["uz"],
         "description": "Sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi.",
         "publisher": {
           "@type": "Organization",
@@ -90,23 +90,7 @@ const HTML_SHELL = `<!doctype html>
         Elchi to'lov va yetkazib berishga aralashmaydi — foydalanuvchilar o'zaro
         bevosita kelishadi.
       </p>
-      <h2>Elchi — есть место в чемодане?</h2>
-      <p>
-        Elchi — бесплатная доска объявлений для путешественников и тех, кому
-        нужно передать посылку. Есть свободное место в чемодане — разместите
-        объявление; нужно отправить документы, лекарства, одежду или подарок —
-        найдите попутчика. Elchi не участвует в оплате и доставке: пользователи
-        договариваются напрямую.
-      </p>
-      <h2>Elchi — is there room in your suitcase?</h2>
-      <p>
-        Elchi is a free notice board for travelers and people who need to send a
-        parcel. Have spare luggage space — post an ad; need to send documents,
-        medicine, clothes or a gift — find someone already making the trip.
-        Elchi takes no part in payment or delivery: users arrange everything
-        directly.
-      </p>
-      <p>Bepul · Бесплатно · Free</p>
+      <p>Bepul e'lon taxtasi</p>
     </noscript>
 
     <script type="module" src="/src/main.tsx"></script>

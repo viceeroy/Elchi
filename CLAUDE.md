@@ -45,7 +45,7 @@ locally, run `vercel dev` alongside; [vite.config.ts](vite.config.ts) proxies `/
 |---|---|
 | [src/App.tsx](src/App.tsx) | The whole page — feed, detail sheet, modals wiring. ~1000 lines, single component |
 | [src/components/](src/components) | Cards, composers, selectors, auth sheets |
-| [src/notes/](src/notes) | Static editorial cards above the feed. **Not** posts, never touch the API |
+| [src/explainer/](src/explainer) | Static editorial cards above the feed. **Not** posts, never touch the API |
 | [src/types.ts](src/types.ts) | `Post`, `PostContact`, `Translations`, `Locale` |
 | [src/constants.ts](src/constants.ts) | Country registry — the source of truth for supported routes |
 | [src/translations.ts](src/translations.ts) | Uzbek copy, keyed by `Locale` |
