@@ -50,7 +50,7 @@ export const PostFab: React.FC<PostFabProps> = ({
       Icon: Plane,
       label: t.fabTravelerLabel || "Uchish",
       // Blue and red exactly as the traveler/request stamps on the cards (see
-      // BoardingPass), so the dial is colour-readable before the label is, and
+      // PostCard), so the dial is colour-readable before the label is, and
       // tilted alternating ways.
       color: "var(--color-blue)",
       textColor: "var(--color-card)",

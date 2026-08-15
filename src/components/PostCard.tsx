@@ -15,14 +15,14 @@ import {
   FEED_CARD_TITLE,
 } from "./FeedCard";
 
-interface BoardingPassProps {
+interface PostCardProps {
   post: Post;
   t: Translations;
   locale: Locale;
   onOpen: () => void;
 }
 
-export const BoardingPass: React.FC<BoardingPassProps> = ({
+export const PostCard: React.FC<PostCardProps> = ({
   post,
   t,
   locale,

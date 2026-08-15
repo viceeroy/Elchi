@@ -1,18 +1,17 @@
 import React from "react";
-import { X, Plane, Briefcase, Info, Megaphone } from "lucide-react";
+import { X, Plane, Briefcase, Info } from "lucide-react";
 import { Locale } from "../types";
-import { Note } from "./data";
+import { Explainer } from "./data";
 import { translations } from "../translations";
 import { useDialog } from "../hooks/useDialog";
 
 const TYPE_ICON = {
   traveler: { Icon: Plane, bg: "var(--color-gold)" },
   request: { Icon: Briefcase, bg: "var(--color-red)" },
-  note: { Icon: Megaphone, bg: "var(--color-gold)" },
 } as const;
 
-interface NoteSheetProps {
-  note: Note;
+interface ExplainerSheetProps {
+  explainer: Explainer;
   locale: Locale;
   onClose: () => void;
 }
@@ -22,8 +21,8 @@ interface NoteSheetProps {
  * slide-up and header treatment) so the two read as one surface — but it holds
  * only static copy: there is no author, no contact and nothing to fetch.
  */
-export const NoteSheet: React.FC<NoteSheetProps> = ({ note, locale, onClose }) => {
-  const c = note.content[locale];
+export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({ explainer, locale, onClose }) => {
+  const c = explainer.content[locale];
   const body = c.detail && c.detail.length > 0 ? c.detail : [c.summary];
   // This sheet takes a locale rather than a `t` bundle — it renders static
   // editorial copy, not API data — so it reaches the string table directly for

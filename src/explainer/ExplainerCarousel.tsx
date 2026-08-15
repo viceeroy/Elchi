@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Locale } from "../types";
-import { Note, NOTES } from "./data";
-import { NoteCard } from "./NoteCard";
+import { Explainer, EXPLAINERS } from "./data";
+import { ExplainerCard } from "./ExplainerCard";
 
-interface NotesCarouselProps {
+interface ExplainerCarouselProps {
   locale: Locale;
   /** Lifted to the page so the open sheet can share the body scroll lock. */
-  onOpenNote: (note: Note) => void;
-  notes?: Note[];
+  onOpenExplainer: (explainer: Explainer) => void;
+  explainers?: Explainer[];
 }
 
 const DISMISSED_KEY = "elchi_dismissed_notes";
@@ -30,10 +30,10 @@ function readDismissed(): Set<string> {
  * (right chevron while not on the last note, left chevron once scrolled past
  * the first).
  */
-export const NotesCarousel: React.FC<NotesCarouselProps> = ({
+export const ExplainerCarousel: React.FC<ExplainerCarouselProps> = ({
   locale,
-  onOpenNote,
-  notes: allNotes = NOTES,
+  onOpenExplainer,
+  explainers: allExplainers = EXPLAINERS,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -41,7 +41,7 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
   // Dismissing a card is local and permanent — it's editorial chrome, not
   // content the user would ever want back, so there's no undo.
   const [dismissed, setDismissed] = useState<Set<string>>(() => readDismissed());
-  const notes = allNotes.filter((n) => !dismissed.has(n.id));
+  const explainers = allExplainers.filter((n) => !dismissed.has(n.id));
 
   const dismiss = (id: string) => {
     setDismissed((prev) => {
@@ -96,9 +96,9 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
       track.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, [syncActive, notes.length]);
+  }, [syncActive, explainers.length]);
 
-  if (notes.length === 0) return null;
+  if (explainers.length === 0) return null;
 
   return (
     <section aria-label="Board notes" className="relative mb-4">
@@ -106,9 +106,9 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
         ref={trackRef}
         className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {notes.map((note, i) => (
+        {explainers.map((explainer, i) => (
           <div
-            key={note.id}
+            key={explainer.id}
             ref={(el) => {
               itemRefs.current[i] = el;
             }}
@@ -116,19 +116,19 @@ export const NotesCarousel: React.FC<NotesCarouselProps> = ({
             // cards it now sits above.
             className="min-w-0 flex-[0_0_100%] snap-start"
           >
-            <NoteCard
-              note={note}
+            <ExplainerCard
+              explainer={explainer}
               locale={locale}
-              onOpen={() => onOpenNote(note)}
-              onDismiss={() => dismiss(note.id)}
+              onOpen={() => onOpenExplainer(explainer)}
+              onDismiss={() => dismiss(explainer.id)}
             />
           </div>
         ))}
       </div>
 
-      {notes.length > 1 && (
+      {explainers.length > 1 && (
         <div className="mt-3 flex justify-center gap-1.5" aria-hidden="true">
-          {notes.map((_, i) => (
+          {explainers.map((_, i) => (
             <div
               key={i}
               className={`h-1.5 rounded-full transition-all duration-300 ${

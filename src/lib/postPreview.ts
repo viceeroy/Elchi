@@ -8,14 +8,11 @@
 // emoji inflates the line box it lands in, and a newline burns one of the
 // clamped lines on whitespace.
 //
-// So the card gets a derived view and the sheet keeps the original. Nothing here
-// writes anything back: `flattenNote` is pure, and the stored note is never
-// modified.
+// The line clamp on the post card handles visual overflow, but a screen reader
+// needs this flattened string or it will pause unpredictably on hidden whitespace.
 //
-// This module used to carry a second, larger export — `derivePreview`, which
-// split an announcement's note into a promoted title and a body. It went with
-// the announcement card; what is left is the sanitisation both card types
-// shared.
+// Historically, this module also handled title promotion for the removed 
+// "announcement" post type. What remains is the sanitisation applied to all notes.
 
 /**
  * Strip emoji, flatten every whitespace run to one space, drop leading list

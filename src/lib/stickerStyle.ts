@@ -6,7 +6,7 @@ import { PostType } from "../types";
  * post type ("UCHISH" → plane, "POCHTA BOR" → suitcase).
  *
  * One definition for both post types. This lived as a ~15-line object literal
- * copy-pasted into BoardingPass and the announcement card, identical but for
+ * copy-pasted into PostCard and the announcement card, identical but for
  * the colour lines, and the copies drifted: when the badges lost their
  * rotate() the same edit had to be made twice, in two files, and a miss would
  * have left one post type tilted against the other in the same column. The

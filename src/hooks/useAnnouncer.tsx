@@ -25,6 +25,7 @@ import React, { useCallback, useState } from "react";
  * the text arrive in the same paint.
  */
 
+// "Announcement" here is the ARIA screen-reader concept, not the removed post type.
 interface Announcement {
   text: string;
   // Bumped on every call so that announcing the same string twice still

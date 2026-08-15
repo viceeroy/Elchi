@@ -1,11 +1,11 @@
 import React from "react";
 import { X } from "lucide-react";
 import { Locale } from "../types";
-import { Note } from "./data";
+import { Explainer } from "./data";
 import { translations } from "../translations";
 
-interface NoteCardProps {
-  note: Note;
+interface ExplainerCardProps {
+  explainer: Explainer;
   locale: Locale;
   onOpen: () => void;
   onDismiss?: () => void;
@@ -16,8 +16,8 @@ interface NoteCardProps {
  * opens the expanded sheet on tap. Only one kind of note is left (see
  * NoteKind in ./data), so this component no longer branches.
  */
-export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDismiss }) => {
-  const c = note.content[locale];
+export const ExplainerCard: React.FC<ExplainerCardProps> = ({ explainer, locale, onOpen, onDismiss }) => {
+  const c = explainer.content[locale];
 
   return (
     <article
@@ -30,7 +30,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, locale, onOpen, onDism
           onOpen();
         }
       }}
-      id={`note-card-${note.id}`}
+      id={`explainer-card-${explainer.id}`}
       className="relative h-full overflow-hidden rounded-xl bg-red text-[#F6EFE2] cursor-pointer shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
       style={{ boxShadow: "0 1px 2px rgba(27,42,74,0.06), 0 10px 28px -18px rgba(27,42,74,0.28)" }}
     >

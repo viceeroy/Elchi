@@ -187,16 +187,7 @@ export interface Translations {
   contactLockedText: string;
   contactLockedBtn: string;
 
-  // Name gate — the blocking step after a login that lands on a profile with no
-  // display_name. Not optional in spirit: the sheet cannot be dismissed, so a
-  // missing string here would leave a user staring at an unlabelled dialog.
-  nameGateTitle?: string;
-  nameGateSubtitle?: string;
-  nameGateLabel?: string;
-  nameGatePlaceholder?: string;
-  nameGateSubmit?: string;
-  nameGateSaving?: string;
-  nameGateErrorInvalid?: string;
+
 
   // Screen-reader-only announcements. These are never painted — they exist so
   // that a state change with no visual equivalent in the accessibility tree

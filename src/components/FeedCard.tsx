@@ -5,14 +5,14 @@ import { Post, Translations } from "../types";
  * The chrome every feed card wears — silhouette, left stripe, inner column,
  * badge row and footer. One definition; the bodies are what differ.
  *
- * This lived as a copy-paste pair in BoardingPass and the announcement card,
+ * This lived as a copy-paste pair in PostCard and the announcement card,
  * identical apart from the stripe's background and the footer's left string,
  * and both files carried comments begging the next editor to keep them in step
  * ("the two cards have drifted twice"). They had drifted twice. The loading
  * skeleton in App.tsx traced the same shape a third time and was, for a while,
  * still drawing a card silhouette the cards themselves had retired.
  *
- * The announcement card is gone, so BoardingPass and the skeleton are the two
+ * The announcement card is gone, so PostCard and the skeleton are the two
  * consumers left — which is still two, and still the reason this file exists.
  *
  * Same extraction as ../lib/stickerStyle.ts, for the same reason.
@@ -29,7 +29,7 @@ import { Post, Translations } from "../types";
  * h-[220px] is pinned rather than left to the content because the cards stack in
  * ONE column, and a card that sizes to its own text makes that column ragged. It
  * is also the number the note clamp was measured against (see the arithmetic in
- * BoardingPass.tsx) — changing it here changes what fits there.
+ * PostCard.tsx) — changing it here changes what fits there.
  *
  * overflow-hidden is the floor under that arithmetic, not a replacement for it.
  * The note clamp was measured at 218px of content in this 220px shell at 375px
@@ -51,7 +51,7 @@ export const FEED_CARD_SHELL =
  * The padded column inside the shell.
  *
  * One inset on all four sides at two breakpoints (p-5 sm:p-6), taken from the
- * intro note's horizontal rhythm (../notes/NoteCard.tsx) and applied vertically
+ * intro note's horizontal rhythm (../explainer/ExplainerCard.tsx) and applied vertically
  * too: the post cards and the intro note stack directly on each other in the
  * feed, so copy that starts at a different inset reads as a misalignment. Each
  * card previously ran its own per-side ramp — four sides, three breakpoints —
@@ -120,14 +120,14 @@ interface FeedCardProps {
 /**
  * Silhouette + stripe + padded column. `children` are the card's own body.
  *
- * role="button" + tabIndex + onKeyDown matches ../notes/NoteCard.tsx, the
+ * role="button" + tabIndex + onKeyDown matches ../explainer/ExplainerCard.tsx, the
  * other click-to-open card in this feed column — that one already had it,
  * this one didn't, and the two need to behave identically since they stack in
  * the same list. Without it the whole card was reachable only by tabbing to
  * the footer's "open" button and unreachable by Enter/Space anywhere else on
  * its surface, despite the entire card being the visual click target.
  *
- * aria-label names the article the same way BoardingPass makes the type
+ * aria-label names the article the same way PostCard makes the type
  * audible: type + route. A screen reader landing on this element with no
  * name would announce "article" or "button" with nothing to identify which
  * post it is.

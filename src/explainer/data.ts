@@ -8,11 +8,12 @@ import { Locale } from "../types";
 // the component instead of in the shared translations dictionary.
 //
 // Only the intro card remains. The two worked examples ("this is what a
+// Only the intro card remains. The two worked examples ("this is what a
 // traveler ad looks like") were scaffolding for an empty board; real posts now
 // fill that role.
-export type NoteKind = "intro";
+export type ExplainerKind = "intro";
 
-export interface NoteContent {
+export interface ExplainerContent {
   /** Small monospace label on the card shoulder. */
   tag: string;
   /** Right-hand meta line — a date, a hint, whatever fits the card kind. */
@@ -25,17 +26,17 @@ export interface NoteContent {
   image?: string;
   /** Full body shown in the expanded sheet; falls back to `summary`. */
   detail?: string[];
-  /** Icon-labeled breakdown of the three ad kinds, shown in the expanded sheet. */
-  typesList?: { icon: "traveler" | "request" | "note"; text: string }[];
+  /** Icon-labeled breakdown of the ad kinds, shown in the expanded sheet. */
+  typesList?: { icon: "traveler" | "request"; text: string }[];
 }
 
-export interface Note {
+export interface Explainer {
   id: string;
-  kind: NoteKind;
-  content: Record<Locale, NoteContent>;
+  kind: ExplainerKind;
+  content: Record<Locale, ExplainerContent>;
 }
 
-export const NOTES: Note[] = [
+export const EXPLAINERS: Explainer[] = [
   {
     id: "who-uses-it",
     kind: "intro",

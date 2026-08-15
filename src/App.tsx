@@ -5,7 +5,7 @@ import { replaceLuggageToken } from "../lib/weight";
 import { formatFlexibleDate } from "../lib/formatDate";
 import { translations, defaultLocale, pluralizeChamadon } from "./translations";
 import { COUNTRIES, getCountry, isHubCity } from "./constants";
-import { BoardingPass } from "./components/BoardingPass";
+import { PostCard } from "./components/PostCard";
 import {
   FEED_CARD_SHELL,
   FEED_CARD_INNER,
@@ -14,7 +14,7 @@ import {
 import { RouteSelector } from "./components/RouteSelector";
 import { PostFab } from "./components/PostFab";
 import { TypedHeadline } from "./components/TypedHeadline";
-import { NotesCarousel, type Note } from "./notes";
+import { ExplainerCarousel, type Explainer } from "./explainer";
 import { useDialog } from "./hooks/useDialog";
 import { useAnnouncer } from "./hooks/useAnnouncer";
 import { supabaseBrowser } from "./supabaseClient";
@@ -30,24 +30,17 @@ import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 // read-mostly noticeboard, and three of the five are behind a login the average
 // reader does not have. Shipping them in the entry chunk made the first render
 // of the feed wait on code for screens that were never requested. They are
-// already rendered conditionally, so splitting them costs no extra unmounting
-// logic; it only stops the bytes travelling.
-//
-// React.lazy wants a default export and this codebase uses named exports
-// throughout (see the component convention in CLAUDE.md), hence the
-// `.then(m => ({ default: m.X }))` on each. NoteSheet is imported from its own
-// module rather than the ./notes barrel so the chunk doesn't drag in
-// NotesCarousel and the notes data, which the first screen already needs — and
-// despite the name it is an editorial card from ./notes, nothing to do with
-// posting.
+// Lazy components for sheets that aren't the primary board load. The explainer
+// sheet only opens from the carousel above the board; the profile and
+// about pages only open from the sidebar menu.
 const PostFormModal = lazy(() =>
   import("./components/PostFormModal").then((m) => ({ default: m.PostFormModal })),
 );
 const LoginModal = lazy(() =>
   import("./components/LoginModal").then((m) => ({ default: m.LoginModal })),
 );
-const NoteSheet = lazy(() =>
-  import("./notes/NoteSheet").then((m) => ({ default: m.NoteSheet })),
+const ExplainerSheet = lazy(() =>
+  import("./explainer/ExplainerSheet").then((m) => ({ default: m.ExplainerSheet })),
 );
 const ProfileSheet = lazy(() =>
   import("./components/ProfileSheet").then((m) => ({ default: m.ProfileSheet })),
@@ -111,9 +104,9 @@ export default function App() {
   // Speed-dial state for the floating "+"
   const [fabOpen, setFabOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  // Board notes are static editorial cards, not feed content — kept here only so
+  // Board explainers are static editorial cards, not feed content — kept here only so
   // the open sheet shares the same body scroll lock as the other modals.
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [selectedExplainer, setSelectedExplainer] = useState<Explainer | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [contactCopied, setContactCopied] = useState(false);
   // Confirmation toast. Holds the message rather than a flag, because the two
@@ -255,7 +248,7 @@ export default function App() {
   useEffect(() => {
     const isModalOpen =
       selectedPost !== null ||
-      selectedNote !== null ||
+      selectedExplainer !== null ||
       formOpen ||
       loginOpen ||
       profileOpen;
@@ -281,7 +274,7 @@ export default function App() {
       body.style.paddingRight = "";
       window.scrollTo(0, scrollY);
     };
-  }, [selectedPost, selectedNote, formOpen, loginOpen, profileOpen]);
+  }, [selectedPost, selectedExplainer, formOpen, loginOpen, profileOpen]);
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -716,7 +709,7 @@ export default function App() {
           {/* The board's own explainer. Not a post: no author, no contact, and
               unaffected by the route filter — a new visitor should meet it
               whichever corridor they land on. */}
-          <NotesCarousel locale={locale} onOpenNote={setSelectedNote} />
+          <ExplainerCarousel locale={locale} onOpenExplainer={setSelectedExplainer} />
 
           {loading ? (
             <div className="flex flex-col gap-4">
@@ -753,7 +746,7 @@ export default function App() {
           ) : posts.length > 0 ? (
             <div className="flex flex-col gap-4">
               {posts.map((post) => (
-                <BoardingPass
+                <PostCard
                   key={post.id}
                   post={post}
                   t={t}
@@ -847,13 +840,13 @@ export default function App() {
         </Suspense>
       )}
 
-      {/* Board note expanded view */}
-      {selectedNote && (
+      {/* Board explainer expanded view */}
+      {selectedExplainer && (
         <Suspense fallback={<SheetFallback />}>
-          <NoteSheet
-            note={selectedNote}
+          <ExplainerSheet
+            explainer={selectedExplainer}
             locale={locale}
-            onClose={() => setSelectedNote(null)}
+            onClose={() => setSelectedExplainer(null)}
           />
         </Suspense>
       )}
