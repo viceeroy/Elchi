@@ -14,7 +14,7 @@ import {
 import { RouteSelector } from "./components/RouteSelector";
 import { PostFab } from "./components/PostFab";
 import { TypedHeadline } from "./components/TypedHeadline";
-import { ExplainerCarousel, type Explainer } from "./explainer";
+import { EXPLAINERS, type Explainer } from "./explainer";
 import { useDialog } from "./hooks/useDialog";
 import { useAnnouncer } from "./hooks/useAnnouncer";
 import { supabaseBrowser } from "./supabaseClient";
@@ -22,7 +22,7 @@ import { supabaseBrowser } from "./supabaseClient";
 // umbrella at all (see supabaseClient.ts), and a type-only import back to it
 // invites someone to "tidy" it into a value import and quietly restore 86 kB.
 import type { Session } from "@supabase/auth-js";
-import { Send, ShieldAlert, Sparkles, MessageSquare, Plane, Briefcase, X, Phone, Share2, Check, Copy, User, Trash2, Lock } from "lucide-react";
+import { Send, ShieldAlert, Sparkles, MessageSquare, Plane, Briefcase, X, Phone, Share2, Check, Copy, User, Trash2, Lock, HelpCircle } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 // Every one of these is a modal or a bottom sheet: none of them is on screen at
@@ -106,7 +106,7 @@ export default function App() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   // Board explainers are static editorial cards, not feed content — kept here only so
   // the open sheet shares the same body scroll lock as the other modals.
-  const [selectedExplainer, setSelectedExplainer] = useState<Explainer | null>(null);
+  const [isExplainerOpen, setIsExplainerOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [contactCopied, setContactCopied] = useState(false);
   // Confirmation toast. Holds the message rather than a flag, because the two
@@ -248,7 +248,7 @@ export default function App() {
   useEffect(() => {
     const isModalOpen =
       selectedPost !== null ||
-      selectedExplainer !== null ||
+      isExplainerOpen ||
       formOpen ||
       loginOpen ||
       profileOpen;
@@ -274,7 +274,7 @@ export default function App() {
       body.style.paddingRight = "";
       window.scrollTo(0, scrollY);
     };
-  }, [selectedPost, selectedExplainer, formOpen, loginOpen, profileOpen]);
+  }, [selectedPost, isExplainerOpen, formOpen, loginOpen, profileOpen]);
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -688,7 +688,7 @@ export default function App() {
       <main className="max-w-[680px] mx-auto px-5">
         
         {/* Hero Section */}
-        <section className="pt-6 pb-2">
+        <section className="pt-6 pb-2 flex items-start justify-between gap-4">
           {/* Types itself out once on mount. This used to be keyed on the feed
               tab so the headline replayed on every switch; with one feed left
               there is nothing to switch between, and an unkeyed instance types
@@ -702,6 +702,13 @@ export default function App() {
               ]}
             />
           </h1>
+          <button
+            onClick={() => setIsExplainerOpen(true)}
+            aria-label="About Elchi"
+            className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5 text-ink transition-colors hover:bg-ink/10"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </button>
         </section>
 
         {/* Posts Filter and Feed */}
@@ -709,7 +716,6 @@ export default function App() {
           {/* The board's own explainer. Not a post: no author, no contact, and
               unaffected by the route filter — a new visitor should meet it
               whichever corridor they land on. */}
-          <ExplainerCarousel locale={locale} onOpenExplainer={setSelectedExplainer} />
 
           {loading ? (
             <div className="flex flex-col gap-4">
@@ -841,12 +847,12 @@ export default function App() {
       )}
 
       {/* Board explainer expanded view */}
-      {selectedExplainer && (
+      {isExplainerOpen && (
         <Suspense fallback={<SheetFallback />}>
           <ExplainerSheet
-            explainer={selectedExplainer}
+            explainers={EXPLAINERS}
             locale={locale}
-            onClose={() => setSelectedExplainer(null)}
+            onClose={() => setIsExplainerOpen(false)}
           />
         </Suspense>
       )}

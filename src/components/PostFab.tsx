@@ -80,7 +80,10 @@ export const PostFab: React.FC<PostFabProps> = ({
         />
       )}
 
-      <div className="fixed bottom-6 right-5 z-50 flex flex-col items-end gap-3">
+      <div 
+        className="fixed bottom-6 z-50 flex flex-col items-end gap-3"
+        style={{ right: "max(1.25rem, calc(50vw - 420px))" }}
+      >
         {open &&
           options.map((opt, i) => (
             <button
