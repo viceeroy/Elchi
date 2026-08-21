@@ -74,11 +74,31 @@ export const PostCard: React.FC<PostCardProps> = ({
   // still shows it via formatFlexibleDate directly (see App.tsx), because
   // there it's an answer to an explicit "Uchish sanasi" / "Kerak bo'lgan sana"
   // label rather than a bare word competing with the route and weight.
-  const dateText =
-    post.date && post.date !== FLEXIBLE_DATE
-      ? formatFlexibleDate(post.date, "short", t.months)
-      : null;
+  const dateText = (() => {
+    if (!post.date || post.date === FLEXIBLE_DATE) return null;
+    const formatted = formatFlexibleDate(post.date, "short", t.months);
 
+    if (isTraveler) {
+      const flightDate = new Date(post.date);
+      flightDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const diffTime = flightDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays >= 0 && diffDays <= 7) {
+        return (
+          // px-1 gives it a bit of padding so that the -2px/2px translateX 
+          // isn't clipped by the parent FeedCardFooter's `truncate` (overflow: hidden).
+          <span className="inline-block px-1 animate-shake-pause">
+            {formatted}
+          </span>
+        );
+      }
+    }
+    return formatted;
+  })();
   return (
     /* Silhouette, stripe, badge row and footer all come from ./FeedCard — this
        card is the body only. The stripe here is the airmail weave, picked from

@@ -174,3 +174,22 @@ body {
   50% { transform: scale(1.15); }
   100% { transform: scale(1); }
 }
+
+/* Subtle horizontal shake with a long pause between shakes */
+@keyframes shake-pause {
+  0%, 66% { transform: translateX(0); }
+  71%, 83%, 94% { transform: translateX(-3px); }
+  77%, 88% { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+
+.animate-shake-pause {
+  /* 3s total: 1s shaking (~33%), 2s pausing (~67%) */
+  animation: shake-pause 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake-pause {
+    animation: none;
+  }
+}
