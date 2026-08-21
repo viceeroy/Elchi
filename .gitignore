@@ -13,3 +13,5 @@ data/
 .serena/
 .impeccable/hook.cache.json
 android.keystore
+twa/*
+!twa/twa-manifest.json

@@ -14,6 +14,7 @@ import {
 import { RouteSelector } from "./components/RouteSelector";
 import { PostFab } from "./components/PostFab";
 import { TypedHeadline } from "./components/TypedHeadline";
+import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
 import { EXPLAINERS, type Explainer } from "./explainer";
 import { useDialog } from "./hooks/useDialog";
 import { useAnnouncer } from "./hooks/useAnnouncer";
@@ -1181,6 +1182,8 @@ export default function App() {
           </button>
         </div>
       )}
+
+      <PwaInstallPrompt />
     </div>
   );
 }

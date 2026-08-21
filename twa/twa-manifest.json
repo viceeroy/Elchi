@@ -1,0 +1,48 @@
+{
+  "packageId": "org.elchi.app",
+  "host": "elchi.org",
+  "name": "Elchi",
+  "launcherName": "Elchi",
+  "display": "standalone",
+  "themeColor": "#1B2A4A",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#EDE9DC",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://elchi.org/icon-512x512.png",
+  "maskableIconUrl": "https://elchi.org/icon-maskable-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "../android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 2,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://elchi.org/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 21,
+  "orientation": "default",
+  "fingerprints": [
+    {
+      "type": "sha256_cert",
+      "value": "1C:12:1D:9F:B4:FA:2C:FA:B9:63:22:85:55:B5:1C:C6:5F:97:D6:B3:F9:99:B7:54:5E:54:EB:C7:FA:5E:58:36"
+    }
+  ],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "displayOverride": [],
+  "appVersion": "1.0.0"
+}
