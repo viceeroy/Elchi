@@ -12,3 +12,4 @@ data/
 .vercel
 .serena/
 .impeccable/hook.cache.json
+android.keystore

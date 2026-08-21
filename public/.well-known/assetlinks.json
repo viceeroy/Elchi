@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "org.elchi.app",
+    "sha256_cert_fingerprints": [
+      "1C:12:1D:9F:B4:FA:2C:FA:B9:63:22:85:55:B5:1C:C6:5F:97:D6:B3:F9:99:B7:54:5E:54:EB:C7:FA:5E:58:36"
+    ]
+  }
+}]
