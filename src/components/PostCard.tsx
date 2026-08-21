@@ -91,13 +91,13 @@ export const PostCard: React.FC<PostCardProps> = ({
         return (
           // px-1 gives it a bit of padding so that the -2px/2px translateX 
           // isn't clipped by the parent FeedCardFooter's `truncate` (overflow: hidden).
-          <span className="inline-block px-1 animate-shake-pause">
+          <span className="inline-block px-1 animate-shake-pause text-red font-bold">
             {formatted}
           </span>
         );
       }
     }
-    return formatted;
+    return <span className="font-bold">{formatted}</span>;
   })();
   return (
     /* Silhouette, stripe, badge row and footer all come from ./FeedCard — this
