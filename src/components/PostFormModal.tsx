@@ -198,7 +198,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         if (customItemType.trim()) labels.push(customItemType.trim());
         const catStr = labels.join(", ");
         const kgStr = weightKg > 0 ? `${weightKg} kg` : "";
-        finalWeight = [kgStr, catStr].filter(Boolean).join(" · ") || catStr || "Pochta";
+        finalWeight = [kgStr, catStr].filter(Boolean).join(" · ") || catStr || "Jo'natma";
       }
 
       let finalContact = contact.trim();

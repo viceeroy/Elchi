@@ -298,7 +298,7 @@ export default function App() {
     // The recipient opens the post and reveals it themselves.
     const shareText = selectedPost.type === "traveler"
       ? `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) uchyapman.`
-      : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) pochta yuborish kerak.`;
+      : `Elchi: ${selectedPost.from_city} → ${selectedPost.to_city} (${shareWeight}) jo'natma yuborish kerak.`;
 
     const shareTitle = t.shareTitle || "Elchi e'lon taxtasi";
 

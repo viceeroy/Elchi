@@ -18,7 +18,7 @@ export default defineConfig({
         lang: 'uz',
         name: 'Elchi',
         short_name: 'Elchi',
-        description: "Sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi.",
+        description: "Yo'lovchilar va jo'natma yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi.",
         theme_color: '#1B2A4A',
         background_color: '#EDE9DC',
         display: 'standalone',

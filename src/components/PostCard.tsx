@@ -114,8 +114,8 @@ export const PostCard: React.FC<PostCardProps> = ({
       <FeedCardBadgeRow>
         {/* Traveler / Request Tag Badge — icon only visually, so the type still
             needs a spoken name: sighted users read colour + icon, but a screen
-            reader gets nothing from either. travelerTag/requestTag are the old
-            text labels the icon replaced ("Uchish" / "Pochta bor") — reused
+            reader gets nothing from either. travelerTag/requestTag are the
+            text labels the icon replaced ("Yo'lovchi" / "Jo'natma") — reused
             here as the accessible name rather than inventing a second string. */}
         <div style={stickerStyle(post.type)} role="img" aria-label={isTraveler ? t.travelerTag : t.requestTag}>
           {isTraveler ? (

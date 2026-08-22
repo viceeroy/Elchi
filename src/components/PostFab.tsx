@@ -48,7 +48,7 @@ export const PostFab: React.FC<PostFabProps> = ({
       // The same two lucide marks the feed and the detail sheet use for the
       // two post types, so an icon means one thing across the whole board.
       Icon: Plane,
-      label: t.fabTravelerLabel || "Uchish",
+      label: t.fabTravelerLabel || "Yo'lovchi",
       // Blue and red exactly as the traveler/request stamps on the cards (see
       // PostCard), so the dial is colour-readable before the label is, and
       // tilted alternating ways.
@@ -60,7 +60,7 @@ export const PostFab: React.FC<PostFabProps> = ({
     {
       key: "request",
       Icon: Briefcase,
-      label: t.fabRequestLabel || "Pochta",
+      label: t.fabRequestLabel || "Jo'natma",
       color: "var(--color-red)",
       textColor: "var(--color-card)",
       tilt: "rotate(2deg)",

@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const from = COUNTRY_NAMES[data.from_country] ?? data.from_country;
   const to = COUNTRY_NAMES[data.to_country] ?? data.to_country;
-  const typeLabel = data.type === 'traveler' ? 'Uchish' : 'Pochta bor';
+  const typeLabel = data.type === 'traveler' ? "Yo'lovchi" : "Jo'natma";
   
   const title = `${typeLabel}: ${data.from_city ?? from} → ${data.to_city ?? to} | Elchi`;
   const desc = [data.weight, data.note].filter(Boolean).join(' · ').slice(0, 160)
