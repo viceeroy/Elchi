@@ -222,13 +222,7 @@ export default function App() {
 
     (async () => {
       try {
-        // Read the session directly rather than from state: this runs on mount,
-        // before onAuthStateChange has necessarily fired. Without it the author
-        // of a deep-linked post wouldn't see their own delete button.
-        const { data: { session: current } } = await supabaseBrowser.auth.getSession();
-        const res = await fetch(`/api/posts?id=${encodeURIComponent(postIdParam)}`, {
-          headers: current ? { Authorization: `Bearer ${current.access_token}` } : {},
-        });
+        const res = await fetch(`/api/posts?id=${encodeURIComponent(postIdParam)}`);
         if (res.ok) setSelectedPost(await res.json());
       } catch (err) {
         console.error("Error resolving shared post:", err);
@@ -317,7 +311,9 @@ export default function App() {
         });
         return;
       } catch (err) {
-        console.log("Web Share failed or cancelled, falling back to copy:", err);
+        if (import.meta.env.DEV) {
+          console.log("Web Share failed or cancelled, falling back to copy:", err);
+        }
       }
     }
 
@@ -417,10 +413,10 @@ export default function App() {
         limit: String(PAGE_SIZE),
         offset: String(append ? posts.length : 0),
       });
-      const { data: { session: current } } = await supabaseBrowser.auth.getSession();
-      const res = await fetch(`/api/posts?${params.toString()}`, {
-        headers: current ? { Authorization: `Bearer ${current.access_token}` } : {},
-      });
+      // The feed list is public and heavily cached at the edge. Sending an auth
+      // token is omitted so the edge caches a purely anonymous response, and
+      // the client reconciles `is_mine` afterwards.
+      const res = await fetch(`/api/posts?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         const page: Post[] = Array.isArray(data.posts) ? data.posts : [];
@@ -454,23 +450,58 @@ export default function App() {
     fetchPosts();
   };
 
-  // Refetch from page 1 whenever the corridor changes, and when the session
-  // changes so is_mine is recomputed for the new viewer.
-  //
-  // The wait on authResolved is what stops a returning visitor fetching the
-  // whole feed twice on every load. `session` starts null, so this effect used
-  // to fire once with no viewer, then again the moment getSession() came back
-  // with one and `session?.user?.id` went undefined → uuid. Two full pages over
-  // the wire, the second landing late enough to visibly replace the first.
-  //
-  // Waiting costs nothing: fetchPosts already awaits getSession() itself before
-  // it can attach the bearer token, so the request was never going out ahead of
-  // the session anyway — the first fetch was pure waste, not a head start.
+  // Refetch from page 1 whenever the corridor changes.
+  // This no longer waits for auth to resolve, so the first page fetches
+  // immediately on mount.
   useEffect(() => {
-    if (!authResolved) return;
     fetchPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authResolved, country, session?.user?.id]);
+  }, [country]);
+
+  // Reconcile ownership (is_mine) for already-rendered posts once the session
+  // is known. This avoids blocking the initial feed load on auth resolution,
+  // and keeps the API's edge cache perfectly anonymous.
+  const checkedOwnershipRef = React.useRef<Set<string>>(new Set());
+  
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    
+    const candidates = [...posts, selectedPost].filter((p): p is Post => p !== null);
+    if (candidates.length === 0) return;
+    
+    const toCheck = candidates.filter(p => !p.is_mine && !checkedOwnershipRef.current.has(p.id));
+    if (toCheck.length === 0) return;
+    
+    // Mark as checked immediately so concurrent renders don't double-fetch
+    toCheck.forEach(p => checkedOwnershipRef.current.add(p.id));
+    
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabaseBrowser
+          .from('posts')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .in('id', toCheck.map(p => p.id));
+          
+        if (cancelled || error || !data || data.length === 0) return;
+        
+        const mine = new Set(data.map(row => row.id));
+        if (mine.size === 0) return;
+        
+        setPosts(current => current.map(p => 
+          mine.has(p.id) ? { ...p, is_mine: true } : p
+        ));
+        
+        if (selectedPost && mine.has(selectedPost.id)) {
+          setSelectedPost(current => current ? { ...current, is_mine: true } : null);
+        }
+      } catch (err) {
+        console.error("Error reconciling post ownership:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [session?.user?.id, posts, selectedPost]);
 
   // Handles this viewer has already revealed, keyed by viewer AND post.
   //

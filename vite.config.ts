@@ -15,6 +15,7 @@ export default defineConfig({
       },
       includeAssets: ['favicon.svg', 'icon-192x192.png', 'icon-512x512.png', 'icon-maskable-512x512.png'],
       manifest: {
+        lang: 'uz',
         name: 'Elchi',
         short_name: 'Elchi',
         description: "Sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi.",
@@ -38,6 +39,24 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
+          }
+        ]
+      },
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: /\/api\/posts(?!\?.*fields=contact)/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-posts',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 300 // 5 minutes
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
           }
         ]
       }

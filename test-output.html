@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Webfonts. src/index.css names "Inter Tight" and "Space Mono" in
+         --font-sans/--font-mono, body, and three components' inline styles, but
+         nothing ever fetched them — no <link>, no @font-face, no @import, no
+         @fontsource dependency — so every glyph in the product silently fell
+         back to the system sans/mono. The CSP in vercel.json already whitelists
+         fonts.googleapis.com under style-src and fonts.gstatic.com under
+         font-src, i.e. it was written for exactly this pair of links; loading
+         them here is what the header was always waiting for.
+
+         Weight ranges match what the codebase actually asks for, not the full
+         family. Inter Tight carries 400 (body), 500, 600, 700, 800 and 900 —
+         it is a variable font, so 400..900 is one file, not six. Space Mono is
+         static and only ships 400 and 700, which is also all the mono elements
+         use; asking for anything else would silently synthesise.
+
+         display=swap so the board's text is readable during the font fetch.
+         Uzbek is Latin-script here, so no subset beyond the default is needed. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..900&family=Space+Mono:wght@400;700&display=swap"
+    />
+    <link rel="preconnect" href="https://oauth.telegram.org" crossorigin />
+    <link rel="preload" href="https://telegram.org/js/telegram-widget.js?22" as="script" />
+
+    <title>NEW TITLE</title>
+    <meta
+      name="description"
+      content="NEW DESC"
+    />
+    <meta
+      name="keywords"
+      content="pochta yuborish, chamadonda joy, sayohatda yordam, yuk tashish e'lonlari, hujjat yuborish, dori yuborish, sovg'a yuborish, elchi"
+    />
+    <meta name="theme-color" content="#1B2A4A" />
+    <link rel="canonical" href="https://elchi.org/post/123" />
+
+    <!-- The board is Uzbek-only -->
+    <link rel="alternate" hreflang="uz" href="https://elchi.org/" />
+    <link rel="alternate" hreflang="x-default" href="https://elchi.org/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Elchi" />
+    <meta property="og:url" content="https://elchi.org/post/123" />
+    <meta property="og:title" content="NEW TITLE" />
+    <meta
+      property="og:description"
+      content="NEW DESC"
+    />
+    <meta property="og:image" content="https://elchi.org/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Elchi — chamadoningizda joy bormi?" />
+    <meta property="og:locale" content="uz_UZ" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NEW TITLE" />
+    <meta
+      name="twitter:description"
+      content="NEW DESC"
+    />
+    <meta name="twitter:image" content="https://elchi.org/og-image.png" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Structured data: what the site is, and its supported language -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Elchi",
+        "url": "https://elchi.org/",
+        "inLanguage": ["uz"],
+        "description": "Sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Elchi",
+          "url": "https://elchi.org/",
+          "logo": "https://elchi.org/favicon.svg"
+        }
+      }
+    </script>
+
+    <!-- FAQ in Uzbek: real indexable text that answers the questions people actually type into search. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Elchi nima?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Elchi — bepul e'lon taxtasi. Chamadonida bo'sh joyi bor sayohatchilar va pochta yubormoqchi bo'lgan odamlar bir-birini shu yerda topadi. Biz to'lov yoki yetkazib berish jarayoniga aralashmaymiz — foydalanuvchilar o'zaro bevosita kelishadi."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "E'lon berish pullikmi?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yo'q. E'lon berish ham, e'lonlarni ko'rish ham butunlay bepul."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qanday qilib e'lon beraman?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Telegram, Google yoki email orqali kiring, \"E'lon berish\" tugmasini bosing, yo'nalish, sana, bo'sh joy va aloqa ma'lumotlaringizni kiriting. E'lon darhol taxtada paydo bo'ladi."
+            }
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Static copy in Uzbek so the raw HTML carries real text before React mounts.
+         Hidden once the app renders; crawlers and no-JS visitors still read it. -->
+    <noscript>
+      <h1>Elchi — chamadoningizda joy bormi?</h1>
+      <p>
+        Elchi — sayohatchilar va pochta yubormoqchi bo'lganlar uchun bepul e'lon
+        taxtasi. Chamadoningizda bo'sh joy bo'lsa e'lon bering; hujjat, dori,
+        kiyim yoki sovg'a yuborish kerak bo'lsa, yo'lda ketayotgan odamni toping.
+        Elchi to'lov va yetkazib berishga aralashmaydi — foydalanuvchilar o'zaro
+        bevosita kelishadi.
+      </p>
+      <p>Bepul e'lon taxtasi</p>
+    </noscript>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

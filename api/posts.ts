@@ -126,9 +126,10 @@ async function markOwnership(
 }
 
 async function handleGet(req: VercelRequest, res: VercelResponse) {
-  // Post data is personal (free-text notes, routes, and — behind auth — phone
-  // numbers). Never let an edge or intermediary cache a response.
-  res.setHeader('Cache-Control', 'private, no-store');
+  // By default, the list and single-post endpoints are public and cached by
+  // the edge so concurrent visitors share the same response. Contact reveal
+  // overrides this to private below.
+  res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
 
   // Loose per-IP cap on reads. Deliberately generous: a large share of users in
   // both corridors are behind carrier-grade NAT, so many people share one
@@ -148,6 +149,9 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
   // rather than the IP so an account (not a proxy pool) is the cost of
   // scraping. get_post_contact enforces the auth requirement server-side too.
   if (wantsContact) {
+    // Overwrite the public cache header: contact values must never be cached.
+    res.setHeader('Cache-Control', 'private, no-store');
+
     if (!id) {
       return res.status(400).json({ error: 'E\'lon topilmadi' });
     }

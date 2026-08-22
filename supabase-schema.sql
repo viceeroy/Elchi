@@ -162,6 +162,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_route ON posts(from_country, to_country);
 -- for why the view's expires_at filter cannot become a partial-index predicate.
 DROP INDEX IF EXISTS idx_posts_type_created;
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_date_created ON posts (date ASC, created_at DESC);
 
 DO $$
 BEGIN

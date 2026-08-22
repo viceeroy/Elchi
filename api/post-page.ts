@@ -1,116 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../lib/supabase.js';
+import fs from 'fs';
+import path from 'path';
+
+// Read the built index.html from dist/ at runtime so PWA tags stay in sync.
+// Fallback to the raw index.html during local dev if dist/ doesn't exist yet.
+let HTML_SHELL = '';
+try {
+  HTML_SHELL = fs.readFileSync(path.join(process.cwd(), 'dist', 'index.html'), 'utf8');
+} catch (e) {
+  try {
+    HTML_SHELL = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
+  } catch (err) {
+    console.error('Could not load index.html template');
+    HTML_SHELL = '<!doctype html><html lang="uz"><head><title>Elchi</title></head><body><div id="root"></div></body></html>';
+  }
+}
 
 // Inlined — same as src/constants.ts, but we can't import client code here.
 const COUNTRY_NAMES: Record<string, string> = { KR: 'Koreya', UZ: "O'zbekiston" };
 
-// We inline the HTML shell as a template string constant directly.
-// This is exactly the content of index.html, but with placeholders injected.
-const HTML_SHELL = `<!doctype html>
-<html lang="uz">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..900&family=Space+Mono:wght@400;700&display=swap"
-    />
-    <link rel="preconnect" href="https://oauth.telegram.org" crossorigin />
-    <link rel="preload" href="https://telegram.org/js/telegram-widget.js?22" as="script" />
-
-    <title>__META_TITLE__</title>
-    <meta
-      name="description"
-      content="__META_DESCRIPTION__"
-    />
-    <meta
-      name="keywords"
-      content="pochta yuborish, chamadonda joy, sayohatda yordam, yuk tashish e'lonlari, hujjat yuborish, dori yuborish, sovg'a yuborish, elchi"
-    />
-    <meta name="theme-color" content="#1B2A4A" />
-    <link rel="canonical" href="__META_URL__" />
-
-    <link rel="alternate" hreflang="uz" href="https://elchi.org/" />
-    <link rel="alternate" hreflang="x-default" href="https://elchi.org/" />
-
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Elchi" />
-    <meta property="og:url" content="__META_URL__" />
-    <meta property="og:title" content="__META_TITLE__" />
-    <meta
-      property="og:description"
-      content="__META_DESCRIPTION__"
-    />
-    <meta property="og:image" content="https://elchi.org/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Elchi — chamadoningizda joy bormi?" />
-    <meta property="og:locale" content="uz_UZ" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="__META_TITLE__" />
-    <meta
-      name="twitter:description"
-      content="__META_DESCRIPTION__"
-    />
-    <meta name="twitter:image" content="https://elchi.org/og-image.png" />
-
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "Elchi",
-        "url": "https://elchi.org/",
-        "inLanguage": ["uz"],
-        "description": "Sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi.",
-        "publisher": {
-          "@type": "Organization",
-          "name": "Elchi",
-          "url": "https://elchi.org/",
-          "logo": "https://elchi.org/favicon.svg"
-        }
-      }
-    </script>
-
-  </head>
-  <body>
-    <div id="root"></div>
-
-    <noscript>
-      <h1>Elchi — chamadoningizda joy bormi?</h1>
-      <p>
-        Elchi — sayohatchilar va pochta yubormoqchi bo'lganlar uchun bepul e'lon
-        taxtasi. Chamadoningizda bo'sh joy bo'lsa e'lon bering; hujjat, dori,
-        kiyim yoki sovg'a yuborish kerak bo'lsa, yo'lda ketayotgan odamni toping.
-        Elchi to'lov va yetkazib berishga aralashmaydi — foydalanuvchilar o'zaro
-        bevosita kelishadi.
-      </p>
-      <p>Bepul e'lon taxtasi</p>
-    </noscript>
-
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-`;
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const id = typeof req.query.postId === 'string' ? req.query.postId : null;
   
-  const defaultTitle = "Elchi — Chamadoningizda joy bormi? | Bepul e'lon taxtasi";
-  const defaultDesc = "Elchi — sayohatchilar va pochta yubormoqchi bo'lganlarni bog'lovchi bepul e'lon taxtasi. Chamadoningizda bo'sh joy bo'lsa e'lon bering, yoki hujjat, dori, sovg'a yuborish uchun yo'lda ketayotgan odamni toping. Ro'yxatdan o'tish oson, to'lovsiz.";
-  const defaultUrl = "https://elchi.org/";
-
   const respondWithDefault = () => {
-    const html = HTML_SHELL
-      .replace(/__META_TITLE__/g, escHtml(defaultTitle))
-      .replace(/__META_DESCRIPTION__/g, escAttr(defaultDesc))
-      .replace(/__META_URL__/g, escAttr(defaultUrl));
-    return res.setHeader('Content-Type', 'text/html; charset=utf-8').status(200).send(html);
+    // HTML_SHELL already contains the default tags
+    return res.setHeader('Content-Type', 'text/html; charset=utf-8').status(200).send(HTML_SHELL);
   };
 
   if (!id) {
@@ -138,10 +53,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     || `${from} → ${to} yo'nalishida e'lon`;
   const url = `https://elchi.org/post/${data.id}`;
 
-  const html = HTML_SHELL
-    .replace(/__META_TITLE__/g, escHtml(title))
-    .replace(/__META_DESCRIPTION__/g, escAttr(desc))
-    .replace(/__META_URL__/g, escAttr(url));
+  const titleStr = escHtml(title);
+  const descStr = escAttr(desc);
+  const urlStr = escAttr(url);
+
+  let html = HTML_SHELL;
+  html = html.replace(/<title>[^<]*<\/title>/, `<title>${titleStr}</title>`);
+  html = html.replace(/(<link\s+rel="canonical"\s+href=")[^"]*(")/, `$1${urlStr}$2`);
+
+  const replaceContent = (nameOrProperty: string, newValue: string) => {
+    const regex = new RegExp(`(<meta\\s+(?:name|property)="${nameOrProperty}"\\s+content=")[^"]*(")`, 'g');
+    html = html.replace(regex, `$1${newValue}$2`);
+  };
+
+  replaceContent('description', descStr);
+  replaceContent('og:description', descStr);
+  replaceContent('twitter:description', descStr);
+  replaceContent('og:title', titleStr);
+  replaceContent('twitter:title', titleStr);
+  replaceContent('og:url', urlStr);
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');

@@ -137,6 +137,7 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({ explainers, loca
                   <img
                     src={c.image}
                     alt=""
+                    loading="lazy"
                     className="w-full aspect-[16/9] rounded-xl mb-1 object-cover shadow-sm ring-1 ring-ink/5"
                   />
                 )}
