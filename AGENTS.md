@@ -127,3 +127,12 @@ service-role key to do anything, because RLS demands a real `auth.uid()`.
 Run `npm run lint` and `npm test`. Schema changes need a dated file in
 [migrations/](migrations) **and** the corresponding edit folded into
 [supabase-schema.sql](supabase-schema.sql), which is the from-scratch install.
+
+## Git Commit & Push Workflow
+
+- Group changes by logical purpose (UI/design, assets, copy, bug fixes, refactoring, config).
+- Do not make one monolithic commit for everything, and do not make tiny single-file noise commits.
+- Follow conventional commits (`feat:`, `fix:`, `refactor:`, `chore:`) with short, descriptive, specific messages.
+- Never use vague messages (`update`, `changes`, `fix stuff`, `misc`, `work`).
+- Review `git status` / `git diff`, stage only related files per commit, verify no secrets/junk/unintended changes, and ensure the log tells a clear story before pushing.
+

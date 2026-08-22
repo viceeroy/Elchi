@@ -15,3 +15,5 @@ data/
 android.keystore
 twa/*
 !twa/twa-manifest.json
+dev-dist/
+
