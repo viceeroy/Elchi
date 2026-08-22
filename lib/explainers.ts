@@ -1,12 +1,12 @@
-import { Locale } from "../types";
+import type { Locale } from "../src/types";
 
 export interface ExplainerContent {
   tag: string;
-  meta: string;
   title: string;
+  routeHub: string;
+  subline: string;
   image: string;
   lead?: string;
-  paragraphs?: string[];
   points?: { title: string; desc: string }[];
   typesList?: { icon: "traveler" | "request"; label: string; text: string }[];
   flowSteps?: { step: number; title: string; desc: string }[];
@@ -26,9 +26,10 @@ export const EXPLAINERS: Explainer[] = [
     content: {
       uz: {
         tag: "Kirish",
-        meta: "1/4",
         title: "Elchi nima?",
-        image: "/explainer_intro.jpg",
+        routeHub: "Koreya ↔ O‘zbekiston",
+        subline: "Platforma haqida umumiy ma’lumot",
+        image: "/intro.png",
         lead: "Elchi — Koreya va O‘zbekiston o‘rtasida biror narsa yubormoqchi bo‘lgan odamlar bilan shu yo‘nalishda safar qilayotgan yo‘lovchilarni bog‘laydigan bepul e’lonlar platformasi.",
         points: [
           {
@@ -48,9 +49,10 @@ export const EXPLAINERS: Explainer[] = [
     content: {
       uz: {
         tag: "Jarayon",
-        meta: "2/4",
         title: "Qanday ishlaydi?",
-        image: "/explainer_how_it_works.jpg",
+        routeHub: "Koreya ↔ O‘zbekiston",
+        subline: "E’lon turlari va 3 bosqichli tartib",
+        image: "/process.png",
         lead: "Platformada ikki xil e’lon mavjud:",
         typesList: [
           {
@@ -77,9 +79,10 @@ export const EXPLAINERS: Explainer[] = [
     content: {
       uz: {
         tag: "Maslahat",
-        meta: "3/4",
-        title: "E’lonni qanday joylash kerak?",
-        image: "/explainer_create_post.jpg",
+        title: "E’lonni qanday joylash?",
+        routeHub: "Koreya ↔ O‘zbekiston",
+        subline: "Foydali va aniq e’lon berish",
+        image: "/post.png",
         lead: "Foydali va tushunarli e’lon yaratish uchun quyidagi ma’lumotlarni aniq ko‘rsating:",
         tips: [
           {
@@ -111,9 +114,10 @@ export const EXPLAINERS: Explainer[] = [
     content: {
       uz: {
         tag: "Xavfsizlik",
-        meta: "4/4",
         title: "Xavfsizlik va mas’uliyat",
-        image: "/explainer_safety.jpg",
+        routeHub: "Koreya ↔ O‘zbekiston",
+        subline: "Xavfsiz kelishuv tavsiyalari",
+        image: "/safety.png",
         lead: "Xavfsiz va ishonchli kelishuv uchun:",
         bullets: [
           "**Narx va shartlarni** oldindan kelishib oling.",

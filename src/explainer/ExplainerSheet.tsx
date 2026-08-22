@@ -3,7 +3,6 @@ import {
   X,
   Plane,
   Briefcase,
-  ArrowLeft,
   ArrowRight,
   Check,
   ShieldCheck,
@@ -11,9 +10,10 @@ import {
   Calendar,
   Scale,
   MessageCircle,
+  Info,
 } from "lucide-react";
 import { Locale } from "../types";
-import { Explainer } from "./data";
+import { Explainer } from "../../lib/explainers";
 import { translations } from "../translations";
 import { useDialog } from "../hooks/useDialog";
 
@@ -50,7 +50,8 @@ const renderFormattedText = (text: string) => {
 };
 
 /**
- * Extended bottom sheet for Elchi explanation posts.
+ * Extended explanation post.
+ * Features touch/finger swipe navigation and a single bottom action button ("Keyingisi" / "Tushundim").
  */
 export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
   explainers,
@@ -115,45 +116,70 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
     };
   }, [syncActive, explainers.length]);
 
-  const currentPost = explainers[active]?.content[locale];
+  const current = explainers[active]?.content[locale];
+  if (!current) return null;
+
+  const isLast = active === explainers.length - 1;
+
+  const handleNextClick = () => {
+    if (isLast) {
+      onClose();
+    } else {
+      scrollToSlide(active + 1);
+    }
+  };
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-ink/45 backdrop-blur-[3px] animate-[fadein_0.2s_ease]"
+      className="fixed inset-0 bg-ink/45 backdrop-blur-[3px] flex items-end justify-center z-[100] animate-[fadein_0.2s_ease]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Loyiha haqida"
+        aria-label={current.title}
         tabIndex={-1}
-        className="relative flex flex-col w-full max-w-[540px] max-h-[92vh] rounded-t-2xl sm:rounded-2xl bg-card border border-edge shadow-2xl outline-none overflow-hidden animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)]"
+        className="bg-card w-full max-w-[560px] rounded-t-2xl pb-6 max-h-[88vh] flex flex-col shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative outline-none overflow-hidden"
       >
-        {/* Header Bar */}
-        <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-rule/70 bg-card">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-paper px-2.5 py-0.5 font-mono text-[11px] font-bold text-ink border border-edge">
-              {currentPost?.tag || "Yo‘riqnoma"}
-            </span>
-            <span className="font-mono text-[12px] font-semibold text-faint">
-              {active + 1} / {explainers.length}
-            </span>
-          </div>
-
+        {/* Navy Header matching Elchi Post Detail Header */}
+        <div className="bg-ink text-card px-6 pt-4 pb-7 relative rounded-t-2xl shrink-0">
+          <div className="w-10 h-1 bg-white/25 rounded-full mx-auto mb-5" aria-hidden="true" />
           <button
             onClick={onClose}
             aria-label={t.closeLabel || "Yopish"}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-ink/5 text-ink transition-colors hover:bg-ink/10 cursor-pointer border-none p-0"
+            className="absolute right-[18px] top-[16px] bg-white/10 hover:bg-white/20 border-none w-8 h-8 rounded-full flex items-center justify-center text-card transition-colors cursor-pointer"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
+
+          {/* Badge */}
+          <div
+            className="font-mono text-[10.5px] uppercase px-3 py-1.5 rounded inline-flex items-center gap-1.5 font-bold"
+            style={{
+              background: "var(--color-gold)",
+              color: "var(--color-ink)",
+            }}
+          >
+            <Info className="w-3.5 h-3.5 text-ink" />
+            {current.tag}
+          </div>
+
+          {/* Title */}
+          <div className="flex items-center gap-3 font-black text-2xl tracking-tight mt-3 text-card">
+            <span>{current.title}</span>
+          </div>
+
+          {/* Meta line */}
+          <div className="font-mono text-xs opacity-70 mt-1.5 tracking-wider">
+            {current.routeHub} · {current.subline}
+          </div>
         </div>
 
-        {/* Scrollable / Swipeable Content Area */}
+        {/* Swipeable Post Body Track (supports touch sliding, hidden scrollbars) */}
         <div
           ref={trackRef}
-          className="flex snap-x snap-mandatory overflow-x-auto overflow-y-auto overscroll-contain pb-4 pt-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-h-[calc(92vh-120px)]"
+          className="flex snap-x snap-mandatory overflow-x-auto overflow-y-auto overscroll-contain flex-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {explainers.map((explainer, i) => {
             const c = explainer.content[locale];
@@ -164,9 +190,9 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
                 ref={(el) => {
                   itemRefs.current[i] = el;
                 }}
-                className="min-w-0 flex-[0_0_100%] snap-start px-6 flex flex-col gap-3.5"
+                className="min-w-0 flex-[0_0_100%] snap-start px-6 pt-6 pb-4 flex flex-col gap-5 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
-                {/* 16:9 Illustration */}
+                {/* Post Illustration */}
                 {c.image && (
                   <div className="w-full aspect-[16/9] rounded-xl overflow-hidden bg-paper ring-1 ring-ink/5 shadow-xs shrink-0">
                     <img
@@ -178,32 +204,23 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
                   </div>
                 )}
 
-                {/* Title */}
-                <h3 className="m-0 text-xl sm:text-2xl font-black tracking-tight text-ink">
-                  {c.title}
-                </h3>
-
-                {/* Lead Text */}
+                {/* Lead Paragraph */}
                 {c.lead && (
-                  <p className="m-0 text-[14.5px] leading-relaxed text-[#3A4256]">
+                  <div className="text-[14.5px] sm:text-[15px] text-body leading-relaxed">
                     {renderFormattedText(c.lead)}
-                  </p>
+                  </div>
                 )}
 
-                {/* Post 1: Points cards */}
+                {/* Post 1: Points */}
                 {c.points && c.points.length > 0 && (
-                  <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-3">
                     {c.points.map((pt, idx) => (
                       <div
                         key={idx}
-                        className="rounded-xl bg-paper/90 p-3.5 border border-edge/70 flex flex-col gap-1"
+                        className="bg-paper rounded-xl p-3.5 flex flex-col gap-1 border border-edge/60"
                       >
-                        <span className="font-bold text-[14px] text-ink">
-                          {pt.title}
-                        </span>
-                        <span className="text-[13px] text-[#4A5268] leading-relaxed">
-                          {pt.desc}
-                        </span>
+                        <div className="font-bold text-[14.5px] text-ink">{pt.title}</div>
+                        <div className="text-[13.5px] text-body leading-relaxed">{pt.desc}</div>
                       </div>
                     ))}
                   </div>
@@ -211,14 +228,14 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
 
                 {/* Post 2: Types List */}
                 {c.typesList && c.typesList.length > 0 && (
-                  <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-3">
                     {c.typesList.map(({ icon, label, text }, idx) => {
                       const conf = TYPE_CONFIG[icon];
                       const IconComp = conf.Icon;
                       return (
                         <div
                           key={idx}
-                          className="flex items-start gap-3 rounded-xl bg-paper/90 p-3.5 border border-edge/70"
+                          className="bg-paper rounded-xl p-3.5 flex items-start gap-3.5 border border-edge/60"
                         >
                           <span
                             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${conf.text} mt-0.5`}
@@ -227,12 +244,8 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
                             <IconComp className="h-4 w-4" />
                           </span>
                           <div className="flex flex-col">
-                            <span className="font-bold text-[14px] text-ink">
-                              {label}
-                            </span>
-                            <span className="text-[13px] text-[#4A5268] leading-relaxed">
-                              {text}
-                            </span>
+                            <span className="font-bold text-[14.5px] text-ink">{label}</span>
+                            <span className="text-[13.5px] text-body leading-relaxed">{text}</span>
                           </div>
                         </div>
                       );
@@ -242,17 +255,17 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
 
                 {/* Post 2: Action Flow Steps */}
                 {c.flowSteps && c.flowSteps.length > 0 && (
-                  <div className="flex flex-col gap-2 rounded-xl bg-paper/80 p-3.5 border border-edge/70">
-                    <span className="font-bold text-[13px] text-ink">
-                      Asosiy qadamlar:
-                    </span>
+                  <div className="bg-paper rounded-xl p-3.5 border border-edge/60 flex flex-col gap-2.5">
+                    <div className="font-mono text-[11px] tracking-wider uppercase text-blue font-bold">
+                      Asosiy qadamlar
+                    </div>
                     <div className="flex flex-col gap-2">
                       {c.flowSteps.map((s, idx) => (
-                        <div key={idx} className="flex items-start gap-2.5 text-[13px]">
+                        <div key={idx} className="flex items-start gap-2.5 text-[13.5px]">
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-bold text-card mt-0.5">
                             {s.step}
                           </span>
-                          <div className="leading-snug text-[#3A4256]">
+                          <div className="leading-relaxed text-body">
                             <strong className="text-ink font-bold mr-1">{s.title}:</strong>
                             {s.desc}
                           </div>
@@ -262,26 +275,22 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
                   </div>
                 )}
 
-                {/* Post 3: Detail Tips Cards */}
+                {/* Post 3: Tips Cards */}
                 {c.tips && c.tips.length > 0 && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2.5">
                     {c.tips.map((tip, idx) => {
                       const IconComp = TIP_ICONS[tip.icon];
                       return (
                         <div
                           key={idx}
-                          className="flex items-start gap-3 rounded-xl bg-paper/90 p-3 border border-edge/70"
+                          className="bg-paper rounded-xl p-3.5 flex items-start gap-3.5 border border-edge/60"
                         >
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink/10 text-ink mt-0.5">
                             <IconComp className="h-3.5 w-3.5" />
                           </span>
                           <div className="flex flex-col">
-                            <span className="font-bold text-[13.5px] text-ink">
-                              {tip.title}
-                            </span>
-                            <span className="text-[12.5px] text-[#4A5268] leading-snug">
-                              {tip.desc}
-                            </span>
+                            <span className="font-bold text-[14px] text-ink">{tip.title}</span>
+                            <span className="text-[13px] text-body leading-relaxed">{tip.desc}</span>
                           </div>
                         </div>
                       );
@@ -291,11 +300,11 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
 
                 {/* Post 4: Bullet list */}
                 {c.bullets && c.bullets.length > 0 && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2.5">
                     {c.bullets.map((bullet, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start gap-2.5 rounded-lg bg-paper/80 p-2.5 sm:p-3 border border-edge/50 text-[13px] sm:text-[13.5px] text-[#3A4256] leading-relaxed"
+                        className="bg-paper rounded-xl p-3.5 flex items-start gap-3 border border-edge/50 text-[13.5px] text-body leading-relaxed"
                       >
                         <ShieldCheck className="h-4 w-4 shrink-0 text-blue mt-0.5" />
                         <span>{renderFormattedText(bullet)}</span>
@@ -304,9 +313,9 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
                   </div>
                 )}
 
-                {/* Post 4: Final note */}
+                {/* Post 4: Note */}
                 {c.note && (
-                  <div className="rounded-xl bg-paper/90 p-3 text-[12.5px] text-[#4A5268] leading-relaxed border border-edge/60">
+                  <div className="bg-paper rounded-xl p-3.5 text-[13px] text-body leading-relaxed border border-edge/60">
                     {renderFormattedText(c.note)}
                   </div>
                 )}
@@ -315,55 +324,29 @@ export const ExplainerSheet: React.FC<ExplainerSheetProps> = ({
           })}
         </div>
 
-        {/* Footer Navigation Bar */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-t border-rule/70 bg-card">
-          {active > 0 ? (
-            <button
-              type="button"
-              onClick={() => scrollToSlide(active - 1)}
-              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13.5px] font-bold text-ink transition-colors hover:bg-ink/5 cursor-pointer border-none bg-transparent"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Oldingi
-            </button>
-          ) : (
-            <div className="w-16" />
-          )}
-
-          {/* Dots Indicator */}
-          <div className="flex gap-1.5" aria-hidden="true">
-            {explainers.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => scrollToSlide(i)}
-                aria-label={`Slide ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer border-none p-0 ${
-                  i === active ? "w-5 bg-ink" : "w-1.5 bg-ink/20 hover:bg-ink/40"
-                }`}
-              />
-            ))}
-          </div>
-
-          {active < explainers.length - 1 ? (
-            <button
-              type="button"
-              onClick={() => scrollToSlide(active + 1)}
-              className="flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2 text-[13.5px] font-bold text-card transition-colors hover:bg-ink/90 cursor-pointer border-none shadow-xs"
-            >
-              Keyingi
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex items-center gap-1.5 rounded-xl bg-green px-4 py-2 text-[13.5px] font-bold text-card transition-colors hover:bg-green-deep cursor-pointer border-none shadow-xs"
-            >
-              <Check className="h-4 w-4" />
-              Tugatish
-            </button>
-          )}
+        {/* Single Primary Action Button at Bottom */}
+        <div className="px-6 pt-3 pb-2 border-t border-rule bg-card shrink-0">
+          <button
+            type="button"
+            onClick={handleNextClick}
+            className={`w-full py-3 px-4 rounded-xl font-bold text-[14.5px] text-card flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99] cursor-pointer border-none ${
+              isLast
+                ? "bg-green hover:bg-green-deep"
+                : "bg-ink hover:bg-ink/90"
+            }`}
+          >
+            {isLast ? (
+              <>
+                <Check className="w-4 h-4" />
+                Tushundim
+              </>
+            ) : (
+              <>
+                Keyingisi
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

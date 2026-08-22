@@ -211,6 +211,11 @@ export default function App() {
       postIdParam = pathMatch[1];
     }
 
+    // Check path for /about
+    if (window.location.pathname === '/about') {
+      setIsExplainerOpen(true);
+    }
+
     if (!postIdParam) return;
 
     // Redirect legacy ?postId=X to /post/X on load
@@ -270,6 +275,13 @@ export default function App() {
       window.scrollTo(0, scrollY);
     };
   }, [selectedPost, isExplainerOpen, formOpen, loginOpen, profileOpen]);
+
+  const closeExplainerModal = () => {
+    setIsExplainerOpen(false);
+    if (window.location.pathname === '/about') {
+      window.history.replaceState({}, "", "/");
+    }
+  };
 
   const closeDetailModal = () => {
     setSelectedPost(null);
@@ -734,13 +746,18 @@ export default function App() {
               ]}
             />
           </h1>
-          <button
-            onClick={() => setIsExplainerOpen(true)}
+          <a
+            href="/about"
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState({}, "", "/about");
+              setIsExplainerOpen(true);
+            }}
             aria-label="About Elchi"
             className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5 text-ink transition-colors hover:bg-ink/10"
           >
             <HelpCircle className="h-5 w-5" />
-          </button>
+          </a>
         </section>
 
         {/* Posts Filter and Feed */}
@@ -817,6 +834,19 @@ export default function App() {
           <div className="mt-6 p-3 bg-card border border-edge border-l-4 border-l-gold rounded-r-xl text-[13px] text-body leading-snug shadow-sm">
             <span className="font-bold text-ink mr-1">{t.disclaimerTitle}</span>
             {t.disclaimerText}
+            <div className="mt-2">
+              <a 
+                href="/about" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  window.history.pushState({}, "", "/about"); 
+                  setIsExplainerOpen(true); 
+                }} 
+                className="font-bold text-blue hover:underline"
+              >
+                Batafsil ma'lumot va qoidalar &rarr;
+              </a>
+            </div>
           </div>
         </section>
       </main>
@@ -884,7 +914,7 @@ export default function App() {
           <ExplainerSheet
             explainers={EXPLAINERS}
             locale={locale}
-            onClose={() => setIsExplainerOpen(false)}
+            onClose={closeExplainerModal}
           />
         </Suspense>
       )}

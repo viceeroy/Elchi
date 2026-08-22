@@ -27,6 +27,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     <changefreq>hourly</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>https://elchi.org/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 ${urls}
 </urlset>`;
 
