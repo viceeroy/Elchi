@@ -24,11 +24,12 @@ Consequences that shape the whole design:
 
 | Layer | Technology |
 |---|---|
-| UI | React 19, Vite 6, Tailwind v4 (`@tailwindcss/vite`), `motion`, `lucide-react` |
+| UI | React 19, Vite 6, Tailwind v4 (`@tailwindcss/vite`), `lucide-react` |
 | API | Vercel Serverless Functions (Node, `@vercel/node`) |
 | Data | Supabase — Postgres 15+, RLS, SECURITY DEFINER views/functions |
 | Auth | Supabase Auth: Google OAuth + a custom Telegram bridge |
 | Hosting | Vercel (`vercel.json` handles build, rewrites, security headers) |
+| PWA | `vite-plugin-pwa` — manifest, auto-update service worker, Workbox runtime cache for `/api/posts` |
 | Analytics | `@vercel/analytics` |
 
 TypeScript throughout, `noEmit` — Vite and Vercel own the actual builds.
@@ -40,29 +41,43 @@ TypeScript throughout, `noEmit` — Vite and Vercel own the actual builds.
 ```
 src/                    React SPA
   App.tsx               Feed, detail sheet, modal orchestration, auth session
-  main.tsx              Root render + Analytics
+  main.tsx              Root render + Analytics + service-worker registration
   types.ts              Post, PostContact, Locale, Translations
   constants.ts          COUNTRIES registry, HOME_COUNTRY, hub-city helpers
   translations.ts       Uzbek dictionary
   index.css             Tailwind import + @theme design tokens
-  supabaseClient.ts     Browser client (anon key, session persistence)
-  components/           BoardingPass, FeedCard, PostFormModal, PostFab,
-                        RouteSelector, ContactFields, LoginModal,
-                        NameGateModal, ProfileSheet, FlagIcon
-  notes/                Static editorial cards (data.ts, NoteCard, NotesCarousel, NoteSheet)
-  lib/postPreview.ts    Sanitises free text for a card's clamped note line
-  assets/               Logo SVGs
+  supabaseClient.ts     Browser client assembled from @supabase/auth-js +
+                        @supabase/postgrest-js directly (no createClient —
+                        see the file header for why)
+  components/           PostCard, FeedCard, PostFormModal, PostFab,
+                        RouteSelector, ContactFields, TypedHeadline,
+                        LoginModal, ProfileSheet, PwaInstallPrompt, FlagIcon
+  explainer/            Static editorial cards (index.ts re-exports
+                        lib/explainers.ts data + ExplainerSheet). Not posts —
+                        never touch the API
+  hooks/                useAnnouncer (aria-live toasts), useDialog (focus trap)
+  lib/                  authorName.ts (card footer name resolution),
+                        postPreview.ts (sanitises free text for a clamped note
+                        line), stickerStyle.ts (category chip styling)
+  assets/               Logo SVGs, images
 
 api/                    Vercel serverless functions
   posts.ts              GET list / GET one / GET contact / POST create / DELETE
   auth-telegram.ts      Telegram login → Supabase session bridge
+  post-page.ts          SSR meta tags for /post/:id deep links (SEO)
+  about-page.ts         Server-rendered /about page from lib/explainers.ts
+  sitemap.ts            /sitemap.xml generated from public_posts
 
-lib/                    Shared server modules (some client-safe)
+lib/                    Shared modules (some client-safe)
   supabase.ts           Anon-key server client
   supabase-admin.ts     Service-role client, lazily built, SERVER ONLY
   rate-limit.ts         Postgres-backed limiter + trustworthy client IP
   verify-token.ts       Per-token memo over auth.getUser() (60s TTL, in-memory)
   contact.ts            Handle validation + tel:/t.me link builders (shared)
+  parcelLimits.ts       Field length caps shared by API and form
+  parcelCategories.ts   Request-parcel category ids (shared)
+  date.ts / formatDate.ts / weight.ts   Display formatting helpers
+  explainers.ts         Explainer card copy (used by src/ and api/about-page.ts)
   contact.test.ts       node:test unit tests
 
 migrations/             Dated incremental SQL
@@ -126,11 +141,13 @@ Created by an `on_auth_user_created` trigger. Holds `auth_provider` (`google` | 
 `display_name`. Posts carry `user_id`, which is never exposed; the only thing that crosses from a
 profile onto a card is `display_name`, so the board stays pseudonymous.
 
-`display_name` is nullable, seeded from provider metadata through `normalize_display_name()`, and
-bounded by `profiles_display_name_check` (2–40 chars, no outer whitespace). When it is NULL the
-client shows a blocking capture sheet after login (`NameGateModal`) and writes the answer straight
-to `profiles` under the own-row UPDATE policy — the API is not in that path, which is why the CHECK
-is the real enforcement. There is no edit UI: capture-once.
+`display_name` is seeded from provider metadata through `normalize_display_name()` in the
+signup trigger (`handle_new_user`) and bounded by `profiles_display_name_check`
+(2–40 chars, no outer whitespace). Since 2026-08-12
+([migrations/2026-08-12-auto-display-name.sql](migrations/2026-08-12-auto-display-name.sql))
+it is **not user-editable**: the own-row UPDATE policy was dropped and every existing name was
+overwritten from provider metadata. There is no capture sheet and no edit UI — the name is
+provider-derived and immutable.
 
 ### `rate_limits`
 
@@ -178,9 +195,11 @@ Current buckets (max / window seconds):
 **Transport.** [vercel.json](vercel.json) sets a strict CSP (self + telegram.org + the Supabase
 project + Vercel insights), `X-Frame-Options: DENY`, HSTS, `Permissions-Policy` denying
 geolocation/mic/camera/payment/USB, and `Cache-Control: private, no-store` on every API
-response — post data is personal and must never sit in an intermediary cache. This rules out any
-HTTP-level (shared/intermediary) cache; the caches below are all in-process or in-tab, never on
-the wire.
+response — post data is personal and must never sit in an intermediary cache. `GET /api/posts`
+sets a looser `public, s-maxage=30` header in-function to let the edge share feed responses;
+whether vercel.json's blanket `no-store` or the function's own header wins has varied across
+Vercel platform versions, so treat that edge caching as **unverified until curl'd against
+production** (see Known limitations below).
 
 **Token verification memo.** [lib/verify-token.ts](lib/verify-token.ts) sits in front of
 `auth.getUser()`, called from `resolveUser` in [api/posts.ts](api/posts.ts) on every authed
@@ -193,6 +212,29 @@ already-issued access token upstream, so a token this memo still honours is one 
 still honour too. Expired tokens are rejected locally from the `exp` claim, no round trip; that
 check only ever rejects, so a forged `exp` still needs to survive the signature check upstream on
 a cache miss.
+
+**Known limitations** (2026-08 audit; none exposes contact data or allows cross-user writes):
+
+- **Contact-reveal rate limit is bypassable via direct PostgREST.** The per-user cap
+  (`contact`, 60/600s) lives only in [api/posts.ts](api/posts.ts). An authenticated user can call
+  `rpc/get_post_contact` with their own JWT at unlimited rate — the SQL function checks auth but
+  not the limit, and the threat model ("an account is the cost of scraping") assumes it does.
+  Fix would move the check into SQL.
+- **`expires_at` is unconstrained in SQL.** A direct PostgREST insert (authenticated JWT, no API)
+  may set `expires_at` arbitrarily far out — a permanent post. Same class: `note` has no width
+  bound in SQL and `date` may be in the past. The shape CHECK covers cities/route/headline only.
+  A `CHECK (expires_at > created_at::date AND expires_at <= date + 365)` would close the main gap.
+- **Direct inserts bypass handle-format validation.** SQL enforces the `contact_type` enum but
+  not that the value matches the kind ([lib/contact.ts](lib/contact.ts)). Cosmetic only —
+  mismatched icon/link.
+- **`check_rate_limit()` is anon-executable and writes attacker-chosen rows.** Anyone with the
+  bundled anon key can insert rows into arbitrary `(bucket, identifier)` pairs. It cannot *raise*
+  anyone's limit, so impact is minor (bucket pollution / slow table growth), but a shared-secret
+  header check inside the function would fix it.
+- **CSP includes `'unsafe-eval'` in script-src** for the production origin — needed by the dev
+  toolchain, weakens XSS defense-in-depth in prod.
+- **Sitemap query is unbounded** ([api/sitemap.ts](api/sitemap.ts)) — selects every active post,
+  no `.limit()`. Fine at current volume.
 
 ---
 
@@ -237,6 +279,21 @@ Wrapped in an outer try/catch so an unexpected throw returns clean JSON instead 
 `FUNCTION_INVOCATION_FAILED` HTML, which breaks `res.json()` on the client. The admin client is
 built lazily for the same reason.
 
+### Server-rendered pages (SEO)
+
+Three functions serve HTML to crawlers rather than JSON to the SPA. All read the built
+`dist/index.html` shell at module load and string-replace `<title>` / canonical / og/twitter meta
+tags, escaping every interpolated value (`escHtml`/`escAttr`):
+
+| Route | Function | Behavior |
+|---|---|---|
+| `/post/:id` | [api/post-page.ts](api/post-page.ts) | Fetches one row from `public_posts`, rewrites meta tags from its route/cargo/note. Not-found or expired → generic shell. Edge-cached 300s |
+| `/about` | [api/about-page.ts](api/about-page.ts) | Renders the explainer cards ([lib/explainers.ts](lib/explainers.ts)) as plain visible HTML inside `#root` so Googlebot sees content without executing the SPA. Static copy only — escapes everything |
+| `/sitemap.xml` | [api/sitemap.ts](api/sitemap.ts) | Lists active post URLs from `public_posts`. Unbounded query — see Known limitations |
+
+These run server-side precisely because the SPA renders nothing without JS; the SPA itself still
+serves all interactive routes via the rewrite fallback.
+
 ---
 
 ## 7. Frontend
@@ -253,16 +310,27 @@ nothing to select between, and a lone always-active chip is a label pretending t
 ### Rendering path
 
 `RouteSelector` picks the corridor → the feed fetches `/api/posts?country=…` → each row renders
-as `BoardingPass`, whose chrome (silhouette, airmail stripe, badge row, footer) comes from
-`FeedCard`. Tapping a card opens the detail sheet; tapping *Bog'lanish* fetches the contact and
-renders `t.me` / `tel:` links built by [lib/contact.ts](lib/contact.ts).
+as `PostCard`, whose chrome (silhouette, airmail stripe, badge row, footer) comes from `FeedCard`
+and its exported sub-parts. Tapping a card opens the detail sheet; tapping *Bog'lanish* fetches
+the contact and renders `t.me` / `tel:` links built by [lib/contact.ts](lib/contact.ts).
 
 `PostFab` is a speed dial with two arms, both opening `PostFormModal` (traveler / request, two
 tabs, per-field inline validation) on the chosen side.
 
-`NotesCarousel` sits above the feed with static editorial cards from
-[src/notes/data.ts](src/notes/data.ts). These are **not** posts: no API, no DB, not filtered.
-Dismissals persist in `localStorage`.
+Explainer cards sit above and around the feed — static editorial content from
+[lib/explainers.ts](lib/explainers.ts) re-exported by
+[src/explainer/index.ts](src/explainer/index.ts), expanded in a lazy `ExplainerSheet`. These are
+**not** posts: no API, no DB, not filtered. The same data drives the server-rendered `/about`
+page (§6), so the copy has exactly one source.
+
+### PWA
+
+[vite.config.ts](vite.config.ts) wires `vite-plugin-pwa` (`registerType: 'autoUpdate'`): a web
+manifest (standalone display, uz locale) plus a Workbox service worker with one runtime rule —
+`NetworkFirst` for `/api/posts` responses (50 entries, 5-minute expiry), explicitly excluding any
+URL containing `fields=contact` so a handle is never written to disk cache.
+`PwaInstallPrompt` surfaces the native install event; `devOptions.enabled` turns the SW on during
+local development too.
 
 ### Client-side caches
 
@@ -275,7 +343,7 @@ worse than a wasted fetch):
   page just seen. Now it paints from cache immediately (stale-while-revalidate) and the network
   request still fires underneath — the board is other people's posts, so staleness is bounded to
   "until the in-flight request lands," not skipped. Keyed on viewer too, since `is_mine` decides
-  the delete button. Any write (`handlePostSubmitSuccess`, delete, name-gate save) calls
+  the delete button. Any write (`handlePostSubmitSuccess`, delete) calls
   `refreshFeed()`, which clears the **whole** cache rather than one key — a post lands in one
   corridor while the author may be viewing another.
 - **`contactCache`** — revealed handles per `viewerId|postId`. Closing the detail sheet used to
