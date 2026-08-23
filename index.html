@@ -30,6 +30,15 @@
     <link rel="preconnect" href="https://oauth.telegram.org" crossorigin />
     <link rel="preload" href="https://telegram.org/js/telegram-widget.js?22" as="script" />
 
+    <!-- DataFast analytics. defer so it never blocks first paint; the CSP in
+         vercel.json whitelists datafa.st under script-src and connect-src. -->
+    <script
+      defer
+      data-website-id="dfid_HuqfXN07SpsFWoIp6ObZk"
+      data-domain="elchi.org"
+      src="https://datafa.st/js/script.js"
+    ></script>
+
     <title>Elchi — Chamadoningizda joy bormi? | Bepul e'lon taxtasi</title>
     <meta
       name="description"
