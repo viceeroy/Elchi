@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../lib/supabase.js';
+import { trackBotRequest } from '../lib/datafast.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -22,6 +23,7 @@ const COUNTRY_NAMES: Record<string, string> = { KR: 'Koreya', UZ: "O'zbekiston" 
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const id = typeof req.query.postId === 'string' ? req.query.postId : null;
+  trackBotRequest(req, res, id ? `/post/${id}` : '/post');
   
   const respondWithDefault = () => {
     // HTML_SHELL already contains the default tags

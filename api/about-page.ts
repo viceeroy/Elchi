@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { EXPLAINERS } from '../lib/explainers.js';
+import { trackBotRequest } from '../lib/datafast.js';
 
 let HTML_SHELL = '';
 try {
@@ -17,6 +18,7 @@ try {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  trackBotRequest(req, res, '/about');
   const title = "Elchi haqida — Bepul e'lon taxtasi";
   const desc = "Elchi platformasi haqida batafsil ma'lumot: u qanday ishlaydi, e'lon berish tartibi va xavfsizlik qoidalari.";
   const url = "https://elchi.org/about";
