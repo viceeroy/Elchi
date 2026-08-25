@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js';
 import { trackBotRequest } from '../lib/datafast.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  trackBotRequest(req, res, '/sitemap.xml');
+  await trackBotRequest(req, res, '/sitemap.xml');
   const { data, error } = await supabase
     .from('public_posts')
     .select('id, created_at')

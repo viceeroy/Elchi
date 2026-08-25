@@ -1,15 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { trackAICrawlerResponse } from '@datafast/ai-crawl';
+import { trackAICrawlerRequest } from '@datafast/ai-crawl';
 
 const WEBSITE_ID = 'dfid_HuqfXN07SpsFWoIp6ObZk';
 const DOMAIN = 'elchi.org';
 
 /**
  * Tracks AI crawler and search bot requests server-side.
- * Runs non-blocking in the background so it never slows down page responses.
- * Human traffic and non-bot requests are filtered out synchronously in zero network time.
+ * Resolves synchronously in zero network time for human visitors.
+ * For crawlers, reliably sends tracking events before the serverless function exits.
  */
-export function trackBotRequest(req: VercelRequest, res: VercelResponse, publicPath?: string): void {
+export async function trackBotRequest(
+  req: VercelRequest,
+  res?: VercelResponse,
+  publicPath?: string
+): Promise<void> {
   try {
     const host = req.headers.host || DOMAIN;
     const path = publicPath ?? (typeof req.url === 'string' ? req.url : '/');
@@ -29,15 +33,11 @@ export function trackBotRequest(req: VercelRequest, res: VercelResponse, publicP
       headers,
     });
 
-    trackAICrawlerResponse(
-      request,
-      { statusCode: res.statusCode || 200 },
-      {
-        websiteId: WEBSITE_ID,
-        domain: DOMAIN,
-        publicOrigin: `https://${DOMAIN}`,
-      }
-    );
+    await trackAICrawlerRequest(request, {
+      websiteId: WEBSITE_ID,
+      domain: DOMAIN,
+      publicOrigin: `https://${DOMAIN}`,
+    });
   } catch {
     // Best effort — never block or fail the primary response
   }
