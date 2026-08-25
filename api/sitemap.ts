@@ -8,7 +8,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .from('public_posts')
     .select('id, created_at')
     .in('type', ['traveler', 'request'])
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(1000);
 
   if (error) {
     return res.status(500).send('Internal Server Error');

@@ -76,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   replaceContent('og:url', urlStr);
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
   return res.status(200).send(html);
 }
 
