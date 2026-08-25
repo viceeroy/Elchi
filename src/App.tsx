@@ -109,7 +109,7 @@ export default function App() {
   // the open sheet shares the same body scroll lock as the other modals.
   const [isExplainerOpen, setIsExplainerOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
-  const [contactCopied, setContactCopied] = useState(false);
+  const [contactCopied, setContactCopied] = useState<string | null>(null);
   // Confirmation toast. Holds the message rather than a flag, because the two
   // composers confirm with different copy.
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -122,11 +122,6 @@ export default function App() {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  // Whether the session above is an ANSWER or merely the initial guess. `null`
-  // is a valid resolved value (logged out), so the state alone cannot say which
-  // it is — and the feed effect below has to know, or it fires once for
-  // "unknown" and again for the real session.
-  const [authResolved, setAuthResolved] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   // Which side of the form to open once login completes — posting is gated
@@ -141,13 +136,9 @@ export default function App() {
     supabaseBrowser.auth
       .getSession()
       .then(({ data }) => setSession(data.session))
-      .catch((err) => console.error("Error reading session:", err))
-      .finally(() => setAuthResolved(true));
+      .catch((err) => console.error("Error reading session:", err));
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
-      // supabase-js emits INITIAL_SESSION on init, which can beat the promise
-      // above. Either path is an answer.
-      setAuthResolved(true);
       // Strip leftover OAuth hash (#access_token / bare #) from URL bar
       if (window.location.hash) {
         window.history.replaceState(null, "", window.location.pathname + window.location.search);
@@ -286,7 +277,7 @@ export default function App() {
   const closeDetailModal = () => {
     setSelectedPost(null);
     setShareCopied(false);
-    setContactCopied(false);
+    setContactCopied(null);
     setRevealedContact(null);
     setContactError(null);
     // Clean up path to keep URL neat
@@ -356,9 +347,9 @@ export default function App() {
     // instead of that check.
     try {
       await navigator.clipboard.writeText(text);
-      setContactCopied(true);
+      setContactCopied(text);
       announce(t.srCopied || "Nusxalandi");
-      setTimeout(() => setContactCopied(false), 2000);
+      setTimeout(() => setContactCopied(null), 2000);
     } catch (err) {
       console.error("Failed to copy contact:", err);
       const input = document.createElement("input");
@@ -367,9 +358,9 @@ export default function App() {
       input.select();
       document.execCommand("copy");
       document.body.removeChild(input);
-      setContactCopied(true);
+      setContactCopied(text);
       announce(t.srCopied || "Nusxalandi");
-      setTimeout(() => setContactCopied(false), 2000);
+      setTimeout(() => setContactCopied(null), 2000);
     }
   };
 
@@ -428,6 +419,15 @@ export default function App() {
       // The feed list is public and heavily cached at the edge. Sending an auth
       // token is omitted so the edge caches a purely anonymous response, and
       // the client reconciles `is_mine` afterwards.
+      //
+      // cacheBust is set by refreshFeed() after the author creates or deletes a
+      // post. Without it the edge serves the stale cached response for up to
+      // s-maxage + stale-while-revalidate (currently 90 s), so the author
+      // would not see their own action reflected.
+      if (cacheBustRef.current) {
+        params.set('_t', cacheBustRef.current);
+        cacheBustRef.current = null;
+      }
       const res = await fetch(`/api/posts?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
@@ -457,8 +457,14 @@ export default function App() {
   // it, so keeping any entry risks showing the author a board that contradicts
   // the action they just took. This is the one thing a stale-while-revalidate
   // feed must not do.
+  // A cache-bust token set before fetchPosts() so the next request bypasses
+  // the Vercel edge cache. Ref rather than state — it is consumed once and must
+  // not trigger a render on its own.
+  const cacheBustRef = React.useRef<string | null>(null);
+
   const refreshFeed = () => {
     feedCache.current.clear();
+    cacheBustRef.current = String(Date.now());
     fetchPosts();
   };
 
@@ -829,25 +835,6 @@ export default function App() {
               ) : null}
             </div>
           ) : null}
-
-          {/* Disclaimer Banner */}
-          <div className="mt-6 p-3 bg-card border border-edge border-l-4 border-l-gold rounded-r-xl text-[13px] text-body leading-snug shadow-sm">
-            <span className="font-bold text-ink mr-1">{t.disclaimerTitle}</span>
-            {t.disclaimerText}
-            <div className="mt-2">
-              <a 
-                href="/about" 
-                onClick={(e) => { 
-                  e.preventDefault(); 
-                  window.history.pushState({}, "", "/about"); 
-                  setIsExplainerOpen(true); 
-                }} 
-                className="font-bold text-blue hover:underline"
-              >
-                Batafsil ma'lumot va qoidalar &rarr;
-              </a>
-            </div>
-          </div>
         </section>
       </main>
 
@@ -1150,7 +1137,7 @@ export default function App() {
                           title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                           aria-label={t.copyContactLabel || "Kontaktni nusxalash"}
                         >
-                          {contactCopied ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
+                          {contactCopied === revealedContact.contact ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
 
@@ -1173,7 +1160,7 @@ export default function App() {
                             title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                             aria-label={t.copyContactLabel || "Kontaktni nusxalash"}
                           >
-                            {contactCopied ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
+                            {contactCopied === revealedContact.contact2 ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
                           </button>
                         </div>
                       )}

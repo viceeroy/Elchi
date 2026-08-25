@@ -23,8 +23,6 @@ export const translations: Record<Locale, Translations> = {
     contactBtn: "Bog'lanish →",
     activeAds: "Ochiq e'lonlar",
     postAdBtn: "E'lon berish",
-    disclaimerTitle: "Elchi shunchaki e'lon taxtasi.",
-    disclaimerText: "Biz to'lov, buyum yoki yetkazib berish jarayoniga aralashmaymiz — foydalanuvchilar o'zaro bevosita kelishadi.",
     // Form Sheet
     addPostTitle: "Yangi e'lon qo'shish",
     addPostSubTraveler: "Uchayotganingizni va bo'sh joyingiz borligini bildiring.",

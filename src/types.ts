@@ -89,8 +89,6 @@ export interface Translations {
   contactBtn: string;
   activeAds: string;
   postAdBtn: string;
-  disclaimerTitle: string;
-  disclaimerText: string;
   
   // Form Sheet
   addPostTitle: string;
