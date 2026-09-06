@@ -156,6 +156,7 @@ export interface Translations {
   allLoaded?: string;
   emptyStateTitle?: string;
   emptyStateText?: string;
+  emptyStateCta?: string;
   stubLabel?: string;
 
   // Login modal

@@ -834,7 +834,55 @@ export default function App() {
                 </div>
               ) : null}
             </div>
-          ) : null}
+          ) : (
+            /* ── Empty state ──────────────────────────────────────────────
+               Shown when the API returned successfully but no posts match
+               the active route filter. An encouraging nudge rather than a
+               dead-end: "No posts yet — be the first!" with a CTA that
+               opens the composer FAB. The illustration is an inline SVG
+               suitcase so it loads instantly and respects the color tokens. */
+            <div className="flex flex-col items-center justify-center text-center px-6 py-16 sm:py-20 md:py-24">
+              {/* Inline SVG suitcase illustration — uses token colors so it
+                  follows the palette and needs no external asset. */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 120 120"
+                fill="none"
+                className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 mb-6 opacity-40"
+                aria-hidden="true"
+              >
+                {/* body */}
+                <rect x="20" y="40" width="80" height="55" rx="8" className="stroke-faint" strokeWidth="3" />
+                {/* handle */}
+                <path d="M45 40V28a10 10 0 0 1 10-10h10a10 10 0 0 1 10 10v12" className="stroke-faint" strokeWidth="3" strokeLinecap="round" />
+                {/* clasp left */}
+                <rect x="38" y="62" width="8" height="12" rx="2" className="fill-faint" opacity="0.5" />
+                {/* clasp right */}
+                <rect x="74" y="62" width="8" height="12" rx="2" className="fill-faint" opacity="0.5" />
+                {/* wheels */}
+                <circle cx="40" cy="98" r="4" className="fill-faint" opacity="0.4" />
+                <circle cx="80" cy="98" r="4" className="fill-faint" opacity="0.4" />
+              </svg>
+
+              <h3 className="text-lg sm:text-xl font-bold text-ink mb-2">
+                {t.emptyStateTitle || "Hozircha e'lonlar yo'q"}
+              </h3>
+              <p className="text-sm sm:text-base text-faint max-w-xs sm:max-w-sm leading-relaxed mb-6">
+                {t.emptyStateText || "Bu yo'nalishda hali hech kim e'lon bermagan. Birinchi bo'lib e'lon bering!"}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  prefetchComposers();
+                  setFabOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue text-white font-semibold text-sm sm:text-base rounded-xl shadow-card hover:shadow-card-hover transition-all active:scale-[0.97] cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                {t.emptyStateCta || "E'lon berish"}
+              </button>
+            </div>
+          )}
         </section>
       </main>
 

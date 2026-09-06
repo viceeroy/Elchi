@@ -86,8 +86,9 @@ export const translations: Record<Locale, Translations> = {
     toastPostCreated: "E'lon muvaffaqiyatli yaratildi!",
     loadMoreBtn: "Yana yuklash ↓",
     allLoaded: "Barcha e'lonlar yuklandi",
-    emptyStateTitle: "E'lonlar topilmadi",
-    emptyStateText: "Hozircha ushbu yo'nalishda faol e'lonlar mavjud emas.",
+    emptyStateTitle: "Hozircha e'lonlar yo'q",
+    emptyStateText: "Bu yo'nalishda hali hech kim e'lon bermagan. Birinchi bo'lib e'lon bering!",
+    emptyStateCta: "E'lon berish",
     stubLabel: "Sana",
 
     // Login modal
