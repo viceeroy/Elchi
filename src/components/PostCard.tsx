@@ -155,10 +155,12 @@ export const PostCard: React.FC<PostCardProps> = ({
           note length; long URLs/words wrap instead of overflowing. Full text
           is in the detail sheet on click.
 
-          Now increased to 3 lines because removing the footer border line and
-          reducing its padding freed up enough vertical budget. */}
+          Clamped to 3 lines on mobile and 2 lines on desktop (sm:line-clamp-2)
+          because desktop typography and padding leave room for 2 lines in
+          the fixed 200px shell, ensuring the last line truncates cleanly
+          with an ellipsis (...) without vertical clipping. */}
       {noteText && (
-        <span className="line-clamp-3 text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0 [overflow-wrap:anywhere]">
+        <span className="line-clamp-3 sm:line-clamp-2 text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0 [overflow-wrap:anywhere]">
           {noteText}
         </span>
       )}
