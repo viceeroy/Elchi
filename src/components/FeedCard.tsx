@@ -1,5 +1,6 @@
 import React from "react";
 import { Post, Translations } from "../types";
+import { Phone } from "lucide-react";
 
 /**
  * The chrome every feed card wears — silhouette, left stripe, inner column,
@@ -215,7 +216,7 @@ export const FeedCardFooter: React.FC<FeedCardFooterProps> = ({
   onOpen,
 }) => (
   <div className={FEED_CARD_FOOTER_ROW}>
-    <span className="text-[13px] text-faint truncate">{left}</span>
+    <span className="text-[13px] text-faint truncate min-w-0">{left}</span>
 
     {/* Unconditional, and on every post type: this button's job is to open the
         extended post, not to reveal a handle — it fires the same onOpen() that
@@ -228,15 +229,11 @@ export const FeedCardFooter: React.FC<FeedCardFooterProps> = ({
         e.stopPropagation();
         onOpen();
       }}
-      /* py-2 (27px tall) cleared WCAG 2.5.8's 24px AA floor but sat well under
-         the 44px comfort target on a mobile-first board. py-2.5 buys 4px
-         (→31px) without visibly changing the footer row's proportions — the
-         whole card is the same click target regardless, so this is a comfort
-         bump, not a fix for something that was failing. */
-      className="flex-shrink-0 font-mono text-[11px] bg-gold text-ink border-none py-2 px-3 rounded-md font-bold cursor-pointer tracking-wider leading-none hover:bg-gold-lit transition-colors shadow-sm"
+      aria-label={t.contactLabel || "Bog'lanish"}
+      className="w-8 h-8 rounded-full bg-gold text-ink hover:bg-gold-lit flex items-center justify-center transition-colors shadow-sm cursor-pointer border-none flex-shrink-0"
       id={`contact-btn-${post.id}`}
     >
-      {t.contactBtn}
+      <Phone className="w-4 h-4" aria-hidden="true" />
     </button>
   </div>
 );

@@ -1,6 +1,6 @@
 import React from "react";
 import { Post, Locale, Translations } from "../types";
-import { Plane, Briefcase } from "lucide-react";
+import { Plane, Briefcase, MapPin } from "lucide-react";
 import { COUNTRIES, getCountry } from "../constants";
 import { stickerStyle } from "../lib/stickerStyle";
 import { flattenNote } from "../lib/postPreview";
@@ -46,10 +46,8 @@ export const PostCard: React.FC<PostCardProps> = ({
     getCountry(post.to_country) ?? COUNTRIES.find((c) => c.code !== fromCountry.code)!;
   const hubFrom = fromCountry.names[locale];
   const hubTo = toCountry.names[locale];
-  // Free-text cities are display-only detail under the country route. The null
+  // Free-text cities are display-only detail under the country route.
 
-
-  // The card shows only the physical weight (kg + luggage), stripping any
   // category labels baked into the weight string — categories are shown only in
   // the detail modal. A 0-kg value is treated as "nothing" and hidden. The
   // luggage word is stored as a neutral "chamadon" token, so the count decides
@@ -99,6 +97,26 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
     return <span className="font-bold">{formatted}</span>;
   })();
+
+  const footerMeta = (
+    <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full">
+      {dateText}
+      {post.from_city && (
+        <>
+          {dateText && (
+            <span className="text-faint/60 select-none" aria-hidden="true">
+              •
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 min-w-0 truncate text-body font-medium">
+            <MapPin className="w-3.5 h-3.5 text-gold-deep flex-shrink-0" aria-hidden="true" />
+            <span className="truncate">{post.from_city}</span>
+          </span>
+        </>
+      )}
+    </span>
+  );
+
   return (
     /* Silhouette, stripe, badge row and footer all come from ./FeedCard — this
        card is the body only. The stripe here is the airmail weave, picked from
@@ -165,7 +183,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         </span>
       )}
 
-      <FeedCardFooter post={post} t={t} left={dateText} onOpen={onOpen} />
+      <FeedCardFooter post={post} t={t} left={footerMeta} onOpen={onOpen} />
     </FeedCard>
   );
 };
