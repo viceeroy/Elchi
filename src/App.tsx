@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
-import { Post, PostContact, Locale, PostType, ContactMethod } from "./types";
+import { Post, Locale, PostType, ContactMethod } from "./types";
 import { telegramUsername, phoneDialString } from "../lib/contact";
 import { replaceLuggageToken } from "../lib/weight";
 import { formatFlexibleDate } from "../lib/formatDate";
@@ -23,7 +23,7 @@ import { supabaseBrowser } from "./supabaseClient";
 // umbrella at all (see supabaseClient.ts), and a type-only import back to it
 // invites someone to "tidy" it into a value import and quietly restore 86 kB.
 import type { Session } from "@supabase/auth-js";
-import { Send, ShieldAlert, Sparkles, MessageSquare, Plane, Briefcase, X, Phone, Share2, Check, Copy, User, Trash2, Lock, HelpCircle } from "lucide-react";
+import { Send, ShieldAlert, Sparkles, MessageSquare, Plane, Briefcase, X, Phone, Share2, Check, Copy, User, Trash2, HelpCircle } from "lucide-react";
 import elchiLogo from "./assets/logo/elchi-logo-icon.svg";
 
 // Every one of these is a modal or a bottom sheet: none of them is on screen at
@@ -116,11 +116,7 @@ export default function App() {
   const toastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  // Contact handles for the open post. Never part of the feed payload — fetched
-  // on demand, and only for logged-in viewers.
-  const [revealedContact, setRevealedContact] = useState<PostContact | null>(null);
-  const [contactLoading, setContactLoading] = useState(false);
-  const [contactError, setContactError] = useState<string | null>(null);
+
   const [session, setSession] = useState<Session | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -278,8 +274,6 @@ export default function App() {
     setSelectedPost(null);
     setShareCopied(false);
     setContactCopied(null);
-    setRevealedContact(null);
-    setContactError(null);
     // Clean up path to keep URL neat
     if (window.location.pathname.startsWith('/post/')) {
       window.history.replaceState({}, "", "/");
@@ -521,86 +515,7 @@ export default function App() {
     return () => { cancelled = true; };
   }, [session?.user?.id, posts, selectedPost]);
 
-  // Handles this viewer has already revealed, keyed by viewer AND post.
-  //
-  // Closing the detail sheet clears revealedContact, so re-opening the same
-  // post fetched the same two strings again. That is not merely a wasted round
-  // trip: the reveal endpoint is the one path with a tight per-account cap (60
-  // per ten minutes), and browsing back to a post to re-read a phone number is
-  // exactly what someone comparing a few travellers does. Spending the budget
-  // on data already sitting in the tab is the wrong thing to charge for.
-  //
-  // Caching this does not weaken the gate. The server decided once, for this
-  // account, that this handle could be seen; the only thing kept is the answer
-  // it already sent to this tab. The viewer's id is in the key so a second
-  // account signing into the same tab starts from nothing, and it lives in a
-  // ref so nothing survives a reload.
-  const contactCache = React.useRef(new Map<string, PostContact>());
 
-  // Pull the open post's contact handles. Logged-out viewers get nothing to
-  // fetch — the reveal is gated server-side too, so this is UI only.
-  useEffect(() => {
-    setContactError(null);
-    if (!selectedPost || !session) {
-      setRevealedContact(null);
-      return;
-    }
-
-    // Resolved before the null write below, so a cached reveal paints on the
-    // first render of the sheet instead of flashing the un-revealed state.
-    const cacheKey = `${session.user.id}|${selectedPost.id}`;
-    const cachedContact = contactCache.current.get(cacheKey);
-    if (cachedContact) {
-      setRevealedContact(cachedContact);
-      setContactLoading(false);
-      return;
-    }
-    setRevealedContact(null);
-
-    let cancelled = false;
-    setContactLoading(true);
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/posts?id=${encodeURIComponent(selectedPost.id)}&fields=contact`,
-          { headers: { Authorization: `Bearer ${session.access_token}` } },
-        );
-        const data = await res.json();
-        if (cancelled) return;
-        if (res.ok) {
-          setRevealedContact(data as PostContact);
-          contactCache.current.set(cacheKey, data as PostContact);
-        } else setContactError(data.error || t.errorGeneral);
-      } catch (err) {
-        console.error("Error fetching contact:", err);
-        if (!cancelled) setContactError(t.errorGeneral);
-      } finally {
-        if (!cancelled) setContactLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPost?.id, session?.user?.id]);
-
-  // Speak the outcome of that fetch. The handles themselves are read out, not
-  // just "contact ready": they are the entire payload of the reveal, and a
-  // screen-reader user would otherwise have to go hunting for what changed.
-  // Announced from an effect rather than inside the fetch so the DOM the
-  // message describes is already committed when the region updates.
-  useEffect(() => {
-    if (!revealedContact) return;
-    const handles = [revealedContact.contact, revealedContact.contact2]
-      .filter(Boolean)
-      .join(", ");
-    announce(`${t.srContactRevealed || "Kontakt ochildi"}: ${handles}`);
-  }, [revealedContact, announce, t.srContactRevealed]);
-
-  // Assertive, unlike everything else here: a failed reveal is a dead end, and
-  // the user needs to know before they keep pressing.
-  useEffect(() => {
-    if (contactError) announceError(contactError);
-  }, [contactError, announceError]);
 
   const setToast = (message: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -1090,10 +1005,7 @@ export default function App() {
 
               {/* Action and Contact segment — single unified section */}
               {(() => {
-                // A note may carry no contact at all. contact_type is NULL then
-                // (it travels in the feed payload, the handle never does), so
-                // there is nothing to reveal and no login worth prompting for.
-                if (!selectedPost.contact_type) return null;
+                if (!selectedPost.contact) return null;
 
                 const sectionLabel = (
                   <div className="font-mono text-[10px] tracking-wider uppercase text-faint">
@@ -1101,65 +1013,12 @@ export default function App() {
                   </div>
                 );
 
-                // Logged out: there is nothing to render. Contact handles are
-                // not part of the feed payload and the reveal endpoint rejects
-                // unauthenticated callers, so this prompt is the only route to
-                // them — which is what stops the board being scraped for phone
-                // numbers.
-                if (!session) {
-                  return (
-                    <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
-                      {sectionLabel}
-                      <p className="text-[13px] text-body m-0 leading-snug">
-                        {t.contactLockedText}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setLoginOpen(true)}
-                        className="font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full bg-blue hover:bg-ink text-card"
-                        id="reveal-contact-btn"
-                      >
-                        <Lock className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{t.contactLockedBtn}</span>
-                      </button>
-                    </div>
-                  );
-                }
-
-                if (contactLoading) {
-                  return (
-                    // aria-busy marks the section as mid-update, so a screen
-                    // reader can say the region is loading rather than reading
-                    // two empty skeleton bars. The arrival itself is announced
-                    // from the effect above.
-                    <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl" aria-busy="true">
-                      {sectionLabel}
-                      <div className="h-5 w-2/3 bg-[#E3DFD1] rounded animate-pulse" aria-hidden="true" />
-                      <div className="h-10 w-full bg-[#E3DFD1] rounded-lg animate-pulse" aria-hidden="true" />
-                    </div>
-                  );
-                }
-
-                if (contactError || !revealedContact) {
-                  return (
-                    <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
-                      {sectionLabel}
-                      <p className="text-[13px] text-red m-0 leading-snug">
-                        {contactError || t.errorGeneral}
-                      </p>
-                    </div>
-                  );
-                }
-
-                const contactInfo = getContactLinkAndLabel(revealedContact.contact, revealedContact.contact_type);
-                const contact2Info = revealedContact.contact2
-                  ? getContactLinkAndLabel(revealedContact.contact2, revealedContact.contact2_type)
+                const contactInfo = getContactLinkAndLabel(selectedPost.contact, selectedPost.contact_type);
+                const contact2Info = selectedPost.contact2
+                  ? getContactLinkAndLabel(selectedPost.contact2, selectedPost.contact2_type)
                   : null;
-                // No trailing ↗/✆ glyph: each button already renders the Send
-                // or Phone icon beside the label, so the glyph only said the
-                // same thing twice in a second visual language.
                 const actionLabel = (isTg: boolean) =>
-                  isTg ? "Telegramda ochish" : "Qo'ng'iroq qilish";
+                  isTg ? "Telegram" : "Qo'ng'iroq";
 
                 return (
                   <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
@@ -1175,21 +1034,21 @@ export default function App() {
                             <Phone className="w-3.5 h-3.5 text-green flex-shrink-0" />
                           )}
                           <span className={`truncate ${contactInfo.isTelegram ? "text-blue" : "text-green"}`}>
-                            {revealedContact.contact}
+                            {selectedPost.contact}
                           </span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleCopyContact(revealedContact.contact)}
+                          onClick={() => handleCopyContact(selectedPost.contact)}
                           className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-field bg-white text-faint hover:text-ink hover:border-ink transition-all"
                           title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                           aria-label={t.copyContactLabel || "Kontaktni nusxalash"}
                         >
-                          {contactCopied === revealedContact.contact ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
+                          {contactCopied === selectedPost.contact ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
 
-                      {revealedContact.contact2 && contact2Info && (
+                      {selectedPost.contact2 && contact2Info && (
                         <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0 border-l border-field pl-2">
                           <div className="flex items-center gap-1.5 font-mono text-sm font-bold min-w-0">
                             {contact2Info.isTelegram ? (
@@ -1198,29 +1057,29 @@ export default function App() {
                               <Phone className="w-3.5 h-3.5 text-green flex-shrink-0" />
                             )}
                             <span className={`truncate ${contact2Info.isTelegram ? "text-blue" : "text-green"}`}>
-                              {revealedContact.contact2}
+                              {selectedPost.contact2}
                             </span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleCopyContact(revealedContact.contact2!)}
+                            onClick={() => handleCopyContact(selectedPost.contact2!)}
                             className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-field bg-white text-faint hover:text-ink hover:border-ink transition-all"
                             title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                             aria-label={t.copyContactLabel || "Kontaktni nusxalash"}
                           >
-                            {contactCopied === revealedContact.contact2 ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
+                            {contactCopied === selectedPost.contact2 ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
                           </button>
                         </div>
                       )}
                     </div>
 
-                    {/* Action buttons stacked underneath */}
-                    <div className="flex flex-col gap-2">
+                    {/* Action buttons on horizontal line */}
+                    <div className="flex items-center gap-2">
                       <a
                         href={contactInfo.url}
                         target={contactInfo.isTelegram ? "_blank" : undefined}
                         rel="noreferrer"
-                        className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full ${
+                        className={`font-mono text-xs px-3 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 min-w-0 ${
                           contactInfo.isTelegram
                             ? "bg-blue hover:bg-ink text-card"
                             : "bg-green hover:bg-green-deep text-white"
@@ -1231,12 +1090,12 @@ export default function App() {
                         <span className="truncate">{actionLabel(contactInfo.isTelegram)}</span>
                       </a>
 
-                      {revealedContact.contact2 && contact2Info && (
+                      {selectedPost.contact2 && contact2Info && (
                         <a
                           href={contact2Info.url}
                           target={contact2Info.isTelegram ? "_blank" : undefined}
                           rel="noreferrer"
-                          className={`font-mono text-xs px-4 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all w-full ${
+                          className={`font-mono text-xs px-3 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 min-w-0 ${
                             contact2Info.isTelegram
                               ? "bg-blue hover:bg-ink text-card"
                               : "bg-green hover:bg-green-deep text-white"
