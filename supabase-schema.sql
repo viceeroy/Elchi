@@ -279,37 +279,7 @@ USING (auth.uid() = user_id);
 -- public_posts — the board's read model — used to be defined here. It now
 -- joins `profiles` for the author's display_name, so it cannot be created
 -- until that table exists; it lives immediately after the profiles section
--- below. get_post_contact() stays here because it reads `posts` only.
-
--- The only route to a contact value: one post per call, authenticated callers
--- only, so harvesting requires an account and is rate-limitable per user.
--- SECURITY DEFINER so it can read columns the caller's own grants exclude;
--- search_path is pinned so the definer context can't be hijacked.
-CREATE OR REPLACE FUNCTION get_post_contact(p_id UUID)
-RETURNS TABLE (
-    contact       TEXT,
-    contact_type  TEXT,
-    contact2      TEXT,
-    contact2_type TEXT
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-    IF auth.uid() IS NULL THEN
-        RAISE EXCEPTION 'authentication required' USING ERRCODE = '42501';
-    END IF;
-
-    RETURN QUERY
-    SELECT p.contact::TEXT, p.contact_type::TEXT, p.contact2::TEXT, p.contact2_type::TEXT
-    FROM posts p
-    WHERE p.id = p_id AND p.expires_at >= CURRENT_DATE;
-END;
-$$;
-
-REVOKE ALL ON FUNCTION get_post_contact(UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION get_post_contact(UUID) TO authenticated, service_role;
+-- below.
 
 -- ---------------------------------------------------------------------------
 -- Retired announcement machinery
@@ -512,7 +482,9 @@ SELECT
     p.weight,
     p.headline,
     p.note,
+    p.contact,
     p.contact_type,
+    p.contact2,
     p.contact2_type,
     (p.contact2 IS NOT NULL) AS has_contact2,
     pr.display_name,

@@ -40,12 +40,10 @@ export interface Post {
   //
   // The free-text body of the ad: an optional remark on the trip.
   note: string | null;
-  // Contact VALUES are deliberately absent from this shape. The feed reads the
-  // `public_posts` view, which omits them, so a scraper cannot pull every
-  // author's phone number in one request. The channel of each contact is still
-  // exposed so the UI can render the right icon before the viewer logs in;
-  // the handles themselves come from fetchPostContact() — see PostContact.
+  // Contact handles:
+  contact: string;
   contact_type: ContactMethod | null;
+  contact2: string | null;
   contact2_type: ContactMethod | null;
   has_contact2: boolean;
   // The author's chosen name, joined into `public_posts` from `profiles`.

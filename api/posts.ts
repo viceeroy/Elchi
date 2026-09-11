@@ -59,15 +59,13 @@ function userScopedClient(token: string) {
   });
 }
 
-// Columns the board renders. Read from the `public_posts` view, which omits the
-// contact values and user_id entirely — those never travel in a list response.
+// Columns the board renders. Read from the `public_posts` view.
 // display_name is the author's chosen name, joined in by the view from
-// `profiles`; it is the one piece of author identity a list response carries,
-// and it carries no way to reach that author.
+// `profiles`.
 const PUBLIC_COLUMNS =
   'id,type,direction,from_country,to_country,from_city,to_city,date,' +
   'weight_kg,luggage_count,categories,category_other,weight,note,' +
-  'contact_type,contact2_type,has_contact2,display_name,created_at,expires_at';
+  'contact,contact_type,contact2,contact2_type,has_contact2,display_name,created_at,expires_at';
 
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
@@ -127,61 +125,18 @@ async function markOwnership(
 
 async function handleGet(req: VercelRequest, res: VercelResponse) {
   // By default, the list and single-post endpoints are public and cached by
-  // the edge so concurrent visitors share the same response. Contact reveal
-  // overrides this to private below.
+  // the edge so concurrent visitors share the same response.
   res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
 
   // Loose per-IP cap on reads. Deliberately generous: a large share of users in
   // both corridors are behind carrier-grade NAT, so many people share one
-  // address and a tight cap here would lock out real traffic. This is a
-  // denial-of-service guard, not the privacy control — the feed carries no
-  // contact values, and the reveal path below is what's actually throttled.
+  // address and a tight cap here would lock out real traffic.
   const allowedRead = await checkRateLimit('read', clientIp(req), 600, 600);
   if (!allowedRead) {
     return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
   }
 
   const id = postId(req);
-  const wantsContact = req.query.fields === 'contact';
-
-  // --- Contact reveal: the sensitive path. ------------------------------
-  // One post per call, logged-in callers only, rate limited on the user id
-  // rather than the IP so an account (not a proxy pool) is the cost of
-  // scraping. get_post_contact enforces the auth requirement server-side too.
-  if (wantsContact) {
-    // Overwrite the public cache header: contact values must never be cached.
-    res.setHeader('Cache-Control', 'private, no-store');
-
-    if (!id) {
-      return res.status(400).json({ error: 'E\'lon topilmadi' });
-    }
-    const user = await resolveUser(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Avval tizimga kiring' });
-    }
-
-    // Two buckets. The per-user cap is the real control: an account is the
-    // cost of scraping, and it can be revoked. The per-IP cap is a backstop so
-    // one host can't drive the reveal endpoint through a pile of throwaway
-    // accounts — loose enough to survive shared/NAT addresses.
-    const perUser = await checkRateLimit('contact', `user:${user.id}`, 60, 600, false);
-    const perIp = perUser && await checkRateLimit('contact-ip', clientIp(req), 240, 600, false);
-    if (!perUser || !perIp) {
-      return res.status(429).json({ error: 'Juda ko\'p so\'rov. Birozdan keyin urinib ko\'ring' });
-    }
-
-    const db = userScopedClient(user.token);
-    const { data, error } = await db.rpc('get_post_contact', { p_id: id });
-    if (error) {
-      console.error('Error fetching post contact:', { message: error.message, code: error.code });
-      return res.status(500).json({ error: 'Xatolik yuz berdi' });
-    }
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row) {
-      return res.status(404).json({ error: 'E\'lon topilmadi' });
-    }
-    return res.status(200).json(row);
-  }
 
   // --- Single post (deep links: ?postId=... may point outside page 1). ---
   if (id) {
