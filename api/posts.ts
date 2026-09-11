@@ -19,7 +19,7 @@ const ALLOWED_CATEGORIES = new Set<string>([...PARCEL_CATEGORY_IDS, 'other']);
 // src/constants.ts — no schema change needed.
 // KZ / TJ / KG / TM are ready to enable — add here + uncomment in
 // src/constants.ts COUNTRIES.
-const ALLOWED_COUNTRIES = new Set(['KR', 'UZ']);
+const ALLOWED_COUNTRIES = new Set(['KR', 'UZ', 'RU']);
 
 // Every corridor the board serves has Uzbekistan on one side, so the Uzbek side
 // is implied rather than requested. Mirrors HOME_COUNTRY in src/constants.ts.

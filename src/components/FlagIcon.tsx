@@ -80,6 +80,15 @@ export const FlagIcon: React.FC<FlagIconProps> = ({ iso, className }) => {
         </svg>
       );
 
+    case "RU":
+      return (
+        <svg viewBox="0 0 30 20" className={cls} style={style} role="img" aria-label="Russia">
+          <rect width="30" height="6.67" fill="#FFFFFF" />
+          <rect y="6.67" width="30" height="6.67" fill="#0032A0" />
+          <rect y="13.34" width="30" height="6.66" fill="#D52B1E" />
+        </svg>
+      );
+
     default:
       return (
         <span

@@ -23,6 +23,12 @@ export const COUNTRIES: Country[] = [
     names: { uz: "O'zbekiston", ru: "Узбекистан", en: "Uzbekistan" },
     cityNames: { uz: "Toshkent", ru: "Ташкент", en: "Tashkent" },
   },
+  {
+    code: "RU",
+    airport: "MOW",
+    names: { uz: "Rossiya", ru: "Россия", en: "Russia" },
+    cityNames: { uz: "Moskva", ru: "Москва", en: "Moscow" },
+  },
   // To launch more corridors, uncomment (and mirror in ALLOWED_COUNTRIES in
   // api/posts.ts). Verified working 2026-07-23.
   // {
