@@ -65,7 +65,7 @@ function userScopedClient(token: string) {
 const PUBLIC_COLUMNS =
   'id,type,direction,from_country,to_country,from_city,to_city,date,' +
   'weight_kg,luggage_count,categories,category_other,weight,note,' +
-  'contact,contact_type,contact2,contact2_type,has_contact2,display_name,created_at,expires_at';
+  'contact,contact_type,contact2,contact2_type,contact3,contact3_type,has_contact2,has_contact3,display_name,created_at,expires_at';
 
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
@@ -325,6 +325,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contact_type,
       contact2,
       contact2_type,
+      contact3,
+      contact3_type,
       honeypot
     } = req.body || {};
 
@@ -341,6 +343,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const toCity = str(to_city);
     const contactVal = str(contact);
     const contact2Val = str(contact2);
+    const contact3Val = str(contact3);
     const noteVal = str(note);
     const categoryOtherVal = str(category_other);
     const weightVal = str(weight);
@@ -370,6 +373,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       toCity.length > PARCEL_CITY_MAX ||
       contactVal.length > 100 ||
       contact2Val.length > 100 ||
+      contact3Val.length > 100 ||
       noteVal.length > PARCEL_NOTE_MAX ||
       categoryOtherVal.length > PARCEL_CATEGORY_OTHER_MAX ||
       weightVal.length > 200;
@@ -418,7 +422,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : fromCountry === 'UZ' && toCountry === 'KR' ? 'u2k'
       : null;
 
-    if (!isContactKind(contact_type) || (contact2Val && !isContactKind(contact2_type))) {
+    if (
+      !isContactKind(contact_type) ||
+      (contact2Val && !isContactKind(contact2_type)) ||
+      (contact3Val && !isContactKind(contact3_type))
+    ) {
       return res.status(400).json({ error: 'Noto\'g\'ri aloqa turi' });
     }
 
@@ -429,11 +437,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!isValidContact(contactVal, contact_type)) {
       return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
     }
-    // The "second handle with no first one" guard that used to sit here is
-    // gone with the shape that made it reachable: a contact is required above,
-    // so contactVal is non-empty by the time control gets this far.
     if (contact2Val && !isValidContact(contact2Val, contact2_type as ContactKind)) {
       return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
+    }
+    if (contact3Val && !isValidContact(contact3Val, contact3_type as ContactKind)) {
+      return res.status(400).json({ error: 'Aloqa ma\'lumoti noto\'g\'ri' });
+    }
+
+    // Ensure at most 1 Telegram and at most 2 phone numbers across all contacts
+    const allContacts = [
+      { val: contactVal, type: contact_type },
+      { val: contact2Val, type: contact2_type },
+      { val: contact3Val, type: contact3_type },
+    ].filter((c) => c.val);
+
+    const telegramCount = allContacts.filter((c) => c.type === 'telegram').length;
+    const phoneCount = allContacts.filter((c) => c.type === 'phone').length;
+    if (telegramCount > 1 || phoneCount > 2) {
+      return res.status(400).json({ error: 'Maksimal 1 ta Telegram va 2 ta telefon raqami kiritish mumkin' });
     }
 
     let dateValue: string;
@@ -497,6 +518,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contact_type,
       contact2: contact2Val || null,
       contact2_type: contact2Val ? contact2_type : null,
+      contact3: contact3Val || null,
+      contact3_type: contact3Val ? contact3_type : null,
       user_id,
       expires_at
     };

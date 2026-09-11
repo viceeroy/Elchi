@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS posts (
     contact_type VARCHAR(10) CHECK (contact_type IN ('telegram', 'phone')),
     contact2 VARCHAR(100),
     contact2_type VARCHAR(10) CHECK (contact2_type IN ('telegram', 'phone')),
+    contact3 VARCHAR(100),
+    contact3_type VARCHAR(10) CHECK (contact3_type IN ('telegram', 'phone')),
 
     created_at TIMESTAMPTZ DEFAULT NOW(),
     expires_at DATE NOT NULL
@@ -486,7 +488,10 @@ SELECT
     p.contact_type,
     p.contact2,
     p.contact2_type,
+    p.contact3,
+    p.contact3_type,
     (p.contact2 IS NOT NULL) AS has_contact2,
+    (p.contact3 IS NOT NULL) AS has_contact3,
     pr.display_name,
     p.created_at,
     p.expires_at

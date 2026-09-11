@@ -46,6 +46,9 @@ export interface Post {
   contact2: string | null;
   contact2_type: ContactMethod | null;
   has_contact2: boolean;
+  contact3?: string | null;
+  contact3_type?: ContactMethod | null;
+  has_contact3?: boolean;
   // The author's chosen name, joined into `public_posts` from `profiles`.
   // Nullable: rows written before the capture gate belong to profiles that have
   // no name yet, and posts predating user_id have no profile at all. Cards fall
@@ -123,6 +126,8 @@ export interface Translations {
   contactPlaceholder: string;
   addTelegramBtn?: string;
   addPhoneBtn?: string;
+  addSecondPhoneBtn?: string;
+  secondPhoneLabel?: string;
   secondaryContactLabel?: string;
   submitBtn: string;
   submittingBtn: string;
