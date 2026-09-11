@@ -58,6 +58,8 @@ export const translations: Record<Locale, Translations> = {
     contactPlaceholder: "@handle yoki telefon raqam",
     addTelegramBtn: "+ Telegram qo'shish",
     addPhoneBtn: "+ Telefon raqam qo'shish",
+    addSecondPhoneBtn: "+ Qo'shimcha telefon",
+    secondPhoneLabel: "Qo'shimcha telefon",
     secondaryContactLabel: "Qo'shimcha bog'lanish",
     submitBtn: "E'lonni joylashtirish",
     submittingBtn: "Joylashtirilmoqda...",

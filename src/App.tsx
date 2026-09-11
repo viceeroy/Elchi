@@ -1013,98 +1013,101 @@ export default function App() {
                   </div>
                 );
 
-                const contactInfo = getContactLinkAndLabel(selectedPost.contact, selectedPost.contact_type);
-                const contact2Info = selectedPost.contact2
-                  ? getContactLinkAndLabel(selectedPost.contact2, selectedPost.contact2_type)
-                  : null;
-                const actionLabel = (isTg: boolean) =>
-                  isTg ? "Telegram" : "Qo'ng'iroq";
+                const rawContacts = [
+                  { val: selectedPost.contact, type: selectedPost.contact_type },
+                  selectedPost.contact2 ? { val: selectedPost.contact2, type: selectedPost.contact2_type } : null,
+                  selectedPost.contact3 ? { val: selectedPost.contact3, type: selectedPost.contact3_type } : null,
+                ].filter((c): c is { val: string; type: ContactMethod | null } => Boolean(c && c.val));
+
+                if (rawContacts.length === 0) return null;
+
+                const contactsInfo = rawContacts.map((c) => ({
+                  ...getContactLinkAndLabel(c.val, c.type),
+                  rawVal: c.val,
+                }));
+
+                const phoneContacts = contactsInfo.filter((c) => !c.isTelegram);
+                const hasMultiplePhones = phoneContacts.length > 1;
+
+                const getButtonLabel = (info: (typeof contactsInfo)[0]) => {
+                  if (info.isTelegram) return "Telegram";
+                  if (hasMultiplePhones) {
+                    const phoneIdx = phoneContacts.findIndex((p) => p.rawVal === info.rawVal);
+                    return phoneIdx === 0 ? "Tel 1" : "Tel 2";
+                  }
+                  return "Qo'ng'iroq";
+                };
 
                 return (
                   <div className="flex flex-col gap-3 p-4 bg-paper rounded-xl">
                     {sectionLabel}
 
-                    {/* Values side by side, each with its own copy button */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 font-mono text-sm font-bold min-w-0">
-                          {contactInfo.isTelegram ? (
-                            <Send className="w-3.5 h-3.5 text-blue flex-shrink-0" />
-                          ) : (
-                            <Phone className="w-3.5 h-3.5 text-green flex-shrink-0" />
-                          )}
-                          <span className={`truncate ${contactInfo.isTelegram ? "text-blue" : "text-green"}`}>
-                            {selectedPost.contact}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyContact(selectedPost.contact)}
-                          className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-field bg-white text-faint hover:text-ink hover:border-ink transition-all"
-                          title={t.contactHelpCopyText || "Kontaktni nusxalash"}
-                          aria-label={t.copyContactLabel || "Kontaktni nusxalash"}
+                    {/* Values with copy buttons */}
+                    <div className={`grid gap-2 ${
+                      contactsInfo.length === 1
+                        ? "grid-cols-1"
+                        : contactsInfo.length === 2
+                          ? "grid-cols-1 sm:grid-cols-2"
+                          : "grid-cols-1 sm:grid-cols-3"
+                    }`}>
+                      {contactsInfo.map((info, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-1.5 p-2 bg-card rounded-lg border border-field min-w-0 shadow-sm"
                         >
-                          {contactCopied === selectedPost.contact ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-
-                      {selectedPost.contact2 && contact2Info && (
-                        <div className="flex items-center justify-between gap-1.5 flex-1 min-w-0 border-l border-field pl-2">
-                          <div className="flex items-center gap-1.5 font-mono text-sm font-bold min-w-0">
-                            {contact2Info.isTelegram ? (
+                          <div className="flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold min-w-0">
+                            {info.isTelegram ? (
                               <Send className="w-3.5 h-3.5 text-blue flex-shrink-0" />
                             ) : (
                               <Phone className="w-3.5 h-3.5 text-green flex-shrink-0" />
                             )}
-                            <span className={`truncate ${contact2Info.isTelegram ? "text-blue" : "text-green"}`}>
-                              {selectedPost.contact2}
+                            <span className={`truncate ${info.isTelegram ? "text-blue" : "text-green"}`}>
+                              {info.label}
                             </span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleCopyContact(selectedPost.contact2!)}
-                            className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-lg border border-field bg-white text-faint hover:text-ink hover:border-ink transition-all"
+                            onClick={() => handleCopyContact(info.rawVal)}
+                            className="h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-md border border-field bg-paper text-faint hover:text-ink hover:border-ink transition-all"
                             title={t.contactHelpCopyText || "Kontaktni nusxalash"}
                             aria-label={t.copyContactLabel || "Kontaktni nusxalash"}
                           >
-                            {contactCopied === selectedPost.contact2 ? <Check className="w-4 h-4 text-green" /> : <Copy className="w-4 h-4" />}
+                            {contactCopied === info.rawVal ? (
+                              <Check className="w-3.5 h-3.5 text-green" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         </div>
-                      )}
+                      ))}
                     </div>
 
                     {/* Action buttons on horizontal line */}
                     <div className="flex items-center gap-2">
-                      <a
-                        href={contactInfo.url}
-                        target={contactInfo.isTelegram ? "_blank" : undefined}
-                        rel="noreferrer"
-                        className={`font-mono text-xs px-3 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 min-w-0 ${
-                          contactInfo.isTelegram
-                            ? "bg-blue hover:bg-ink text-card"
-                            : "bg-green hover:bg-green-deep text-white"
-                        }`}
-                        id="contact-action-btn"
-                      >
-                        {contactInfo.isTelegram ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
-                        <span className="truncate">{actionLabel(contactInfo.isTelegram)}</span>
-                      </a>
-
-                      {selectedPost.contact2 && contact2Info && (
-                        <a
-                          href={contact2Info.url}
-                          target={contact2Info.isTelegram ? "_blank" : undefined}
-                          rel="noreferrer"
-                          className={`font-mono text-xs px-3 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-2 transition-all flex-1 min-w-0 ${
-                            contact2Info.isTelegram
-                              ? "bg-blue hover:bg-ink text-card"
-                              : "bg-green hover:bg-green-deep text-white"
-                          }`}
-                        >
-                          {contact2Info.isTelegram ? <Send className="w-4 h-4 flex-shrink-0" /> : <Phone className="w-4 h-4 flex-shrink-0" />}
-                          <span className="truncate">{actionLabel(contact2Info.isTelegram)}</span>
-                        </a>
-                      )}
+                      {contactsInfo.map((info, idx) => {
+                        const btnLabel = getButtonLabel(info);
+                        return (
+                          <a
+                            key={idx}
+                            href={info.url}
+                            target={info.isTelegram ? "_blank" : undefined}
+                            rel="noreferrer"
+                            className={`font-mono text-xs px-2.5 py-2.5 rounded-lg font-bold text-center flex items-center justify-center gap-1.5 transition-all flex-1 min-w-0 shadow-sm ${
+                              info.isTelegram
+                                ? "bg-blue hover:bg-ink text-card"
+                                : "bg-green hover:bg-green-deep text-white"
+                            }`}
+                            id={idx === 0 ? "contact-action-btn" : undefined}
+                          >
+                            {info.isTelegram ? (
+                              <Send className="w-3.5 h-3.5 flex-shrink-0" />
+                            ) : (
+                              <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                            )}
+                            <span className="truncate">{btnLabel}</span>
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 );

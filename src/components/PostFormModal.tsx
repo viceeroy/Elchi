@@ -65,10 +65,19 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
   const [fromCity, setFromCity] = useState<string>("");
   const [toCity, setToCity] = useState<string>("");
   const [note, setNote] = useState("");
-  const [contact, setContact] = useState("");
-  const [contactMethod, setContactMethod] = useState<ContactMethod>("telegram");
-  const [showContact2, setShowContact2] = useState(false);
-  const [contact2, setContact2] = useState("");
+  const [primaryContactMethod, setPrimaryContactMethod] = useState<ContactMethod>("telegram");
+  const [telegram, setTelegram] = useState("");
+  const [phone1, setPhone1] = useState("");
+  const [phone2, setPhone2] = useState("");
+  const [showPhone1, setShowPhone1] = useState(false);
+  const [showPhone2, setShowPhone2] = useState(false);
+  const [showTelegram, setShowTelegram] = useState(false);
+  const [contactErrors, setContactErrors] = useState<{
+    primary?: string;
+    phone1?: string;
+    phone2?: string;
+    telegram?: string;
+  }>({});
   
   const today = new Date();
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
@@ -133,18 +142,68 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
       }
     } else if (currentStep === 6) {
       if (!note.trim()) nextErrors.note = t.errorFieldNote;
-      if (!contact.trim()) {
-        nextErrors.contact = t.errorFieldContact;
+
+      const newContactErrors: {
+        primary?: string;
+        phone1?: string;
+        phone2?: string;
+        telegram?: string;
+      } = {};
+
+      if (primaryContactMethod === "telegram") {
+        if (!telegram.trim()) {
+          newContactErrors.primary = t.errorFieldContact;
+          nextErrors.contact = t.errorFieldContact;
+        } else {
+          const normTg = telegram.trim().startsWith("@") ? telegram.trim() : `@${telegram.trim()}`;
+          if (!isValidContact(normTg, "telegram")) {
+            newContactErrors.primary = t.errorContactTelegram;
+            nextErrors.contact = t.errorContactTelegram;
+          }
+        }
+
+        if (showPhone1 && phone1.trim()) {
+          if (!isValidContact(phone1.trim(), "phone")) {
+            newContactErrors.phone1 = t.errorContactPhone;
+            if (!nextErrors.contact) nextErrors.contact = t.errorContactPhone;
+          }
+        }
+
+        if (showPhone2 && phone2.trim()) {
+          if (!isValidContact(phone2.trim(), "phone")) {
+            newContactErrors.phone2 = t.errorContactPhone;
+            if (!nextErrors.contact) nextErrors.contact = t.errorContactPhone;
+          }
+        }
       } else {
-        const normalized = contactMethod === "telegram"
-          ? (contact.trim().startsWith("@") ? contact.trim() : `@${contact.trim()}`)
-          : contact.trim().replace(/^@/, "");
-        if (!isValidContact(normalized, contactMethod)) {
-          nextErrors.contact = contactMethod === "telegram"
-            ? t.errorContactTelegram
-            : t.errorContactPhone;
+        if (!phone1.trim()) {
+          newContactErrors.primary = t.errorFieldContact;
+          nextErrors.contact = t.errorFieldContact;
+        } else {
+          const normPhone = phone1.trim().replace(/^@/, "");
+          if (!isValidContact(normPhone, "phone")) {
+            newContactErrors.primary = t.errorContactPhone;
+            nextErrors.contact = t.errorContactPhone;
+          }
+        }
+
+        if (showTelegram && telegram.trim()) {
+          const normTg = telegram.trim().startsWith("@") ? telegram.trim() : `@${telegram.trim()}`;
+          if (!isValidContact(normTg, "telegram")) {
+            newContactErrors.telegram = t.errorContactTelegram;
+            if (!nextErrors.contact) nextErrors.contact = t.errorContactTelegram;
+          }
+        }
+
+        if (showPhone2 && phone2.trim()) {
+          if (!isValidContact(phone2.trim(), "phone")) {
+            newContactErrors.phone2 = t.errorContactPhone;
+            if (!nextErrors.contact) nextErrors.contact = t.errorContactPhone;
+          }
         }
       }
+
+      setContactErrors(newContactErrors);
     }
 
     setErrors(nextErrors);
@@ -201,25 +260,28 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         finalWeight = [kgStr, catStr].filter(Boolean).join(" · ") || catStr || "Jo'natma";
       }
 
-      let finalContact = contact.trim();
-      if (contactMethod === "telegram") {
-        if (!finalContact.startsWith("@")) {
-          finalContact = "@" + finalContact;
+      const contacts: Array<{ val: string; type: ContactMethod }> = [];
+
+      if (primaryContactMethod === "telegram") {
+        const normTg = telegram.trim().startsWith("@") ? telegram.trim() : `@${telegram.trim()}`;
+        contacts.push({ val: normTg, type: "telegram" });
+
+        if (showPhone1 && phone1.trim()) {
+          contacts.push({ val: phone1.trim(), type: "phone" });
+        }
+        if (showPhone2 && phone2.trim()) {
+          contacts.push({ val: phone2.trim(), type: "phone" });
         }
       } else {
-        if (finalContact.startsWith("@")) {
-          finalContact = finalContact.substring(1);
-        }
-      }
+        const normPhone = phone1.trim().replace(/^@/, "");
+        contacts.push({ val: normPhone, type: "phone" });
 
-      const contact2Method = contactMethod === "telegram" ? "phone" : "telegram";
-      let finalContact2: string | null = null;
-      if (showContact2 && contact2.trim()) {
-        finalContact2 = contact2.trim();
-        if (contact2Method === "telegram" && !finalContact2.startsWith("@")) {
-          finalContact2 = "@" + finalContact2;
-        } else if (contact2Method === "phone" && finalContact2.startsWith("@")) {
-          finalContact2 = finalContact2.substring(1);
+        if (showTelegram && telegram.trim()) {
+          const normTg = telegram.trim().startsWith("@") ? telegram.trim() : `@${telegram.trim()}`;
+          contacts.push({ val: normTg, type: "telegram" });
+        }
+        if (showPhone2 && phone2.trim()) {
+          contacts.push({ val: phone2.trim(), type: "phone" });
         }
       }
 
@@ -236,10 +298,12 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         category_other: postType === "request" ? customItemType.trim() || null : null,
         weight: finalWeight,
         note: note.trim(),
-        contact: finalContact,
-        contact_type: contactMethod,
-        contact2: finalContact2,
-        contact2_type: finalContact2 ? contact2Method : null,
+        contact: contacts[0].val,
+        contact_type: contacts[0].type,
+        contact2: contacts[1]?.val || null,
+        contact2_type: contacts[1]?.type || null,
+        contact3: contacts[2]?.val || null,
+        contact3_type: contacts[2]?.type || null,
         honeypot: honeypot
       };
 
@@ -644,31 +708,39 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
               <ContactFields
                 t={t}
                 label={<>{t.contactLabel} <span className="text-red-500">*</span></>}
-                method={contactMethod}
-                onMethodChange={(next) => {
-                  setContactMethod(next);
-                  if (next !== "telegram") return;
-                  if (!contact) {
-                    setContact("@");
-                  } else if (
-                    !contact.startsWith("@") &&
-                    !contact.includes("+") &&
-                    contact.length < 15
-                  ) {
-                    setContact("@" + contact.trim());
-                  }
+                primaryMethod={primaryContactMethod}
+                onPrimaryMethodChange={(next) => {
+                  setPrimaryContactMethod(next);
+                  setContactErrors({});
                 }}
-                contact={contact}
-                onContactChange={(value) => { setContact(value); clearError("contact"); }}
-                contact2={contact2}
-                onContact2Change={setContact2}
-                showContact2={showContact2}
-                onShowContact2Change={(show) => {
-                  setShowContact2(show);
-                  if (!show) setContact2("");
+                telegram={telegram}
+                onTelegramChange={(val) => {
+                  setTelegram(val);
+                  setContactErrors((prev) => ({ ...prev, primary: undefined, telegram: undefined }));
+                  clearError("contact");
                 }}
-                error={errors.contact}
-                inputRef={(el) => { fieldRefs.current.contact = el; }}
+                phone1={phone1}
+                onPhone1Change={(val) => {
+                  setPhone1(val);
+                  setContactErrors((prev) => ({ ...prev, primary: undefined, phone1: undefined }));
+                  clearError("contact");
+                }}
+                phone2={phone2}
+                onPhone2Change={(val) => {
+                  setPhone2(val);
+                  setContactErrors((prev) => ({ ...prev, phone2: undefined }));
+                }}
+                showPhone1={showPhone1}
+                onShowPhone1Change={setShowPhone1}
+                showPhone2={showPhone2}
+                onShowPhone2Change={setShowPhone2}
+                showTelegram={showTelegram}
+                onShowTelegramChange={setShowTelegram}
+                primaryError={contactErrors.primary}
+                phone1Error={contactErrors.phone1}
+                phone2Error={contactErrors.phone2}
+                telegramError={contactErrors.telegram}
+                primaryInputRef={(el) => { fieldRefs.current.contact = el; }}
               />
 
               <div
