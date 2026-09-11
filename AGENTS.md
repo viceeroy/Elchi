@@ -14,7 +14,28 @@ Two post types: `traveler` (I'm flying, I have space) and `request` (I have a pa
 [migrations/2026-08-07-remove-announcements.sql](migrations/2026-08-07-remove-announcements.sql).
 Rows written under it are kept in the table but filtered out of `public_posts`.
 
-## Commands
+## Commands & Running Locally
+
+### Fast Run Recipe (Do Not Re-analyze)
+
+When asked to run the project, do not waste steps exploring configs, package.json, or directory structure. Follow this directly:
+
+1. **Check if already running:**
+   ```bash
+   lsof -i :5173 -i :3000
+   ```
+   If both port 3000 (Vercel) and 5173 (Vite) are listening, the project is already up and running.
+
+2. **Start missing services (run as daemons):**
+   - **Backend API (`:3000`)**: `vercel dev --listen 3000`
+   - **Frontend SPA (`:5173`)**: `npm run dev`
+   *(Vite serves the SPA at `http://localhost:5173` and proxies `/api` requests to `http://localhost:3000`).*
+
+3. **Verify:**
+   - Frontend: `http://localhost:5173`
+   - API Feed: `http://localhost:5173/api/posts`
+
+### Core Commands
 
 ```bash
 npm run dev
@@ -34,10 +55,6 @@ npm test
 
 `lint` is `tsc --noEmit` — there is no ESLint. `test` is `node --test "lib/**/*.test.ts"`;
 only `lib/` is covered (currently [lib/contact.test.ts](lib/contact.test.ts)).
-
-`vite` serves the SPA but **not** `api/` — those are Vercel functions. For a working feed
-locally, run `vercel dev` alongside; [vite.config.ts](vite.config.ts) proxies `/api` to
-`http://localhost:3000` (override with `ELCHI_API_PROXY`).
 
 ## Layout
 
