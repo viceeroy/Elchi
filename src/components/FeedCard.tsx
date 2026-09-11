@@ -214,26 +214,33 @@ export const FeedCardFooter: React.FC<FeedCardFooterProps> = ({
   t,
   left,
   onOpen,
-}) => (
-  <div className={FEED_CARD_FOOTER_ROW}>
-    <span className="text-[13px] text-faint truncate min-w-0">{left}</span>
+}) => {
+  const isTraveler = post.type === "traveler";
+  const btnColorClasses = isTraveler
+    ? "bg-blue hover:bg-ink text-card"
+    : "bg-red hover:opacity-90 text-card";
 
-    {/* Unconditional, and on every post type: this button's job is to open the
-        extended post, not to reveal a handle — it fires the same onOpen() that
-        tapping the card does. Contact VALUES never travel in a list response;
-        they come one at a time from get_post_contact() behind the login gate,
-        which is what keeps the board from being scrapeable. stopPropagation so
-        the card's own handler doesn't fire a second time behind it. */}
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onOpen();
-      }}
-      aria-label={t.contactLabel || "Bog'lanish"}
-      className="w-8 h-8 rounded-full bg-gold text-ink hover:bg-gold-lit flex items-center justify-center transition-colors shadow-sm cursor-pointer border-none flex-shrink-0"
-      id={`contact-btn-${post.id}`}
-    >
-      <Phone className="w-4 h-4" aria-hidden="true" />
-    </button>
-  </div>
-);
+  return (
+    <div className={FEED_CARD_FOOTER_ROW}>
+      <span className="text-[13px] text-faint truncate min-w-0">{left}</span>
+
+      {/* Unconditional, and on every post type: this button's job is to open the
+          extended post, not to reveal a handle — it fires the same onOpen() that
+          tapping the card does. Contact VALUES never travel in a list response;
+          they come one at a time from get_post_contact() behind the login gate,
+          which is what keeps the board from being scrapeable. stopPropagation so
+          the card's own handler doesn't fire a second time behind it. */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpen();
+        }}
+        aria-label={t.contactLabel || "Bog'lanish"}
+        className={`w-8 h-8 rounded-full ${btnColorClasses} active:scale-95 flex items-center justify-center transition-all duration-200 shadow-sm cursor-pointer border-none flex-shrink-0`}
+        id={`contact-btn-${post.id}`}
+      >
+        <Phone className="w-4 h-4" aria-hidden="true" />
+      </button>
+    </div>
+  );
+};
