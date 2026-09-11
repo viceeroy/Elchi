@@ -88,29 +88,21 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
 
       {/* Country dropdown */}
       {open && (
-        <div className="absolute top-[calc(100%+8px)] right-0 z-30 bg-card border border-rule rounded-xl shadow-lg py-1.5 min-w-[180px]">
+        <div className="absolute top-[calc(100%+8px)] right-0 z-30 bg-card border border-rule rounded-xl shadow-lg py-1.5 min-w-[140px]">
           {options.map((c) => {
             const active = c.iso === selected.iso;
             return (
               <button
-                key={c.code}
+                key={c.iso}
                 type="button"
                 onClick={() => selectCountry(c)}
-                className={`w-full flex items-center justify-between gap-3 px-3.5 py-2 text-left transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-left transition-colors ${
                   active ? "bg-paper" : "hover:bg-paper"
                 }`}
               >
-                <span className="flex items-center gap-2">
-                  <FlagIcon iso={c.iso} className="w-[18px] h-[13px]" />
-                  <span className="flex flex-col">
-                    <span className={`text-[13px] ${active ? "font-bold" : "font-semibold"} text-ink`}>
-                      {c.country}
-                    </span>
-                    <span className="text-[11px] text-faint">{c.city}</span>
-                  </span>
-                </span>
-                <span className="font-mono text-[11px] font-bold tracking-[1px] text-gold-deep">
-                  {c.code}
+                <FlagIcon iso={c.iso} className="w-[18px] h-[13px] shrink-0" />
+                <span className={`text-[13px] ${active ? "font-bold" : "font-semibold"} text-ink`}>
+                  {c.country}
                 </span>
               </button>
             );
