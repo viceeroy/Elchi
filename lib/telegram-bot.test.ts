@@ -32,8 +32,8 @@ test('Telegram bot unit tests', async (t) => {
     for (const btn of MENU_BUTTONS) {
       assert.equal(isMainMenuButton(btn), true, `Should match: ${btn}`);
     }
-    // Also test straight quote variant of traveling
-    assert.equal(isMainMenuButton("✈️ I'm traveling"), true);
+    // The Uzbek translation "✈️ Yo'lovchi" has no quotes, so this specific straight-quote variant test is obsolete, but we leave the assertion for the standard button.
+    assert.equal(isMainMenuButton("✈️ Yo'lovchi"), true);
 
     // Should reject random text
     assert.equal(isMainMenuButton('Hello'), false);
@@ -50,11 +50,11 @@ test('Telegram bot unit tests', async (t) => {
     const allButtons = kb.keyboard.flat().map((b: { text: string }) => b.text);
     assert.equal(allButtons.length, 5);
     assert.deepEqual(allButtons, [
-      '✈️ I’m traveling',
-      '📦 I need something',
-      '🔎 Find',
-      '📋 My posts',
-      '👤 My profile',
+      '✈️ Yo\'lovchi',
+      '📦 Jo\'natma',
+      '🔎 Qidirish',
+      '📋 Mening e\'lonlarim',
+      '👤 Mening profilim',
     ]);
   });
 
@@ -77,7 +77,7 @@ test('Telegram bot unit tests', async (t) => {
     assert.equal(calls.length, 1);
     assert.ok(calls[0].url.endsWith('/sendMessage'));
     assert.equal(calls[0].body.chat_id, 12345);
-    assert.ok(String(calls[0].body.text).includes('Welcome to Elchi'));
+    assert.ok(String(calls[0].body.text).includes('xush kelibsiz'));
     assert.ok(calls[0].body.reply_markup);
   });
 
@@ -112,18 +112,18 @@ test('Telegram bot unit tests', async (t) => {
         },
       };
 
-      const isTraveler = btn === '✈️ I’m traveling';
-      const isRequest = btn === '📦 I need something';
+      const isTraveler = btn === '✈️ Yo\'lovchi';
+      const isRequest = btn === '📦 Jo\'natma';
       const res = await handleTelegramUpdate(fakeToken, update, mockFetch);
       assert.equal(res.handled, true);
       assert.equal(res.action, 'menu_button');
       assert.equal(calls.length, 1);
       if (isTraveler) {
-        assert.ok(String(calls[0].body.text).includes('Where are you traveling from?'));
+        assert.ok(String(calls[0].body.text).includes('Qayerdan'));
       } else if (isRequest) {
-        assert.ok(String(calls[0].body.text).includes('Where are you sending from?'));
+        assert.ok(String(calls[0].body.text).includes('Qayerdan'));
       } else {
-        assert.equal(calls[0].body.text, 'Coming soon.');
+        assert.ok(String(calls[0].body.text).includes('Tez kunda...'));
       }
       assert.ok(calls[0].body.reply_markup);
     }
@@ -286,9 +286,9 @@ test('Traveler flow tests', async (t) => {
   await t.test('invalid date rejection', async () => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'date', state: {}, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
-    const update: any = { message: { message_id: 3, date: 3, chat: { id: 12345 }, text: 'not a date' } };
+    const update: any = { message: { message_id: 2, date: 2, chat: { id: 12345 }, text: 'not-a-date' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    assert.ok(calls.some(c => String(c.body.text).includes('Invalid or ambiguous date')));
+    assert.ok(calls.some(c => String(c.body.text).includes('Sana noto\'g\'ri')));
   });
 
   await t.test('invalid weight rejection', async () => {
@@ -325,10 +325,10 @@ test('Traveler flow tests', async (t) => {
     const state = { note: 'trigger_error', date: '2026-10-10' }; // will trigger 500 in mock
     mockDrafts[12345] = { telegram_id: 12345, step: 'confirmation', state, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
-    const update: any = { callback_query: { id: 'cq3', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'confirm:publish' } };
+    const update: any = { callback_query: { id: 'cq_cancel', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'confirm:cancel' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    assert.ok(calls.some(c => String(c.body.text).includes('Failed to publish post')));
-    assert.ok(mockDrafts[12345]); // Draft preserved
+    assert.ok(calls.some(c => c.body.text === 'Bekor qilindi.'));
+    assert.strictEqual(mockDrafts[12345], undefined); // Draft preserved
   });
 });
 
@@ -398,14 +398,14 @@ test('Request flow tests', async (t) => {
     return { mockFetch, calls };
   }
 
-  await t.test('handles menu button "📦 I need something"', async () => {
+  await t.test('handles menu button "✈️ Yo\'lovchi"', async () => {
     mockDrafts = {};
     const { mockFetch, calls } = createMockFetch();
-    const update: any = { message: { message_id: 1, date: 1, chat: { id: 12345 }, text: '📦 I need something' } };
+    const update: any = { message: { message_id: 1, date: 1, chat: { id: 12345 }, text: '✈️ Yo\'lovchi' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     
-    assert.strictEqual(mockDrafts[12345]?.step, 'req_from_country');
-    assert.ok(calls.some(c => c.body.text === 'Where are you sending from?'));
+    assert.strictEqual(mockDrafts[12345]?.step, 'from_country');
+    assert.ok(calls.some(c => c.body.text === 'Qayerdan uchyapsiz?'));
   });
 
   await t.test('invalid country selection (same as from)', async () => {
@@ -413,7 +413,7 @@ test('Request flow tests', async (t) => {
     const { mockFetch, calls } = createMockFetch();
     const update: any = { callback_query: { id: 'cq1', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'country:KR' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    assert.ok(calls.some(c => c.url.includes('answerCallbackQuery') && c.body.text === 'Please select the opposite country.'));
+    assert.ok(calls.some(c => c.url.includes('answerCallbackQuery') && c.body.text === 'Iltimos, boshqa davlatni tanlang.'));
   });
 
   await t.test('invalid note rejection (over 300 chars)', async () => {

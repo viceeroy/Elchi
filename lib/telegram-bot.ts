@@ -44,11 +44,11 @@ export interface TelegramUpdate {
 }
 
 export const MENU_BUTTONS = [
-  '✈️ I’m traveling',
-  '📦 I need something',
-  '🔎 Find',
-  '📋 My posts',
-  '👤 My profile',
+  '✈️ Yo\'lovchi',
+  '📦 Jo\'natma',
+  '🔎 Qidirish',
+  '📋 Mening e\'lonlarim',
+  '👤 Mening profilim',
 ] as const;
 
 export type MenuButton = (typeof MENU_BUTTONS)[number];
@@ -57,10 +57,10 @@ export type MenuButton = (typeof MENU_BUTTONS)[number];
 export function getMainMenuKeyboard() {
   return {
     keyboard: [
-      [{ text: '✈️ I’m traveling' }],
-      [{ text: '📦 I need something' }],
-      [{ text: '🔎 Find' }],
-      [{ text: '📋 My posts' }, { text: '👤 My profile' }],
+      [{ text: '✈️ Yo\'lovchi' }],
+      [{ text: '📦 Jo\'natma' }],
+      [{ text: '🔎 Qidirish' }],
+      [{ text: '📋 Mening e\'lonlarim' }, { text: '👤 Mening profilim' }],
     ],
     resize_keyboard: true,
     is_persistent: true,
@@ -75,11 +75,11 @@ function normalizeMenuText(text: string): string {
 export function isMainMenuButton(text: string): boolean {
   const norm = normalizeMenuText(text);
   return (
-    norm === "✈️ I'm traveling" ||
-    norm === '📦 I need something' ||
-    norm === '🔎 Find' ||
-    norm === '📋 My posts' ||
-    norm === '👤 My profile'
+    norm === '✈️ Yo\'lovchi' ||
+    norm === '📦 Jo\'natma' ||
+    norm === '🔎 Qidirish' ||
+    norm === '📋 Mening e\'lonlarim' ||
+    norm === '👤 Mening profilim'
   );
 }
 
@@ -203,13 +203,13 @@ export async function handleTelegramUpdate(
     await deleteDraft(chatId);
     
     if (rawText === '/cancel') {
-      await sendTelegramMessage(token, chatId, 'Draft canceled.', getMainMenuKeyboard(), fetchFn);
+      await sendTelegramMessage(token, chatId, 'Bekor qilindi.', getMainMenuKeyboard(), fetchFn);
       return { handled: true, action: 'start', chatId, responseSent: true };
     }
 
     const welcomeText =
-      'Assalomu alaykum! Welcome to Elchi (@elchitravel_bot).\n\n' +
-      'Please choose an option from the menu:';
+      'Assalomu alaykum! Elchiga (@elchitravel_bot) xush kelibsiz.\n\n' +
+      'Iltimos, menyudan tanlang:';
 
     await sendTelegramMessage(token, chatId, welcomeText, getMainMenuKeyboard(), fetchFn);
     return { handled: true, action: 'start', chatId, responseSent: true };
@@ -217,15 +217,15 @@ export async function handleTelegramUpdate(
 
   // 2b. Main menu button selection
   if (isMainMenuButton(rawText)) {
-    if (rawText === "✈️ I'm traveling" || rawText === '✈️ I’m traveling') {
+    if (rawText === "✈️ Yo'lovchi") {
       const handled = await handleTravelerFlow(token, update, chatId, chatId, fetchFn);
       if (handled) return { handled: true, action: 'menu_button', chatId, responseSent: true };
     }
-    if (rawText === '📦 I need something') {
+    if (rawText === '📦 Jo\'natma') {
       const handled = await handleRequestFlow(token, update, chatId, chatId, fetchFn);
       if (handled) return { handled: true, action: 'menu_button', chatId, responseSent: true };
     }
-    await sendTelegramMessage(token, chatId, 'Coming soon.', getMainMenuKeyboard(), fetchFn);
+    await sendTelegramMessage(token, chatId, 'Tez kunda...', getMainMenuKeyboard(), fetchFn);
     return { handled: true, action: 'menu_button', chatId, responseSent: true };
   }
 
@@ -412,15 +412,15 @@ function renderConfirmation(state: DraftState, username?: string): string {
   const fromCity = state.from_city || (state.from_country === 'KR' ? 'Seoul' : 'Tashkent');
   const toCity = state.to_city || (state.to_country === 'KR' ? 'Seoul' : 'Tashkent');
   
-  return `✈️ Traveler\n\n${fromFlag} ${fromCity} → ${toFlag} ${toCity}\n📅 ${state.date}\n🧳 ${state.weight_kg} kg\n👜 ${state.luggage_count} bag(s)\n\n${state.note ? `📝 ${state.note}\n\n` : ''}📱 ${state.contact}`;
+  return `✈️ Yo'lovchi\n\n${fromFlag} ${fromCity} → ${toFlag} ${toCity}\n📅 ${state.date}\n🧳 ${state.weight_kg} kg\n👜 ${state.luggage_count} ta chamadon\n\n${state.note ? `📝 ${state.note}\n\n` : ''}📱 ${state.contact}`;
 }
 
 export async function handleTravelerFlow(token: string, update: TelegramUpdate, telegramId: number, chatId: number, fetchFn: typeof fetch = fetch): Promise<boolean> {
   const draft = await getDraft(telegramId);
 
-  if (update.message?.text?.trim() === "✈️ I'm traveling" || update.message?.text?.trim() === "✈️ I’m traveling") {
+  if (update.message?.text?.trim() === "✈️ Yo'lovchi") {
     await upsertDraft(telegramId, 'from_country', {});
-    await sendTelegramMessage(token, chatId, 'Where are you traveling from?', getCountryKeyboard(), fetchFn);
+    await sendTelegramMessage(token, chatId, 'Qayerdan uchyapsiz?', getCountryKeyboard(), fetchFn);
     return true;
   }
 
@@ -436,33 +436,33 @@ export async function handleTravelerFlow(token: string, update: TelegramUpdate, 
         nextState.from_country = data.split(':')[1];
         nextStep = 'to_country';
         await answerTelegramCallbackQuery(token, cq.id, '', fetchFn);
-        await sendTelegramMessage(token, chatId, 'Where are you traveling to?', getCountryKeyboard(nextState.from_country), fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qayerga uchyapsiz?', getCountryKeyboard(nextState.from_country), fetchFn);
       } 
       else if (draft.step === 'to_country' && data.startsWith('country:')) {
         const selected = data.split(':')[1];
         if (selected === nextState.from_country) {
-          await answerTelegramCallbackQuery(token, cq.id, 'Please select the opposite country.', fetchFn);
+          await answerTelegramCallbackQuery(token, cq.id, 'Iltimos, boshqa davlatni tanlang.', fetchFn);
           return true;
         }
         nextState.to_country = selected;
         nextStep = 'from_city';
         await answerTelegramCallbackQuery(token, cq.id, '', fetchFn);
-        await sendTelegramMessage(token, chatId, 'Which city are you leaving from?', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qaysi shahardan uchyapsiz?', undefined, fetchFn);
       }
 
       else if (draft.step === 'note' && data === 'skip_note') {
         nextStep = 'contact';
         await answerTelegramCallbackQuery(token, cq.id, '', fetchFn);
         const kb: any = { inline_keyboard: [] };
-        if (cq.from.username) kb.inline_keyboard.push([{ text: `Use @${cq.from.username}`, callback_data: `contact:@${cq.from.username}` }]);
-        await sendTelegramMessage(token, chatId, 'Please provide contact information (e.g. phone number or Telegram @username).', kb.inline_keyboard.length > 0 ? kb : undefined, fetchFn);
+        if (cq.from.username) kb.inline_keyboard.push([{ text: `Mening @${cq.from.username} profilim`, callback_data: `contact:@${cq.from.username}` }]);
+        await sendTelegramMessage(token, chatId, 'Bog\'lanish uchun telefon raqam yoki Telegram @username kiriting.', kb.inline_keyboard.length > 0 ? kb : undefined, fetchFn);
       }
       else if (draft.step === 'contact' && data.startsWith('contact:')) {
         nextState.contact = data.substring('contact:'.length);
         nextState.contact_type = nextState.contact.startsWith('@') ? 'telegram' : 'phone';
         nextStep = 'confirmation';
         await answerTelegramCallbackQuery(token, cq.id, '', fetchFn);
-        await sendTelegramMessage(token, chatId, renderConfirmation(nextState, cq.from.username), { inline_keyboard: [[{ text: '✅ Publish', callback_data: 'confirm:publish' }, { text: '❌ Cancel', callback_data: 'confirm:cancel' }]] }, fetchFn);
+        await sendTelegramMessage(token, chatId, renderConfirmation(nextState, cq.from.username), { inline_keyboard: [[{ text: '✅ Joylashtirish', callback_data: 'confirm:publish' }, { text: '❌ Bekor qilish', callback_data: 'confirm:cancel' }]] }, fetchFn);
       }
       else if (draft.step === 'confirmation' && data.startsWith('confirm:')) {
         const action = data.split(':')[1];
@@ -470,13 +470,13 @@ export async function handleTravelerFlow(token: string, update: TelegramUpdate, 
         
         if (action === 'cancel') {
           await deleteDraft(telegramId);
-          await sendTelegramMessage(token, chatId, 'Traveler draft canceled.', getMainMenuKeyboard(), fetchFn);
+          await sendTelegramMessage(token, chatId, 'Bekor qilindi.', getMainMenuKeyboard(), fetchFn);
           return true;
         } else if (action === 'publish') {
           const admin = getSupabaseAdmin();
           const { data: profile } = await admin.from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
           if (!profile?.id) {
-            await sendTelegramMessage(token, chatId, 'You must log in to the Elchi website first before posting from Telegram.', getMainMenuKeyboard(), fetchFn);
+            await sendTelegramMessage(token, chatId, 'Telegram orqali e\'lon berishdan oldin Elchi veb-saytiga kiring.', getMainMenuKeyboard(), fetchFn);
             await deleteDraft(telegramId);
             return true;
           }
@@ -492,21 +492,21 @@ export async function handleTravelerFlow(token: string, update: TelegramUpdate, 
             
           if (error) {
             console.error('Insert error', error);
-            await sendTelegramMessage(token, chatId, 'Failed to publish post. Please try again.', undefined, fetchFn);
+            await sendTelegramMessage(token, chatId, 'Xatolik yuz berdi. Iltimos qaytadan urining.', undefined, fetchFn);
           } else {
             await deleteDraft(telegramId);
             await sendTelegramMessage(
               token, 
               chatId, 
-              '✅ Your traveler post is live on Elchi.', 
-              { inline_keyboard: [[{ text: '🔗 View my post', url: `https://elchi.org/post/${inserted.id}` }]] }, 
+              '✅ E\'loningiz muvaffaqiyatli joylashtirildi.', 
+              { inline_keyboard: [[{ text: '🔗 E\'lonni ko\'rish', url: `https://elchi.org/post/${inserted.id}` }]] }, 
               fetchFn
             );
           }
           return true;
         }
       } else {
-        await answerTelegramCallbackQuery(token, cq.id, 'Invalid option.', fetchFn);
+        await answerTelegramCallbackQuery(token, cq.id, 'Noto\'g\'ri tanlov.', fetchFn);
       }
     } 
     else if (update.message?.text) {
@@ -515,49 +515,53 @@ export async function handleTravelerFlow(token: string, update: TelegramUpdate, 
       if (draft.step === 'from_city') {
         nextState.from_city = text;
         nextStep = 'to_city';
-        await sendTelegramMessage(token, chatId, 'Which city are you traveling to?', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qaysi shaharga boryapsiz?', undefined, fetchFn);
       }
       else if (draft.step === 'to_city') {
         nextState.to_city = text;
         nextStep = 'date';
-        await sendTelegramMessage(token, chatId, 'What date are you traveling? (e.g. 25 September)', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qaysi sanada uchyapsiz? (masalan: 25 Sentabr)', undefined, fetchFn);
       }
       else if (draft.step === 'date') {
         const parsed = parseDate(text);
         if (!parsed) {
-          await sendTelegramMessage(token, chatId, 'Invalid or ambiguous date. Please try a clear format like YYYY-MM-DD or DD Month.', undefined, fetchFn);
+          await sendTelegramMessage(token, chatId, 'Sana noto\'g\'ri. Iltimos YYYY-MM-DD yoki aniq sanani kiriting.', undefined, fetchFn);
           return true;
         }
         nextState.date = parsed;
         nextStep = 'weight_kg';
-        await sendTelegramMessage(token, chatId, 'How much space do you have? (kg)', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qancha bo\'sh joyingiz bor? (kg)', undefined, fetchFn);
       }
       else if (draft.step === 'weight_kg') {
         const val = parseFloat(text);
         if (isNaN(val) || val <= 0 || val > 100) {
-          await sendTelegramMessage(token, chatId, 'Please enter a valid weight (between 1 and 100).', undefined, fetchFn);
+          await sendTelegramMessage(token, chatId, 'Iltimos, to\'g\'ri vazn kiriting (1 dan 100 gacha).', undefined, fetchFn);
           return true;
         }
         nextState.weight_kg = val;
         nextStep = 'luggage_count';
-        await sendTelegramMessage(token, chatId, 'How many suitcases/bags? (enter 0 if describing space only)', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Nechta chamadon? (agar faqat kg bo\'lsa 0 yozing)', undefined, fetchFn);
       }
       else if (draft.step === 'luggage_count') {
         const val = parseInt(text, 10);
         if (isNaN(val) || val < 0 || val > 20) {
-          await sendTelegramMessage(token, chatId, 'Please enter a valid number of bags (0 to 20).', undefined, fetchFn);
+          await sendTelegramMessage(token, chatId, 'Iltimos, to\'g\'ri chamadon sonini kiriting (0 dan 20 gacha).', undefined, fetchFn);
           return true;
         }
         nextState.luggage_count = val;
         nextStep = 'note';
-        await sendTelegramMessage(token, chatId, 'Anything else travelers should know?', { inline_keyboard: [[{ text: '⏭️ Skip', callback_data: 'skip_note' }]] }, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qo\'shimcha izoh (ixtiyoriy)', { inline_keyboard: [[{ text: '⏭️ O\'tkazib yuborish', callback_data: 'skip_note' }]] }, fetchFn);
       }
       else if (draft.step === 'note') {
+        if (text.length > 300) {
+          await sendTelegramMessage(token, chatId, 'Izoh juda uzun. Iltimos, 300 belgidan oshirmang.', undefined, fetchFn);
+          return true;
+        }
         nextState.note = text.substring(0, 300);
         nextStep = 'contact';
         const kb: any = { inline_keyboard: [] };
-        if (update.message.from?.username) kb.inline_keyboard.push([{ text: `Use @${update.message.from.username}`, callback_data: `contact:@${update.message.from.username}` }]);
-        await sendTelegramMessage(token, chatId, 'Please provide contact information (e.g. phone number or Telegram @username).', kb.inline_keyboard.length > 0 ? kb : undefined, fetchFn);
+        if (update.message.from?.username) kb.inline_keyboard.push([{ text: `Mening @${update.message.from.username} profilim`, callback_data: `contact:@${update.message.from.username}` }]);
+        await sendTelegramMessage(token, chatId, 'Bog\'lanish uchun telefon raqam yoki Telegram @username kiriting.', kb.inline_keyboard.length > 0 ? kb : undefined, fetchFn);
       }
       else if (draft.step === 'contact') {
         let contactKind: 'telegram' | 'phone' | null = null;
@@ -575,17 +579,17 @@ export async function handleTravelerFlow(token: string, update: TelegramUpdate, 
         }
 
         if (!contactKind) {
-          await sendTelegramMessage(token, chatId, 'Invalid contact format. Please provide a valid phone number or Telegram @username.', undefined, fetchFn);
+          await sendTelegramMessage(token, chatId, 'Bog\'lanish ma\'lumoti noto\'g\'ri. Iltimos, to\'g\'ri telefon raqam yoki Telegram @username kiriting.', undefined, fetchFn);
           return true;
         }
 
         nextState.contact = text;
         nextState.contact_type = contactKind;
         nextStep = 'confirmation';
-        await sendTelegramMessage(token, chatId, renderConfirmation(nextState, update.message.from?.username), { inline_keyboard: [[{ text: '✅ Publish', callback_data: 'confirm:publish' }, { text: '❌ Cancel', callback_data: 'confirm:cancel' }]] }, fetchFn);
+        await sendTelegramMessage(token, chatId, renderConfirmation(nextState, update.message.from?.username), { inline_keyboard: [[{ text: '✅ Joylashtirish', callback_data: 'confirm:publish' }, { text: '❌ Bekor qilish', callback_data: 'confirm:cancel' }]] }, fetchFn);
       }
       else {
-        await sendTelegramMessage(token, chatId, 'Please use the buttons provided above.', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Iltimos, yuqoridagi tugmalardan foydalaning.', undefined, fetchFn);
         return true;
       }
     }
@@ -602,15 +606,15 @@ function renderRequestConfirmation(state: DraftState): string {
   const fromCity = state.from_city || (state.from_country === 'KR' ? 'Seoul' : 'Tashkent');
   const toCity = state.to_city || (state.to_country === 'KR' ? 'Seoul' : 'Tashkent');
   
-  return `📦 Request\n\n${fromFlag} ${fromCity} → ${toFlag} ${toCity}\n📅 Needed by: ${state.date}\n⚖️ Approx. weight: ${state.weight_kg} kg\n📝 ${state.note || ''}\n📱 ${state.contact}`;
+  return `📦 Jo'natma\n\n${fromFlag} ${fromCity} → ${toFlag} ${toCity}\n📅 ${state.date} gacha\n🧳 ${state.weight_kg} kg gacha\n\n📝 ${state.note}\n\n📱 ${state.contact}`;
 }
 
 export async function handleRequestFlow(token: string, update: TelegramUpdate, telegramId: number, chatId: number, fetchFn: typeof fetch = fetch): Promise<boolean> {
   const draft = await getDraft(telegramId);
 
-  if (update.message?.text?.trim() === "📦 I need something") {
+  if (update.message?.text?.trim() === "📦 Jo'natma") {
     await upsertDraft(telegramId, 'req_from_country', {});
-    await sendTelegramMessage(token, chatId, 'Where are you sending from?', getCountryKeyboard(), fetchFn);
+    await sendTelegramMessage(token, chatId, 'Qayerdan yuboryapsiz?', getCountryKeyboard(), fetchFn);
     return true;
   }
 
@@ -644,7 +648,7 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
         nextState.contact_type = nextState.contact.startsWith('@') ? 'telegram' : 'phone';
         nextStep = 'req_confirmation';
         await answerTelegramCallbackQuery(token, cq.id, '', fetchFn);
-        await sendTelegramMessage(token, chatId, renderRequestConfirmation(nextState), { inline_keyboard: [[{ text: '✅ Publish', callback_data: 'confirm:publish' }, { text: '❌ Cancel', callback_data: 'confirm:cancel' }]] }, fetchFn);
+        await sendTelegramMessage(token, chatId, renderRequestConfirmation(nextState), { inline_keyboard: [[{ text: '✅ Joylashtirish', callback_data: 'confirm:publish' }, { text: '❌ Bekor qilish', callback_data: 'confirm:cancel' }]] }, fetchFn);
       }
       else if (draft.step === 'req_confirmation' && data.startsWith('confirm:')) {
         const action = data.split(':')[1];
@@ -652,13 +656,13 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
         
         if (action === 'cancel') {
           await deleteDraft(telegramId);
-          await sendTelegramMessage(token, chatId, 'Draft canceled.', getMainMenuKeyboard(), fetchFn);
+          await sendTelegramMessage(token, chatId, 'Bekor qilindi.', getMainMenuKeyboard(), fetchFn);
           return true;
         } else if (action === 'publish') {
           const admin = getSupabaseAdmin();
           const { data: profile } = await admin.from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
           if (!profile?.id) {
-            await sendTelegramMessage(token, chatId, 'You must log in to the Elchi website first before posting from Telegram.', getMainMenuKeyboard(), fetchFn);
+            await sendTelegramMessage(token, chatId, 'Telegram orqali e\'lon berishdan oldin Elchi veb-saytiga kiring.', getMainMenuKeyboard(), fetchFn);
             await deleteDraft(telegramId);
             return true;
           }
@@ -673,21 +677,21 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
             
           if (error) {
             console.error('Insert error', error);
-            await sendTelegramMessage(token, chatId, 'Failed to publish post. Please try again.', undefined, fetchFn);
+            await sendTelegramMessage(token, chatId, 'Xatolik yuz berdi. Iltimos qaytadan urining.', undefined, fetchFn);
           } else {
             await deleteDraft(telegramId);
             await sendTelegramMessage(
               token, 
               chatId, 
-              '✅ Your request is live on Elchi.', 
-              { inline_keyboard: [[{ text: '🔗 View my post', url: `https://elchi.org/post/${inserted.id}` }]] }, 
+              '✅ Jo\'natma e\'loningiz muvaffaqiyatli joylashtirildi.', 
+              { inline_keyboard: [[{ text: '🔗 E\'lonni ko\'rish', url: `https://elchi.org/post/${inserted.id}` }]] }, 
               fetchFn
             );
           }
           return true;
         }
       } else {
-        await answerTelegramCallbackQuery(token, cq.id, 'Invalid option.', fetchFn);
+        await answerTelegramCallbackQuery(token, cq.id, 'Noto\'g\'ri tanlov.', fetchFn);
       }
     } 
     else if (update.message?.text) {
@@ -696,43 +700,43 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
       if (draft.step === 'req_from_city') {
         nextState.from_city = text;
         nextStep = 'req_to_city';
-        await sendTelegramMessage(token, chatId, 'Which city are you sending to?', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qaysi shaharga yuboryapsiz?', undefined, fetchFn);
       }
       else if (draft.step === 'req_to_city') {
         nextState.to_city = text;
         nextStep = 'req_date';
-        await sendTelegramMessage(token, chatId, 'What is the needed-by/travel date? (e.g. 25 September)', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qaysi sanagacha yetkazish kerak? (masalan: 25 Sentabr)', undefined, fetchFn);
       }
       else if (draft.step === 'req_date') {
         const parsed = parseDate(text);
         if (!parsed) {
-          await sendTelegramMessage(token, chatId, 'Invalid or ambiguous date. Please try a clear format like YYYY-MM-DD or DD Month.', undefined, fetchFn);
+          await sendTelegramMessage(token, chatId, 'Sana noto\'g\'ri. Iltimos YYYY-MM-DD yoki aniq sanani kiriting.', undefined, fetchFn);
           return true;
         }
         nextState.date = parsed;
         nextStep = 'req_note';
-        await sendTelegramMessage(token, chatId, 'What do you need? Please provide a short note/description (max 300 characters).', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Nima yubormoqchisiz? Qisqacha izoh yozing (maksimal 300 belgi).', undefined, fetchFn);
       }
       else if (draft.step === 'req_note') {
         if (text.length > 300) {
-          await sendTelegramMessage(token, chatId, 'Note is too long. Please shorten it to 300 characters or less.', undefined, fetchFn);
+          await sendTelegramMessage(token, chatId, 'Izoh juda uzun. Iltimos, 300 belgidan oshirmang.', undefined, fetchFn);
           return true;
         }
         nextState.note = text;
         nextStep = 'req_weight';
-        await sendTelegramMessage(token, chatId, 'Approximate weight in kg?', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Taxminiy og\'irligi? (kg)', undefined, fetchFn);
       }
       else if (draft.step === 'req_weight') {
         const val = parseFloat(text);
         if (isNaN(val) || val <= 0 || val > 100) {
-          await sendTelegramMessage(token, chatId, 'Please enter a valid weight (between 1 and 100).', undefined, fetchFn);
+          await sendTelegramMessage(token, chatId, 'Iltimos, to\'g\'ri vazn kiriting (1 dan 100 gacha).', undefined, fetchFn);
           return true;
         }
         nextState.weight_kg = val;
         nextStep = 'req_contact';
         const kb: any = { inline_keyboard: [] };
-        if (update.message.from?.username) kb.inline_keyboard.push([{ text: `Use @${update.message.from.username}`, callback_data: `contact:@${update.message.from.username}` }]);
-        await sendTelegramMessage(token, chatId, 'Please provide contact information (e.g. phone number or Telegram @username).', kb.inline_keyboard.length > 0 ? kb : undefined, fetchFn);
+        if (update.message.from?.username) kb.inline_keyboard.push([{ text: `Mening @${update.message.from.username} profilim`, callback_data: `contact:@${update.message.from.username}` }]);
+        await sendTelegramMessage(token, chatId, 'Bog\'lanish uchun telefon raqam yoki Telegram @username kiriting.', kb.inline_keyboard.length > 0 ? kb : undefined, fetchFn);
       }
       else if (draft.step === 'req_contact') {
         let contactKind: 'telegram' | 'phone' | null = null;
@@ -742,16 +746,16 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
         else if (isValidContact(text, 'phone')) contactKind = 'phone';
         
         if (!contactKind) {
-          await sendTelegramMessage(token, chatId, 'Invalid contact format. Please provide a valid phone number or Telegram @username.', undefined, fetchFn);
+          await sendTelegramMessage(token, chatId, 'Bog\'lanish ma\'lumoti noto\'g\'ri. Iltimos, to\'g\'ri telefon raqam yoki Telegram @username kiriting.', undefined, fetchFn);
           return true;
         }
         nextState.contact = text;
         nextState.contact_type = contactKind;
         nextStep = 'req_confirmation';
-        await sendTelegramMessage(token, chatId, renderRequestConfirmation(nextState), { inline_keyboard: [[{ text: '✅ Publish', callback_data: 'confirm:publish' }, { text: '❌ Cancel', callback_data: 'confirm:cancel' }]] }, fetchFn);
+        await sendTelegramMessage(token, chatId, renderRequestConfirmation(nextState), { inline_keyboard: [[{ text: '✅ Joylashtirish', callback_data: 'confirm:publish' }, { text: '❌ Bekor qilish', callback_data: 'confirm:cancel' }]] }, fetchFn);
       }
       else {
-        await sendTelegramMessage(token, chatId, 'Please use the buttons provided above.', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Iltimos, yuqoridagi tugmalardan foydalaning.', undefined, fetchFn);
         return true;
       }
     }
