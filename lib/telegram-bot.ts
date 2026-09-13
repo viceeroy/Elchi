@@ -245,7 +245,7 @@ export async function handleTelegramUpdate(
   return { handled: true, action: 'unknown', chatId, responseSent: true };
 }
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { isValidContact } from './contact.ts';
+import { isValidContact } from './contact.js';
 
 let adminClient: SupabaseClient | null = null;
 function getSupabaseAdmin(): SupabaseClient {
