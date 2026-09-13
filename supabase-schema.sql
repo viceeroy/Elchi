@@ -567,3 +567,19 @@ $$;
 REVOKE ALL ON FUNCTION check_rate_limit(TEXT, TEXT, INTEGER, INTEGER) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION check_rate_limit(TEXT, TEXT, INTEGER, INTEGER)
     TO anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
+-- telegram_bot_drafts
+-- ---------------------------------------------------------------------------
+-- Temporary storage for Telegram bot multi-step conversation states.
+-- Bypasses the strict `posts` constraints. RLS is on with no policies, meaning
+-- only the service_role key can read/write to it.
+CREATE TABLE IF NOT EXISTS telegram_bot_drafts (
+    telegram_id BIGINT PRIMARY KEY,
+    step VARCHAR(50) NOT NULL,
+    state JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE telegram_bot_drafts ENABLE ROW LEVEL SECURITY;
