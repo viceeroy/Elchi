@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Translations } from "../types";
-import { X } from "lucide-react";
+import { X, Send } from "lucide-react";
 import { supabaseBrowser } from "../supabaseClient";
 import { useDialog } from "../hooks/useDialog";
 
@@ -10,149 +10,73 @@ interface LoginModalProps {
   onLoginSuccess: () => void;
 }
 
-interface TelegramAuthUser {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
-}
-
-declare global {
-  interface Window {
-    onTelegramAuth?: (user: TelegramAuthUser) => void;
-  }
-}
-
 const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "";
 
 export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSuccess }) => {
-  const [loading, setLoading] = useState<"telegram" | "google" | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [tgUser, setTgUser] = useState<TelegramAuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "polling" | "verified" | "expired">("idle");
   const panelRef = useDialog<HTMLDivElement>(onClose);
-  // Telegram renders a fixed-width iframe button we can't restyle. Measure it
-  // once it mounts and match the Google button + divider to the same width so
-  // the two options read as a set.
-  const [tgWidth, setTgWidth] = useState<number | null>(null);
-  // The Telegram widget script loads from telegram.org and renders its iframe
-  // async, leaving a blank gap on slow connections. Track when the iframe
-  // actually paints so we can show a skeleton placeholder until then.
-  const [tgReady, setTgReady] = useState(false);
-  // Bumped to force the Telegram widget useEffect to re-run, which tears
-  // down the old iframe and injects a fresh script+iframe. Used when the
-  // cached tgUser.auth_date has expired and the widget must produce a new
-  // auth payload with a current timestamp.
-  const [widgetKey, setWidgetKey] = useState(0);
+  const pollIntervalRef = useRef<number | null>(null);
 
-  const handleGoogleLogin = async () => {
-    setLoading("google");
+  const startLoginFlow = async () => {
+    setLoading(true);
     setError(null);
-    setTgUser(null);
     try {
-      // Supabase redirects to Google, then back to the app; detectSessionInUrl
-      // (supabaseClient) picks up the session and onAuthStateChange fires.
-      const { error: oauthError } = await supabaseBrowser.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin },
-      });
-      if (oauthError) throw oauthError;
+      const res = await fetch("/api/signup-start", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.token) {
+        throw new Error(data.error || t.loginErrorGeneral || "Error");
+      }
+      setToken(data.token);
+      setStatus("polling");
+      window.open(`https://t.me/${TELEGRAM_BOT_USERNAME}?start=login_${data.token}`, "_blank");
     } catch (err) {
       setError(err instanceof Error ? err.message : t.loginErrorGeneral || "Error");
-      setLoading(null);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Retry handler that guards against re-sending an expired Telegram auth
-  // payload. The server enforces a 300 s TTL on auth_date
-  // (AUTH_DATE_MAX_AGE_SECONDS in auth-telegram.ts). This client-side check
-  // is a UX optimisation, not a correctness guarantee — a skewed client
-  // clock can produce false positives (extra click) or false negatives
-  // (retry fails on the server anyway), but the worst case is one wasted
-  // round-trip. 270 s gives 30 s of headroom before the server's hard cutoff.
-  const handleRetry = () => {
-    if (!tgUser) return;
-    const ageSeconds = Math.floor(Date.now() / 1000) - tgUser.auth_date;
-    if (ageSeconds > 270) {
-      setTgUser(null);
-      setError(t.loginSessionExpired || "Sessiya muddati o'tgan. Iltimos qaytadan kiring.");
-      // Force a fresh Telegram widget so the user gets a new auth_date.
-      // The old iframe *might* still be clickable — Telegram's widget isn't
-      // documented as single-fire — but re-injecting the script removes any
-      // doubt and guarantees Telegram's servers produce a current timestamp.
-      setTgReady(false);
-      setWidgetKey((k) => k + 1);
-      return;
-    }
-    window.onTelegramAuth?.(tgUser);
-  };
-
-  const telegramContainerRef = useRef<HTMLDivElement>(null);
-
-  // Inject the Telegram Login Widget script once on mount
   useEffect(() => {
-    if (!TELEGRAM_BOT_USERNAME || !telegramContainerRef.current) return;
+    if (status !== "polling" || !token) return;
 
-    window.onTelegramAuth = async (user: TelegramAuthUser) => {
-      setTgUser(user);
-      setLoading("telegram");
-      setError(null);
+    const checkStatus = async () => {
       try {
-        const res = await fetch("/api/auth-telegram", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(user),
-        });
+        const res = await fetch(`/api/signup-status?token=${token}`);
         const data = await res.json();
-        if (!res.ok || !data.hashed_token) {
-          throw new Error(data.error || t.loginErrorGeneral);
+        
+        if (data.status === "verified" && data.hashed_token) {
+          setStatus("verified");
+          if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
+          
+          const { error: verifyError } = await supabaseBrowser.auth.verifyOtp({
+            token_hash: data.hashed_token,
+            type: "magiclink",
+          });
+          
+          if (verifyError) throw verifyError;
+          onLoginSuccess();
+        } else if (data.status === "expired") {
+          setStatus("expired");
+          setError(t.loginSessionExpired || "Sessiya muddati o'tgan. Iltimos qaytadan kiring.");
+          if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
         }
-        const { error: verifyError } = await supabaseBrowser.auth.verifyOtp({
-          token_hash: data.hashed_token,
-          type: "magiclink",
-        });
-        if (verifyError) throw verifyError;
-        onLoginSuccess();
       } catch (err) {
-        setError(err instanceof Error ? err.message : t.loginErrorGeneral || "Error");
-      } finally {
-        setLoading(null);
+        // Log quietly, let it retry on next interval unless it's a hard fail
+        console.error("Status check failed", err);
       }
     };
 
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-radius", "8");
-    telegramContainerRef.current.innerHTML = "";
-    telegramContainerRef.current.appendChild(script);
-
-    // Once Telegram injects its iframe, read its width so the Google button and
-    // divider below can match it. Watch for the iframe appearing/resizing.
-    const observer = new MutationObserver(() => {
-      const iframe = telegramContainerRef.current?.querySelector("iframe");
-      if (iframe && iframe.offsetWidth > 0) {
-        setTgWidth(iframe.offsetWidth);
-        setTgReady(true);
-      }
-    });
-    observer.observe(telegramContainerRef.current, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-    });
+    pollIntervalRef.current = window.setInterval(checkStatus, 2000);
 
     return () => {
-      observer.disconnect();
-      window.onTelegramAuth = undefined;
+      if (pollIntervalRef.current) {
+        window.clearInterval(pollIntervalRef.current);
+      }
     };
-  }, [widgetKey]);
+  }, [status, token, onLoginSuccess, t]);
 
   return (
     <div
@@ -167,10 +91,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
         tabIndex={-1}
         className="bg-card w-full max-w-[560px] rounded-t-2xl px-6 pt-4 pb-8 max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideup_0.28s_cubic-bezier(0.2,0.8,0.2,1)] relative outline-none"
       >
-        {/* Notch pull-bar */}
         <div className="w-10 h-1 bg-field rounded-full mx-auto mb-5" aria-hidden="true"></div>
 
-        {/* Close Button */}
         <button
           onClick={onClose}
           aria-label={t.closeLabel || "Yopish"}
@@ -182,74 +104,37 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
         <h2 id="login-modal-title" className="text-2xl font-extrabold text-ink tracking-tight mb-1">{t.loginTitle}</h2>
         <p className="text-sm text-body mb-6">{t.loginSubtitle}</p>
 
-        {/* Auth options in a centered column sized to the Telegram widget, so
-            the fixed-width Telegram button and the Google button below share the
-            same footprint and read as a set. Falls back to 280px until measured. */}
-        <div
-          className="mx-auto flex flex-col items-stretch"
-          style={{ width: tgWidth ? `${tgWidth}px` : "280px" }}
-        >
-          {/* Native Telegram login widget. Telegram renders its own iframe button
-              whose click target must not be overlaid or resized, or the button
-              silently stops responding — so it's shown as-is, centered. */}
-          <div className="relative flex justify-center min-h-[40px]">
-            {TELEGRAM_BOT_USERNAME && !tgReady && (
-              <div className="absolute inset-0 h-10 rounded-lg bg-rule animate-pulse" />
-            )}
-            <div className="flex justify-center w-full" ref={telegramContainerRef} />
+        <div className="mx-auto flex flex-col items-stretch w-[280px]">
+          {status === "polling" ? (
+             <div className="flex flex-col items-center gap-4 text-center">
+               <div className="flex items-center gap-2 text-ink font-semibold">
+                  <svg className="animate-spin w-5 h-5 text-ink" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Telegram botida tasdiqlang...</span>
+               </div>
+               <p className="text-sm text-body">
+                 Biz sizni Telegram botga yo'naltirdik. Iltimos, u yerda <b>✅ Tasdiqlash</b> tugmasini bosing.
+               </p>
+             </div>
+          ) : (
+            <button
+              onClick={startLoginFlow}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 border-none rounded-lg py-3 text-sm font-bold text-white bg-[#2AABEE] hover:bg-[#229ED9] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Send className="w-4 h-4" />
+              Telegram orqali kirish
+            </button>
+          )}
 
-            {(loading === "telegram" || (error && tgUser)) && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-card rounded-lg">
-                {loading === "telegram" ? (
-                  <div className="flex w-full h-full items-center justify-center gap-2 border border-field rounded-lg text-sm font-bold text-ink">
-                    <svg className="animate-spin w-4 h-4 text-ink" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Tekshirilmoqda...</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleRetry}
-                    className="flex w-full h-full items-center justify-center gap-2 border border-field rounded-lg text-sm font-bold text-ink bg-card hover:bg-paper transition-colors"
-                  >
-                    Qayta urinish
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
           {!TELEGRAM_BOT_USERNAME && (
-            <p className="text-red text-xs text-center">
+            <p className="text-red text-xs text-center mt-2">
               {t.loginErrorGeneral || "Telegram login unavailable"}
             </p>
           )}
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-4">
-            <span className="flex-1 h-px bg-rule" />
-            <span className="text-[11px] font-medium uppercase tracking-wider text-faint">
-              {t.orDivider || "yoki"}
-            </span>
-            <span className="flex-1 h-px bg-rule" />
-          </div>
-
-          {/* Google OAuth */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading !== null}
-            className="w-full flex items-center justify-center gap-2 border border-field rounded-lg py-3 text-sm font-bold text-ink bg-card hover:bg-paper transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09a6.6 6.6 0 0 1 0-4.18V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
-            </svg>
-            {t.continueWithGoogle}
-          </button>
-
-          {loading === "google" && <p className="text-body text-sm mt-2 text-center">...</p>}
           {error && <p className="text-red text-sm mt-4 text-center">{error}</p>}
         </div>
       </div>
