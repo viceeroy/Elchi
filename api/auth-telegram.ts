@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '../lib/supabase-admin.js';
 import { checkRateLimit, clientIp } from '../lib/rate-limit.js';
+import { provisionTelegramUser } from '../lib/telegram-auth.js';
 
 interface TelegramAuthPayload {
   id: number;
@@ -86,52 +87,13 @@ async function handleTelegramAuth(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Tasdiqlash muvaffaqiyatsiz' });
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
-  const syntheticEmail = `telegram_${payload.id}@elchi.local`;
-
-  const { error: createError } = await supabaseAdmin.auth.admin.createUser({
-    email: syntheticEmail,
-    email_confirm: true,
-    user_metadata: {
-      telegram_id: payload.id,
-      telegram_username: payload.username || null,
-      // Recorded, but it does NOT become the profile's display_name — that
-      // column is the user's own answer to the capture gate and nothing else.
-      // handle_new_user() ignores this field on purpose; see
-      // migrations/2026-08-06-display-name-user-entered.sql.
-      display_name: payload.first_name || payload.username || null,
-      avatar_url: payload.photo_url || null,
-      provider: 'telegram',
-    },
-  });
-
-  // Idempotent: repeat logins from the same Telegram account hit the same
-  // synthetic email and legitimately fail as "already registered". Detect that
-  // via Supabase's status/code first (422 / email_exists) and only fall back to
-  // the message text, so a reworded message doesn't 500 every returning user.
-  if (createError) {
-    const err = createError as { status?: number; code?: string; message?: string };
-    const isAlreadyExists =
-      err.status === 422 ||
-      err.code === 'email_exists' ||
-      Boolean(err.message?.toLowerCase().includes('already'));
-    if (!isAlreadyExists) {
-      console.error('Error creating Telegram user:', { message: (createError as { message?: string }).message });
-      return res.status(500).json({ error: 'Xatolik yuz berdi' });
-    }
-  }
-
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'magiclink',
-    email: syntheticEmail,
-  });
-
-  if (linkError || !linkData?.properties?.hashed_token) {
-    console.error('Error generating Telegram session link:', { message: linkError?.message });
+  try {
+    const { hashed_token } = await provisionTelegramUser(payload);
+    return res.status(200).json({ hashed_token });
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({ error: 'Xatolik yuz berdi' });
   }
-
-  return res.status(200).json({ hashed_token: linkData.properties.hashed_token });
 }
 
 // Outer guard so any unexpected throw (e.g. a missing service-role key or a
