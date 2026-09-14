@@ -177,6 +177,36 @@ export async function handleTelegramUpdate(
     if (chatId) {
       let handled = await handleTravelerFlow(token, update, cq.from.id, chatId, fetchFn);
       if (!handled) handled = await handleRequestFlow(token, update, cq.from.id, chatId, fetchFn);
+      if (!handled) handled = await handleMenuFlows(token, update, cq.from.id, chatId, fetchFn);
+      
+      if (!handled && cq.data?.startsWith('login_confirm_')) {
+        const loginToken = cq.data.split('_')[2];
+        const admin = getSupabaseAdmin();
+        try {
+          const { data: tokenRow } = await admin.from('signup_tokens').select('*').eq('token', loginToken).maybeSingle();
+          if (!tokenRow || tokenRow.status !== 'pending' || new Date(tokenRow.expires_at) < new Date()) {
+            await answerTelegramCallbackQuery(token, cq.id, 'Havola muddati o\'tgan yoki yaroqsiz.', fetchFn);
+            return { handled: true, action: 'callback_query', chatId, responseSent: true };
+          }
+          
+          await getOrCreateTelegramProfile({
+            id: cq.from.id,
+            username: cq.from.username,
+            first_name: cq.from.first_name,
+          });
+          const { provisionTelegramUser } = await import('./telegram-auth.ts');
+          const { hashed_token } = await provisionTelegramUser({ id: cq.from.id, username: cq.from.username, first_name: cq.from.first_name });
+          
+          await admin.from('signup_tokens').update({ status: 'verified', telegram_id: cq.from.id, hashed_token }).eq('token', loginToken);
+          await answerTelegramCallbackQuery(token, cq.id, 'Tizimga kirdingiz!', fetchFn);
+          await sendTelegramMessage(token, chatId, '✅ Tizimga muvaffaqiyatli kirdingiz. Veb-saytga qaytishingiz mumkin.', getMainMenuKeyboard(), fetchFn);
+        } catch (e) {
+          console.error(e);
+          await answerTelegramCallbackQuery(token, cq.id, 'Xatolik yuz berdi.', fetchFn);
+        }
+        return { handled: true, action: 'callback_query', chatId, responseSent: true };
+      }
+
       if (handled) return { handled: true, action: 'callback_query', chatId, responseSent: true };
     }
 
@@ -205,6 +235,20 @@ export async function handleTelegramUpdate(
     if (rawText === '/cancel') {
       await sendTelegramMessage(token, chatId, 'Bekor qilindi.', getMainMenuKeyboard(), fetchFn);
       return { handled: true, action: 'start', chatId, responseSent: true };
+    }
+
+    if (rawText.startsWith('/start login_')) {
+      const loginToken = rawText.split('_')[1];
+      const admin = getSupabaseAdmin();
+      const { data: tokenRow } = await admin.from('signup_tokens').select('*').eq('token', loginToken).maybeSingle();
+      
+      if (tokenRow && tokenRow.status === 'pending' && new Date(tokenRow.expires_at) >= new Date()) {
+        await sendTelegramMessage(token, chatId, 'Veb-saytga kirishni tasdiqlaysizmi?', {
+          inline_keyboard: [[{ text: '✅ Tizimga kirishni tasdiqlash', callback_data: `login_confirm_${loginToken}` }]]
+        }, fetchFn);
+        return { handled: true, action: 'start', chatId, responseSent: true };
+      }
+      // If invalid/expired/used token, fallthrough to normal welcome
     }
 
     const welcomeText =
@@ -244,17 +288,11 @@ export async function handleTelegramUpdate(
   );
   return { handled: true, action: 'unknown', chatId, responseSent: true };
 }
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { isValidContact } from './contact.js';
-
-let adminClient: SupabaseClient | null = null;
-function getSupabaseAdmin(): SupabaseClient {
-  if (adminClient) return adminClient;
-  adminClient = createClient(process.env.SUPABASE_URL || '', process.env.SUPABASE_SERVICE_ROLE_KEY || '', {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  return adminClient;
-}
+import { isValidContact } from './contact.ts';
+import { getSupabaseAdmin } from './supabase-admin.ts';
+import { PARCEL_NOTE_MAX } from './parcelLimits.ts';
+import { getOrCreateTelegramProfile } from './telegram-auth.ts';
+import { COUNTRIES } from '../src/constants.ts';
 // --- State Management ---
 export interface DraftState {
   from_country?: string;
@@ -350,10 +388,11 @@ async function cleanupStaleDrafts(): Promise<void> {
 // --- Helpers for Traveler Flow ---
 
 function getCountryKeyboard(exclude?: string) {
-  const all = [
-    { text: '🇰🇷 Korea', callback_data: 'country:KR' },
-    { text: '🇺🇿 Uzbekistan', callback_data: 'country:UZ' }
-  ];
+  const flags: Record<string, string> = { KR: '🇰🇷', UZ: '🇺🇿', RU: '🇷🇺' };
+  const all = COUNTRIES.map(c => ({
+    text: `${flags[c.code] || ''} ${c.names.uz}`.trim(),
+    callback_data: `country:${c.code}`
+  }));
   return { inline_keyboard: [exclude ? all.filter(b => !b.callback_data.endsWith(exclude)) : all] };
 }
 
@@ -474,9 +513,15 @@ export async function handleTravelerFlow(token: string, update: TelegramUpdate, 
           return true;
         } else if (action === 'publish') {
           const admin = getSupabaseAdmin();
-          const { data: profile } = await admin.from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
-          if (!profile?.id) {
-            await sendTelegramMessage(token, chatId, 'Telegram orqali e\'lon berishdan oldin Elchi veb-saytiga kiring.', getMainMenuKeyboard(), fetchFn);
+          let profileId: string | null = null;
+          try {
+            profileId = await getOrCreateTelegramProfile({
+              id: telegramId,
+              username: cq.from.username,
+              first_name: cq.from.first_name,
+            });
+          } catch (e) {
+            await sendTelegramMessage(token, chatId, 'Xatolik yuz berdi.', getMainMenuKeyboard(), fetchFn);
             await deleteDraft(telegramId);
             return true;
           }
@@ -487,7 +532,7 @@ export async function handleTravelerFlow(token: string, update: TelegramUpdate, 
             categories: [],
             category_other: null, weight: nextState.weight_kg + ' kg',
             note: nextState.note || null, contact: nextState.contact, contact_type: nextState.contact_type,
-            user_id: profile.id, expires_at: new Date(new Date(nextState.date as string).getTime() + 86400000).toISOString().split('T')[0]
+            user_id: profileId, expires_at: new Date(new Date(nextState.date as string).getTime() + 86400000).toISOString().split('T')[0]
           }).select('id').single();
             
           if (error) {
@@ -553,11 +598,11 @@ export async function handleTravelerFlow(token: string, update: TelegramUpdate, 
         await sendTelegramMessage(token, chatId, 'Qo\'shimcha izoh (ixtiyoriy)', { inline_keyboard: [[{ text: '⏭️ O\'tkazib yuborish', callback_data: 'skip_note' }]] }, fetchFn);
       }
       else if (draft.step === 'note') {
-        if (text.length > 300) {
-          await sendTelegramMessage(token, chatId, 'Izoh juda uzun. Iltimos, 300 belgidan oshirmang.', undefined, fetchFn);
+        if (text.length > PARCEL_NOTE_MAX) {
+          await sendTelegramMessage(token, chatId, `Izoh juda uzun. Iltimos, ${PARCEL_NOTE_MAX} belgidan oshirmang.`, undefined, fetchFn);
           return true;
         }
-        nextState.note = text.substring(0, 300);
+        nextState.note = text.substring(0, PARCEL_NOTE_MAX);
         nextStep = 'contact';
         const kb: any = { inline_keyboard: [] };
         if (update.message.from?.username) kb.inline_keyboard.push([{ text: `Mening @${update.message.from.username} profilim`, callback_data: `contact:@${update.message.from.username}` }]);
@@ -630,18 +675,18 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
         nextState.from_country = data.split(':')[1];
         nextStep = 'req_to_country';
         await answerTelegramCallbackQuery(token, cq.id, '', fetchFn);
-        await sendTelegramMessage(token, chatId, 'Where are you sending to?', getCountryKeyboard(nextState.from_country), fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qayerga yuboryapsiz?', getCountryKeyboard(nextState.from_country), fetchFn);
       } 
       else if (draft.step === 'req_to_country' && data.startsWith('country:')) {
         const selected = data.split(':')[1];
         if (selected === nextState.from_country) {
-          await answerTelegramCallbackQuery(token, cq.id, 'Please select the opposite country.', fetchFn);
+          await answerTelegramCallbackQuery(token, cq.id, 'Iltimos, boshqa davlatni tanlang.', fetchFn);
           return true;
         }
         nextState.to_country = selected;
         nextStep = 'req_from_city';
         await answerTelegramCallbackQuery(token, cq.id, '', fetchFn);
-        await sendTelegramMessage(token, chatId, 'Which city are you sending from?', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, 'Qaysi shahardan yuboryapsiz?', undefined, fetchFn);
       }
       else if (draft.step === 'req_contact' && data.startsWith('contact:')) {
         nextState.contact = data.substring('contact:'.length);
@@ -660,9 +705,15 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
           return true;
         } else if (action === 'publish') {
           const admin = getSupabaseAdmin();
-          const { data: profile } = await admin.from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
-          if (!profile?.id) {
-            await sendTelegramMessage(token, chatId, 'Telegram orqali e\'lon berishdan oldin Elchi veb-saytiga kiring.', getMainMenuKeyboard(), fetchFn);
+          let profileId: string | null = null;
+          try {
+            profileId = await getOrCreateTelegramProfile({
+              id: telegramId,
+              username: cq.from.username,
+              first_name: cq.from.first_name,
+            });
+          } catch (e) {
+            await sendTelegramMessage(token, chatId, 'Xatolik yuz berdi.', getMainMenuKeyboard(), fetchFn);
             await deleteDraft(telegramId);
             return true;
           }
@@ -672,7 +723,7 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
             weight_kg: nextState.weight_kg, luggage_count: 0,
             categories: [], category_other: null, weight: nextState.weight_kg + ' kg',
             note: nextState.note || null, contact: nextState.contact, contact_type: nextState.contact_type,
-            user_id: profile.id, expires_at: new Date(new Date(nextState.date as string).getTime() + 86400000).toISOString().split('T')[0]
+            user_id: profileId, expires_at: new Date(new Date(nextState.date as string).getTime() + 86400000).toISOString().split('T')[0]
           }).select('id').single();
             
           if (error) {
@@ -715,11 +766,11 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
         }
         nextState.date = parsed;
         nextStep = 'req_note';
-        await sendTelegramMessage(token, chatId, 'Nima yubormoqchisiz? Qisqacha izoh yozing (maksimal 300 belgi).', undefined, fetchFn);
+        await sendTelegramMessage(token, chatId, `Nima yubormoqchisiz? Qisqacha izoh yozing (maksimal ${PARCEL_NOTE_MAX} belgi).`, undefined, fetchFn);
       }
       else if (draft.step === 'req_note') {
-        if (text.length > 300) {
-          await sendTelegramMessage(token, chatId, 'Izoh juda uzun. Iltimos, 300 belgidan oshirmang.', undefined, fetchFn);
+        if (text.length > PARCEL_NOTE_MAX) {
+          await sendTelegramMessage(token, chatId, `Izoh juda uzun. Iltimos, ${PARCEL_NOTE_MAX} belgidan oshirmang.`, undefined, fetchFn);
           return true;
         }
         nextState.note = text;
@@ -763,5 +814,141 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
     if (nextStep) await upsertDraft(telegramId, nextStep, nextState);
     return true;
   }
+  return false;
+}
+
+export async function handleMenuFlows(token: string, update: TelegramUpdate, telegramId: number, chatId: number, fetchFn: typeof fetch = fetch): Promise<boolean> {
+  const admin = getSupabaseAdmin();
+  if (update.message?.text?.trim() === "👤 Mening profilim") {
+    const profileId = await getOrCreateTelegramProfile({
+      id: telegramId,
+      username: update.message.from?.username,
+      first_name: update.message.from?.first_name,
+    }).catch(() => null);
+
+    if (!profileId) {
+      await sendTelegramMessage(token, chatId, 'Profil topilmadi.', getMainMenuKeyboard(), fetchFn);
+      return true;
+    }
+
+    const { data: profile } = await admin.from('profiles').select('display_name, telegram_username').eq('id', profileId).single();
+    const { count } = await admin.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileId).gte('expires_at', new Date().toISOString().split('T')[0]);
+
+    const info = `👤 Profilingiz\n\nIsm: ${profile?.display_name || 'Noma\'lum'}\nTelegram: ${profile?.telegram_username ? `@${profile.telegram_username}` : 'Noma\'lum'}\nFaol e'lonlar: ${count || 0} ta`;
+    await sendTelegramMessage(token, chatId, info, getMainMenuKeyboard(), fetchFn);
+    return true;
+  }
+
+  if (update.message?.text?.trim() === "📋 Mening e'lonlarim") {
+    const { data: profile } = await admin.from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
+    if (!profile?.id) {
+      await sendTelegramMessage(token, chatId, 'Sizda e\'lonlar yo\'q.', getMainMenuKeyboard(), fetchFn);
+      return true;
+    }
+
+    const { data: posts } = await admin.from('posts')
+      .select('id, type, from_city, to_city, date, expires_at')
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (!posts || posts.length === 0) {
+      await sendTelegramMessage(token, chatId, 'Sizda e\'lonlar yo\'q.', getMainMenuKeyboard(), fetchFn);
+      return true;
+    }
+
+    for (const p of posts) {
+      const typeStr = p.type === 'traveler' ? '✈️ Yo\'lovchi' : '📦 Jo\'natma';
+      const status = new Date(p.expires_at) >= new Date() ? 'faol' : 'muddati o\'tgan';
+      const text = `${typeStr}\n${p.from_city || '?'} → ${p.to_city || '?'}\nSana: ${p.date || '?'}\nHolat: ${status}`;
+      
+      const kb = {
+        inline_keyboard: [
+          [
+            { text: '🔗 Ko\'rish', url: `https://elchi.org/post/${p.id}` },
+            { text: '🗑 O\'chirish', callback_data: `delete_post:${p.id}` }
+          ]
+        ]
+      };
+      await sendTelegramMessage(token, chatId, text, kb, fetchFn);
+    }
+    return true;
+  }
+
+  if (update.callback_query?.data?.startsWith('delete_post:')) {
+    const postId = update.callback_query.data.split(':')[1];
+    const { data: profile } = await admin.from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
+    if (profile?.id) {
+      await admin.from('posts').delete().match({ id: postId, user_id: profile.id });
+      await answerTelegramCallbackQuery(token, update.callback_query.id, 'O\'chirildi', fetchFn);
+      await sendTelegramMessage(token, chatId, '✅ E\'lon o\'chirildi.', getMainMenuKeyboard(), fetchFn);
+    } else {
+      await answerTelegramCallbackQuery(token, update.callback_query.id, 'Xatolik', fetchFn);
+    }
+    return true;
+  }
+
+  if (update.message?.text?.trim() === "🔎 Qidirish") {
+    await sendTelegramMessage(token, chatId, 'Qaysi yo\'nalish bo\'yicha qidirmoqchisiz?', {
+      inline_keyboard: [
+        [{ text: '🇰🇷 KR ↔ 🇺🇿 UZ', callback_data: 'search_c:KR_UZ' }],
+        [{ text: '🇷🇺 RU ↔ 🇺🇿 UZ', callback_data: 'search_c:RU_UZ' }]
+      ]
+    }, fetchFn);
+    return true;
+  }
+
+  const cq = update.callback_query;
+  const data = cq?.data || '';
+
+  if (data.startsWith('search_c:')) {
+    const corridor = data.split(':')[1];
+    await answerTelegramCallbackQuery(token, cq!.id, '', fetchFn);
+    await sendTelegramMessage(token, chatId, 'Kimlarni qidiryapsiz?', {
+      inline_keyboard: [
+        [{ text: '✈️ Yo\'lovchilar', callback_data: `search_t:${corridor}:traveler` }],
+        [{ text: '📦 Jo\'natmalar', callback_data: `search_t:${corridor}:request` }],
+        [{ text: 'Ikkalasi', callback_data: `search_t:${corridor}:all` }]
+      ]
+    }, fetchFn);
+    return true;
+  }
+
+  if (data.startsWith('search_t:')) {
+    const parts = data.split(':');
+    const corridor = parts[1];
+    const type = parts[2];
+    const [c1, c2] = corridor.split('_');
+    
+    await answerTelegramCallbackQuery(token, cq!.id, 'Qidirilmoqda...', fetchFn);
+
+    let query = admin.from('public_posts').select('id, type, from_city, to_city, date, weight, headline, note, display_name, from_country, to_country').order('created_at', { ascending: false }).limit(50);
+
+    if (type !== 'all') {
+      query = query.eq('type', type);
+    }
+
+    const { data: posts } = await query;
+    const filtered = (posts || []).filter(p => (p.from_country === c1 && p.to_country === c2) || (p.from_country === c2 && p.to_country === c1)).slice(0, 5);
+
+    if (filtered.length === 0) {
+      await sendTelegramMessage(token, chatId, 'Hozircha e\'lonlar topilmadi.', getMainMenuKeyboard(), fetchFn);
+      return true;
+    }
+
+    for (const p of filtered) {
+      const typeStr = p.type === 'traveler' ? '✈️ Yo\'lovchi' : '📦 Jo\'natma';
+      const text = `${typeStr}\n${p.from_city || '?'} → ${p.to_city || '?'}\nSana: ${p.date || '?'}\nVazn: ${p.weight || '?'}\nIzoh: ${p.note || ''}\nAvtor: ${p.display_name || 'Noma\'lum'}`;
+      
+      const kb = {
+        inline_keyboard: [
+          [{ text: '🔗 Ko\'rish', url: `https://elchi.org/post/${p.id}` }]
+        ]
+      };
+      await sendTelegramMessage(token, chatId, text, kb, fetchFn);
+    }
+    return true;
+  }
+
   return false;
 }

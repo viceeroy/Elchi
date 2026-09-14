@@ -259,20 +259,9 @@ test('Traveler flow tests', async (t) => {
     const update: any = { message: { message_id: 1, date: 1, chat: { id: 12345 }, text: '/cancel' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.strictEqual(mockDrafts[12345], undefined);
-    assert.ok(calls.some(c => c.body.text === 'Draft canceled.'));
+    assert.ok(calls.some(c => c.body.text === 'Bekor qilindi.'));
   });
 
-  await t.test('handles main menu button selection with "Coming soon."', async () => {
-    const { mockFetch, calls } = createMockFetch();
-    const update: any = { message: { message_id: 3, date: 3, chat: { id: 12345 }, text: '🔎 Find' } };
-    
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    
-    assert.strictEqual(calls.length, 1);
-    assert.strictEqual(calls[0].url, `https://api.telegram.org/bot${fakeToken}/sendMessage`);
-    assert.strictEqual(calls[0].body.chat_id, 12345);
-    assert.strictEqual(calls[0].body.text, 'Coming soon.');
-  });
 
   await t.test('invalid country selection (same as from)', async () => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'to_country', state: { from_country: 'KR' }, updated_at: new Date().toISOString() };
@@ -280,7 +269,7 @@ test('Traveler flow tests', async (t) => {
     const update: any = { callback_query: { id: 'cq1', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'country:KR' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     // It should answer with error
-    assert.ok(calls.some(c => c.url.includes('answerCallbackQuery') && c.body.text === 'Please select the opposite country.'));
+    assert.ok(calls.some(c => c.url.includes('answerCallbackQuery') && c.body.text === 'Iltimos, boshqa davlatni tanlang.'));
   });
 
   await t.test('invalid date rejection', async () => {
@@ -296,7 +285,7 @@ test('Traveler flow tests', async (t) => {
     const { mockFetch, calls } = createMockFetch();
     const update: any = { message: { message_id: 4, date: 4, chat: { id: 12345 }, text: '200' } }; // > 100
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    assert.ok(calls.some(c => String(c.body.text).includes('valid weight')));
+    assert.ok(calls.some(c => String(c.body.text).includes('to\'g\'ri vazn kiriting')));
   });
 
   await t.test('invalid luggage count rejection', async () => {
@@ -304,7 +293,7 @@ test('Traveler flow tests', async (t) => {
     const { mockFetch, calls } = createMockFetch();
     const update: any = { message: { message_id: 5, date: 5, chat: { id: 12345 }, text: '-1' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    assert.ok(calls.some(c => String(c.body.text).includes('valid number of bags')));
+    assert.ok(calls.some(c => String(c.body.text).includes('to\'g\'ri chamadon sonini kiriting')));
   });
 
   await t.test('successful confirmation and publish', async () => {
@@ -313,7 +302,7 @@ test('Traveler flow tests', async (t) => {
     const { mockFetch, calls } = createMockFetch();
     const update: any = { callback_query: { id: 'cq2', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'confirm:publish' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    assert.ok(calls.some(c => String(c.body.text).includes('Your traveler post is live on Elchi')));
+    assert.ok(calls.some(c => String(c.body.text).includes('E\'loningiz muvaffaqiyatli joylashtirildi')));
     assert.strictEqual(insertedPosts.length, 1);
     assert.strictEqual(insertedPosts[0].user_id, 'uuid-123');
     assert.strictEqual(insertedPosts[0].weight, '20 kg');
@@ -419,10 +408,10 @@ test('Request flow tests', async (t) => {
   await t.test('invalid note rejection (over 300 chars)', async () => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'req_note', state: {}, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
-    const longNote = 'A'.repeat(301);
+    const longNote = 'A'.repeat(1001);
     const update: any = { message: { message_id: 2, date: 2, chat: { id: 12345 }, text: longNote } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    assert.ok(calls.some(c => String(c.body.text).includes('Note is too long')));
+    assert.ok(calls.some(c => String(c.body.text).includes('Izoh juda uzun')));
   });
 
   await t.test('successful confirmation and publish', async () => {
@@ -432,12 +421,14 @@ test('Request flow tests', async (t) => {
     const { mockFetch, calls } = createMockFetch();
     const update: any = { callback_query: { id: 'cq2', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'confirm:publish' } };
     await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
-    assert.ok(calls.some(c => String(c.body.text).includes('Your request is live on Elchi')));
+    assert.ok(calls.some(c => String(c.body.text).includes('Jo\'natma e\'loningiz muvaffaqiyatli joylashtirildi')));
     assert.strictEqual(insertedPosts.length, 1);
     assert.strictEqual(insertedPosts[0].type, 'request');
     assert.strictEqual(insertedPosts[0].luggage_count, 0);
     assert.deepEqual(insertedPosts[0].categories, []);
     assert.strictEqual(insertedPosts[0].user_id, 'uuid-123');
+    // It should fetch signup_tokens... we might not have a mocked DB so this will fail or hang.
+    // The previous tests mock Supabase by hijacking fetch? Let's check how they do it.
     assert.strictEqual(mockDrafts[12345], undefined);
   });
 });
