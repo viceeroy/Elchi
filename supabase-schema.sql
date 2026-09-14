@@ -507,6 +507,20 @@ WHERE p.expires_at >= CURRENT_DATE
 GRANT SELECT ON public_posts TO anon, authenticated;
 
 -- ---------------------------------------------------------------------------
+-- signup_tokens
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS signup_tokens (
+    token UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'verified')) DEFAULT 'pending',
+    telegram_id BIGINT,
+    hashed_token TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+ALTER TABLE signup_tokens ENABLE ROW LEVEL SECURITY;
+
+-- ---------------------------------------------------------------------------
 -- rate_limits (API throttle)
 -- ---------------------------------------------------------------------------
 -- Postgres-backed fixed-window limiter for the serverless API (see
@@ -583,3 +597,15 @@ CREATE TABLE IF NOT EXISTS telegram_bot_drafts (
 );
 
 ALTER TABLE telegram_bot_drafts ENABLE ROW LEVEL SECURITY;
+-- Create signup_tokens table
+CREATE TABLE IF NOT EXISTS signup_tokens (
+    token UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'verified')) DEFAULT 'pending',
+    telegram_id BIGINT,
+    hashed_token TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+-- Enable RLS and setup policies
+ALTER TABLE signup_tokens ENABLE ROW LEVEL SECURITY;
