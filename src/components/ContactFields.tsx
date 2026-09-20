@@ -45,7 +45,7 @@ const PhoneShortcuts: React.FC<{
           onChange("+998 " + value.replace(/^\+?\d*/, "").trim());
         }
       }}
-      className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
+      className="font-mono text-xs px-2.5 py-1.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
     >
       🇺🇿 +998
     </button>
@@ -56,7 +56,7 @@ const PhoneShortcuts: React.FC<{
           onChange("+82 " + value.replace(/^\+?\d*/, "").trim());
         }
       }}
-      className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
+      className="font-mono text-xs px-2.5 py-1.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
     >
       🇰🇷 +82
     </button>
@@ -67,7 +67,7 @@ const PhoneShortcuts: React.FC<{
           onChange("+7 " + value.replace(/^\+?\d*/, "").trim());
         }
       }}
-      className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
+      className="font-mono text-xs px-2.5 py-1.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
     >
       🇷🇺 +7
     </button>
@@ -229,7 +229,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                     onShowPhone1Change(false);
                     onPhone1Change("");
                   }}
-                  className="text-faint hover:text-red p-1"
+                  className="text-faint hover:text-red p-2"
                   aria-label={t.deleteBtn || "O'chirish"}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -274,7 +274,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                     onShowPhone2Change(false);
                     onPhone2Change("");
                   }}
-                  className="text-faint hover:text-red p-1"
+                  className="text-faint hover:text-red p-2"
                   aria-label={t.deleteBtn || "O'chirish"}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -344,7 +344,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                     onShowTelegramChange(false);
                     onTelegramChange("");
                   }}
-                  className="text-faint hover:text-red p-1"
+                  className="text-faint hover:text-red p-2"
                   aria-label={t.deleteBtn || "O'chirish"}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -391,7 +391,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                     onShowPhone2Change(false);
                     onPhone2Change("");
                   }}
-                  className="text-faint hover:text-red p-1"
+                  className="text-faint hover:text-red p-2"
                   aria-label={t.deleteBtn || "O'chirish"}
                 >
                   <X className="w-3.5 h-3.5" />
