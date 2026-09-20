@@ -81,7 +81,7 @@ export const PostFab: React.FC<PostFabProps> = ({
       )}
 
       <div 
-        className="fixed bottom-6 z-50 flex flex-col items-end gap-3"
+        className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] z-50 flex flex-col items-end gap-3"
         style={{ right: "max(1.25rem, calc(50vw - 420px))" }}
       >
         {open &&

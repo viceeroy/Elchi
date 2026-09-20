@@ -455,7 +455,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   <select
                     value={fromCountry}
                     onChange={(e) => pickCountry("from", e.target.value)}
-                    className="w-full p-3 border border-field focus:border-blue rounded-lg text-sm bg-card text-ink outline-none font-semibold"
+                    className="w-full p-3 border border-field focus:border-blue rounded-lg text-base sm:text-sm bg-card text-ink outline-none font-semibold"
                   >
                     {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -474,7 +474,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   <select
                     value={toCountry}
                     onChange={(e) => pickCountry("to", e.target.value)}
-                    className="w-full p-3 border border-field focus:border-blue rounded-lg text-sm bg-card text-ink outline-none font-semibold"
+                    className="w-full p-3 border border-field focus:border-blue rounded-lg text-base sm:text-sm bg-card text-ink outline-none font-semibold"
                   >
                     {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -501,7 +501,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     onChange={(e) => { setFromCity(e.target.value); clearError("fromCity"); }}
                     placeholder="Qayerdan (masalan: Seoul)"
                     maxLength={PARCEL_CITY_MAX}
-                    className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink outline-none ${
+                    className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink outline-none ${
                       errors.fromCity ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
                     }`}
                   />
@@ -520,7 +520,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     onChange={(e) => { setToCity(e.target.value); clearError("toCity"); }}
                     placeholder="Qayerga (masalan: Toshkent)"
                     maxLength={PARCEL_CITY_MAX}
-                    className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink outline-none ${
+                    className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink outline-none ${
                       errors.toCity ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
                     }`}
                   />
@@ -653,7 +653,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     onChange={(e) => setCustomItemType(e.target.value)}
                     placeholder={t.itemTypeOtherPlaceholder}
                     maxLength={PARCEL_CATEGORY_OTHER_MAX}
-                    className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-field rounded-lg text-sm bg-card text-ink"
+                    className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-field rounded-lg text-base sm:text-sm bg-card text-ink"
                     style={{ padding: "10px 14px", border: "1.5px solid var(--color-field)", borderRadius: "8px" }}
                   />
 
@@ -687,7 +687,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             <>
               <div>
                 <label className="block font-mono text-[10.5px] tracking-wider uppercase text-blue font-bold mb-1.5">
-                  {t.noteLabel.replace(" (ixtiyoriy)", "")} <span className="text-red-500">*</span>
+                  {t.noteLabel.replace(" (ixtiyoriy)", "")} <span className="text-red">*</span>
                 </label>
                 <textarea
                   ref={(el) => { fieldRefs.current.note = el; }}
@@ -695,7 +695,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                   onChange={(e) => { setNote(e.target.value); clearError("note"); }}
                   placeholder={t.notePlaceholder}
                   maxLength={PARCEL_NOTE_MAX}
-                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink resize-y min-h-[72px] outline-none ${
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink resize-y min-h-[72px] outline-none ${
                     errors.note ? ERROR_INPUT_CLASS : "border-field focus:border-blue"
                   }`}
                 ></textarea>
@@ -707,7 +707,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
               <ContactFields
                 t={t}
-                label={<>{t.contactLabel} <span className="text-red-500">*</span></>}
+                label={<>{t.contactLabel} <span className="text-red">*</span></>}
                 primaryMethod={primaryContactMethod}
                 onPrimaryMethodChange={(next) => {
                   setPrimaryContactMethod(next);

@@ -2,11 +2,12 @@ import React from "react";
 import { Phone, Send, AlertCircle, X } from "lucide-react";
 import { ContactMethod, Translations } from "../types";
 
-// Phone fields keep digits and the punctuation used by the +998/+82 formats
+// Phone fields keep digits and the punctuation used by the +998/+82/+7 formats
 // in the placeholder; letters and everything else are dropped as the user types.
 export const sanitizePhone = (value: string) => value.replace(/[^\d+\-\s()]/g, "");
 
 const ERROR_INPUT_CLASS = "border-red focus:border-red ring-1 ring-red/30";
+const PHONE_PLACEHOLDER = "+998 90-123-4567, +82 10-1234-5678 yoki +7 912-345-6789";
 
 export interface ContactFieldsProps {
   t: Translations;
@@ -58,6 +59,17 @@ const PhoneShortcuts: React.FC<{
       className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
     >
       🇰🇷 +82
+    </button>
+    <button
+      type="button"
+      onClick={() => {
+        if (!value.startsWith("+7")) {
+          onChange("+7 " + value.replace(/^\+?\d*/, "").trim());
+        }
+      }}
+      className="font-mono text-[10px] px-2 py-0.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
+    >
+      🇷🇺 +7
     </button>
   </div>
 );
@@ -165,7 +177,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
               }}
               placeholder="username"
               maxLength={99}
-              className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono transition-all border-field focus:border-blue focus:ring-1 focus:ring-blue ${
+              className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink font-mono transition-all border-field focus:border-blue focus:ring-1 focus:ring-blue ${
                 primaryError ? ERROR_INPUT_CLASS : ""
               }`}
               style={{ paddingLeft: "34px" }}
@@ -177,9 +189,9 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
               inputMode="tel"
               value={phone1}
               onChange={(e) => onPhone1Change(sanitizePhone(e.target.value))}
-              placeholder="+998 90-123-4567 yoki +82 10-1234-5678"
+              placeholder={PHONE_PLACEHOLDER}
               maxLength={100}
-              className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono transition-all border-field focus:border-green focus:ring-1 focus:ring-green ${
+              className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink font-mono transition-all border-field focus:border-green focus:ring-1 focus:ring-green ${
                 primaryError ? ERROR_INPUT_CLASS : ""
               }`}
               style={{ paddingLeft: "34px" }}
@@ -232,9 +244,9 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                   inputMode="tel"
                   value={phone1}
                   onChange={(e) => onPhone1Change(sanitizePhone(e.target.value))}
-                  placeholder="+998 90-123-4567 yoki +82 10-1234-5678"
+                  placeholder={PHONE_PLACEHOLDER}
                   maxLength={100}
-                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono border-field focus:border-green focus:ring-1 focus:ring-green ${
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink font-mono border-field focus:border-green focus:ring-1 focus:ring-green ${
                     phone1Error ? ERROR_INPUT_CLASS : ""
                   }`}
                   style={{ paddingLeft: "34px" }}
@@ -277,9 +289,9 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                   inputMode="tel"
                   value={phone2}
                   onChange={(e) => onPhone2Change(sanitizePhone(e.target.value))}
-                  placeholder="+998 90-123-4567 yoki +82 10-1234-5678"
+                  placeholder={PHONE_PLACEHOLDER}
                   maxLength={100}
-                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono border-field focus:border-green focus:ring-1 focus:ring-green ${
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink font-mono border-field focus:border-green focus:ring-1 focus:ring-green ${
                     phone2Error ? ERROR_INPUT_CLASS : ""
                   }`}
                   style={{ paddingLeft: "34px" }}
@@ -351,7 +363,7 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                   }}
                   placeholder="username"
                   maxLength={99}
-                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono border-field focus:border-blue focus:ring-1 focus:ring-blue ${
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink font-mono border-field focus:border-blue focus:ring-1 focus:ring-blue ${
                     telegramError ? ERROR_INPUT_CLASS : ""
                   }`}
                   style={{ paddingLeft: "34px" }}
@@ -394,9 +406,9 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({
                   inputMode="tel"
                   value={phone2}
                   onChange={(e) => onPhone2Change(sanitizePhone(e.target.value))}
-                  placeholder="+998 90-123-4567 yoki +82 10-1234-5678"
+                  placeholder={PHONE_PLACEHOLDER}
                   maxLength={100}
-                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-sm bg-card text-ink font-mono border-field focus:border-green focus:ring-1 focus:ring-green ${
+                  className={`w-full box-sizing-border-box p-3 border rounded-lg text-base sm:text-sm bg-card text-ink font-mono border-field focus:border-green focus:ring-1 focus:ring-green ${
                     phone2Error ? ERROR_INPUT_CLASS : ""
                   }`}
                   style={{ paddingLeft: "34px" }}
