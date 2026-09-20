@@ -99,8 +99,8 @@ test('Telegram bot unit tests', async (t) => {
     assert.equal(calls.length, 1);
   });
 
-  await t.test('handles each menu button with "Coming soon."', async () => {
-    for (const btn of MENU_BUTTONS) {
+  await t.test('starts traveler and shipment flows from reply buttons', async () => {
+    for (const btn of MENU_BUTTONS.slice(0, 2)) {
       const { mockFetch, calls } = createMockFetch();
       const update: TelegramUpdate = {
         update_id: 3,
@@ -122,11 +122,46 @@ test('Telegram bot unit tests', async (t) => {
         assert.ok(String(calls[0].body.text).includes('Qayerdan'));
       } else if (isRequest) {
         assert.ok(String(calls[0].body.text).includes('Qayerdan'));
-      } else {
-        assert.ok(String(calls[0].body.text).includes('Tez kunda...'));
       }
       assert.ok(calls[0].body.reply_markup);
     }
+  });
+
+  await t.test('routes search reply button to its inline corridor choices', async () => {
+    const { mockFetch, calls } = createMockFetch();
+    const update: TelegramUpdate = {
+      update_id: 6,
+      message: {
+        message_id: 15,
+        date: 1600000000,
+        chat: { id: 54321, type: 'private' },
+        text: '🔎 Qidirish',
+      },
+    };
+
+    await handleTelegramUpdate(fakeToken, update, mockFetch);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.text, "Qaysi yo'nalish bo'yicha qidirmoqchisiz?");
+    assert.ok(calls[0].body.reply_markup);
+  });
+
+  await t.test('routes curly-apostrophe traveler reply button to traveler flow', async () => {
+    const { mockFetch, calls } = createMockFetch();
+    const update: TelegramUpdate = {
+      update_id: 7,
+      message: {
+        message_id: 16,
+        date: 1600000000,
+        chat: { id: 54321, type: 'private' },
+        text: '✈️ Yo’lovchi',
+      },
+    };
+
+    await handleTelegramUpdate(fakeToken, update, mockFetch);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.text, 'Qayerdan uchyapsiz?');
   });
 
   await t.test('handles unknown message with "Please choose an option from the menu."', async () => {

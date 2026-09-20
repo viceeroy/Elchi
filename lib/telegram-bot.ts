@@ -226,6 +226,7 @@ export async function handleTelegramUpdate(
 
   const chatId = message.chat.id;
   const rawText = message.text ? message.text.trim() : '';
+  const menuText = normalizeMenuText(rawText);
 
   // 2a. /start or /cancel command
   if (rawText === '/start' || rawText.startsWith('/start ') || rawText === '/cancel') {
@@ -260,15 +261,21 @@ export async function handleTelegramUpdate(
   }
 
   // 2b. Main menu button selection
-  if (isMainMenuButton(rawText)) {
-    if (rawText === "✈️ Yo'lovchi") {
-      const handled = await handleTravelerFlow(token, update, chatId, chatId, fetchFn);
+  if (isMainMenuButton(menuText)) {
+    const telegramId = message.from?.id ?? chatId;
+
+    if (menuText === "✈️ Yo'lovchi") {
+      const handled = await handleTravelerFlow(token, update, telegramId, chatId, fetchFn);
       if (handled) return { handled: true, action: 'menu_button', chatId, responseSent: true };
     }
-    if (rawText === '📦 Jo\'natma') {
-      const handled = await handleRequestFlow(token, update, chatId, chatId, fetchFn);
+    if (menuText === '📦 Jo\'natma') {
+      const handled = await handleRequestFlow(token, update, telegramId, chatId, fetchFn);
       if (handled) return { handled: true, action: 'menu_button', chatId, responseSent: true };
     }
+
+    const handled = await handleMenuFlows(token, update, telegramId, chatId, fetchFn);
+    if (handled) return { handled: true, action: 'menu_button', chatId, responseSent: true };
+
     await sendTelegramMessage(token, chatId, 'Tez kunda...', getMainMenuKeyboard(), fetchFn);
     return { handled: true, action: 'menu_button', chatId, responseSent: true };
   }
@@ -457,7 +464,7 @@ function renderConfirmation(state: DraftState, username?: string): string {
 export async function handleTravelerFlow(token: string, update: TelegramUpdate, telegramId: number, chatId: number, fetchFn: typeof fetch = fetch): Promise<boolean> {
   const draft = await getDraft(telegramId);
 
-  if (update.message?.text?.trim() === "✈️ Yo'lovchi") {
+  if (normalizeMenuText(update.message?.text || '') === "✈️ Yo'lovchi") {
     await upsertDraft(telegramId, 'from_country', {});
     await sendTelegramMessage(token, chatId, 'Qayerdan uchyapsiz?', getCountryKeyboard(), fetchFn);
     return true;
@@ -819,7 +826,9 @@ export async function handleRequestFlow(token: string, update: TelegramUpdate, t
 
 export async function handleMenuFlows(token: string, update: TelegramUpdate, telegramId: number, chatId: number, fetchFn: typeof fetch = fetch): Promise<boolean> {
   const admin = getSupabaseAdmin();
-  if (update.message?.text?.trim() === "👤 Mening profilim") {
+  const menuText = normalizeMenuText(update.message?.text || '');
+
+  if (menuText === "👤 Mening profilim") {
     const profileId = await getOrCreateTelegramProfile({
       id: telegramId,
       username: update.message.from?.username,
@@ -839,7 +848,7 @@ export async function handleMenuFlows(token: string, update: TelegramUpdate, tel
     return true;
   }
 
-  if (update.message?.text?.trim() === "📋 Mening e'lonlarim") {
+  if (menuText === "📋 Mening e'lonlarim") {
     const { data: profile } = await admin.from('profiles').select('id').eq('telegram_id', telegramId).maybeSingle();
     if (!profile?.id) {
       await sendTelegramMessage(token, chatId, 'Sizda e\'lonlar yo\'q.', getMainMenuKeyboard(), fetchFn);
@@ -888,7 +897,7 @@ export async function handleMenuFlows(token: string, update: TelegramUpdate, tel
     return true;
   }
 
-  if (update.message?.text?.trim() === "🔎 Qidirish") {
+  if (menuText === "🔎 Qidirish") {
     await sendTelegramMessage(token, chatId, 'Qaysi yo\'nalish bo\'yicha qidirmoqchisiz?', {
       inline_keyboard: [
         [{ text: '🇰🇷 KR ↔ 🇺🇿 UZ', callback_data: 'search_c:KR_UZ' }],
