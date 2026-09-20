@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from './supabase-admin.js';
+import { getSupabaseAdmin } from './supabase-admin.ts';
 
 export async function provisionTelegramUser(payload: {
   id: number;
