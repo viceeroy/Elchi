@@ -553,9 +553,9 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                               : "bg-card text-ink border-rule hover:border-ink"
                         }`}
                       >
-                        <span className="text-[9px] opacity-65">{weekdays[d.getDay()]}</span>
+                        <span className="text-[11px] opacity-65">{weekdays[d.getDay()]}</span>
                         <span className="text-15px font-bold">{d.getDate()}</span>
-                        <span className="text-[8px] opacity-65">{monthShortNames[d.getMonth()]}</span>
+                        <span className="text-[11px] opacity-65">{monthShortNames[d.getMonth()]}</span>
                       </button>
                     );
                   })}
