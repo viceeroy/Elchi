@@ -7,7 +7,7 @@
 //
 // These rules gate what lands in the `contact` column, and the phone cases in
 // particular are load-bearing: the post form's own sanitizer permits spaces,
-// hyphens and parentheses, and its +998/+82 quick-fill buttons insert a space.
+// hyphens and parentheses, and its +998/+82/+7 quick-fill buttons insert a space.
 // A "digits only" pattern would reject almost every real submission, so the
 // separator cases below exist to keep anyone from tightening it into one.
 
@@ -54,6 +54,9 @@ test('phone numbers', async (t) => {
     for (const phone of [
       '+998 90-123-4567',       // UZ quick-fill button
       '+82 10-1234-5678',       // KR quick-fill button
+      '+7 912-345-6789',        // RU quick-fill button (+7, 10 digits after the code)
+      '+79123456789',           // RU no separators
+      '+7 (912) 345-67-89',     // RU formatted
       '+998901234567',          // no separators
       '(998) 90 123 45 67',     // parentheses
       '010-1234-5678',          // local format, no country code
@@ -107,6 +110,7 @@ test('telegramUsername strips anything outside the username charset', () => {
 
 test('phoneDialString reduces to a dialable URI body', () => {
   assert.equal(phoneDialString('+998 90-123-4567'), '+998901234567');
+  assert.equal(phoneDialString('+7 912-345-6789'), '+79123456789');
   assert.equal(phoneDialString('(82) 10 1234 5678'), '821012345678');
   assert.equal(phoneDialString('010-1234-5678'), '01012345678');
   assert.equal(phoneDialString('  +1 (555) 010-9999 '), '+15550109999');

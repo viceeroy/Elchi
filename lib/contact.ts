@@ -13,10 +13,10 @@ const TELEGRAM_RE = /^@[A-Za-z][A-Za-z0-9_]{4,31}$/;
 
 // Phones are stored in the shape the author typed — the form's own sanitizer
 // permits digits, "+", spaces, hyphens and parentheses, and the placeholder
-// ("+998 90-123-4567") actively encourages the separators. So the pattern
-// allows that punctuation and the digit COUNT carries the real constraint:
-// 7–15, the E.164 range. A "+" is only meaningful leading, so it isn't
-// permitted anywhere else.
+// ("+998 90-123-4567, +82 10-1234-5678 yoki +7 912-345-6789") actively
+// encourages the separators. So the pattern allows that punctuation and the
+// digit COUNT carries the real constraint: 7–15, the E.164 range. A "+" is
+// only meaningful leading, so it isn't permitted anywhere else.
 const PHONE_RE = /^\+?[\d\s()-]+$/;
 const PHONE_MIN_DIGITS = 7;
 const PHONE_MAX_DIGITS = 15;
