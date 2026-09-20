@@ -198,8 +198,8 @@ export default function App() {
       postIdParam = pathMatch[1];
     }
 
-    // Check path for /about
-    if (window.location.pathname === '/about') {
+    // Check path for /about or /elchi-haqida
+    if (window.location.pathname === '/about' || window.location.pathname === '/elchi-haqida') {
       setIsExplainerOpen(true);
     }
 
@@ -265,7 +265,7 @@ export default function App() {
 
   const closeExplainerModal = () => {
     setIsExplainerOpen(false);
-    if (window.location.pathname === '/about') {
+    if (window.location.pathname === '/about' || window.location.pathname === '/elchi-haqida') {
       window.history.replaceState({}, "", "/");
     }
   };

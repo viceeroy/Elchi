@@ -7,7 +7,8 @@
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/about", "destination": "/api/about-page" },
-    { "source": "/((?!api/|post/|about/|src/|lib/|@vite/|@react-refresh|node_modules/|assets/|favicon\\.ico|favicon\\.svg|\\.well-known/|manifest\\.webmanifest|icon-.*\\.png|sw\\.js|workbox-.*\\.js|registerSW\\.js).*)", "destination": "/index.html" }
+    { "source": "/elchi-haqida", "destination": "/api/about-page" },
+    { "source": "/((?!api/|post/|about/|elchi-haqida/|src/|lib/|@vite/|@react-refresh|node_modules/|assets/|favicon\\.ico|favicon\\.svg|\\.well-known/|manifest\\.webmanifest|icon-.*\\.png|sw\\.js|workbox-.*\\.js|registerSW\\.js).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

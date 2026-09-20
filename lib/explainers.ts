@@ -27,10 +27,10 @@ export const EXPLAINERS: Explainer[] = [
       uz: {
         tag: "Kirish",
         title: "Elchi nima?",
-        routeHub: "Koreya ↔ O‘zbekiston",
+        routeHub: "O‘zbekiston ↔ Xorij",
         subline: "Platforma haqida umumiy ma’lumot",
         image: "/intro.png",
-        lead: "Elchi — Koreya va O‘zbekiston o‘rtasida biror narsa yubormoqchi bo‘lgan odamlar bilan shu yo‘nalishda safar qilayotgan yo‘lovchilarni bog‘laydigan bepul e’lonlar platformasi.",
+        lead: "Elchi — O‘zbekiston va boshqa davlatlar o‘rtasida biror narsa yubormoqchi bo‘lganlar bilan shu yo‘nalishda safar qilayotgan yo‘lovchilarni bog‘laydigan bepul e’lonlar platformasi.",
         points: [
           {
             title: "Odamlarni bir-biriga topishtiradi",
@@ -50,7 +50,7 @@ export const EXPLAINERS: Explainer[] = [
       uz: {
         tag: "Jarayon",
         title: "Qanday ishlaydi?",
-        routeHub: "Koreya ↔ O‘zbekiston",
+        routeHub: "O‘zbekiston ↔ Xorij",
         subline: "E’lon turlari va 3 bosqichli tartib",
         image: "/process.png",
         lead: "Platformada ikki xil e’lon mavjud:",
@@ -58,12 +58,12 @@ export const EXPLAINERS: Explainer[] = [
           {
             icon: "traveler",
             label: "Yo‘lovchi",
-            text: "Koreya ↔ O‘zbekiston yo‘nalishida safar qilayotgan va boshqalarning buyumlarini olib borishga tayyor odam.",
+            text: "O‘zbekiston va xorij o‘rtasida safar qilayotgan hamda boshqalarning buyumlarini olib borishga tayyor yo‘lovchi.",
           },
           {
             icon: "request",
             label: "Jo‘natma",
-            text: "Koreya ↔ O‘zbekiston yo‘nalishida buyum yoki posilka yubormoqchi bo‘lgan odam.",
+            text: "O‘zbekistonga yoki xorijga buyum yoxud posilka yubormoqchi bo‘lgan odam.",
           },
         ],
         flowSteps: [
@@ -80,7 +80,7 @@ export const EXPLAINERS: Explainer[] = [
       uz: {
         tag: "Maslahat",
         title: "E’lonni qanday joylash?",
-        routeHub: "Koreya ↔ O‘zbekiston",
+        routeHub: "O‘zbekiston ↔ Xorij",
         subline: "Foydali va aniq e’lon berish",
         image: "/post.png",
         lead: "Foydali va tushunarli e’lon yaratish uchun quyidagi ma’lumotlarni aniq ko‘rsating:",
@@ -88,7 +88,7 @@ export const EXPLAINERS: Explainer[] = [
           {
             icon: "map",
             title: "Yo‘nalish",
-            desc: "Qayerdan → qayerga (masalan: Seul → Toshkent)",
+            desc: "Qayerdan → qayerga (uchish va yetib borish shaharlari)",
           },
           {
             icon: "calendar",
@@ -115,7 +115,7 @@ export const EXPLAINERS: Explainer[] = [
       uz: {
         tag: "Xavfsizlik",
         title: "Xavfsizlik va mas’uliyat",
-        routeHub: "Koreya ↔ O‘zbekiston",
+        routeHub: "O‘zbekiston ↔ Xorij",
         subline: "Xavfsiz kelishuv tavsiyalari",
         image: "/safety.png",
         lead: "Xavfsiz va ishonchli kelishuv uchun:",
