@@ -6,7 +6,7 @@ import {
   getMainMenuKeyboard,
   MENU_BUTTONS,
   type TelegramUpdate,
-} from './telegram-bot.ts';
+} from './telegram-bot.js';
 
 test('Telegram bot unit tests', async (t) => {
   const fakeToken = '123456:FAKE_TOKEN';
@@ -292,7 +292,7 @@ test('Traveler flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'from_country', state: {}, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { message: { message_id: 1, date: 1, chat: { id: 12345 }, text: '/cancel' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.strictEqual(mockDrafts[12345], undefined);
     assert.ok(calls.some(c => c.body.text === 'Bekor qilindi.'));
   });
@@ -302,7 +302,7 @@ test('Traveler flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'to_country', state: { from_country: 'KR' }, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { callback_query: { id: 'cq1', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'country:KR' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     // It should answer with error
     assert.ok(calls.some(c => c.url.includes('answerCallbackQuery') && c.body.text === 'Iltimos, boshqa davlatni tanlang.'));
   });
@@ -311,7 +311,7 @@ test('Traveler flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'date', state: {}, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { message: { message_id: 2, date: 2, chat: { id: 12345 }, text: 'not-a-date' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.ok(calls.some(c => String(c.body.text).includes('Sana noto\'g\'ri')));
   });
 
@@ -319,7 +319,7 @@ test('Traveler flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'weight_kg', state: {}, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { message: { message_id: 4, date: 4, chat: { id: 12345 }, text: '200' } }; // > 100
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.ok(calls.some(c => String(c.body.text).includes('to\'g\'ri vazn kiriting')));
   });
 
@@ -327,7 +327,7 @@ test('Traveler flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'luggage_count', state: {}, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { message: { message_id: 5, date: 5, chat: { id: 12345 }, text: '-1' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.ok(calls.some(c => String(c.body.text).includes('to\'g\'ri chamadon sonini kiriting')));
   });
 
@@ -336,7 +336,7 @@ test('Traveler flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'confirmation', state: validState, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { callback_query: { id: 'cq2', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'confirm:publish' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.ok(calls.some(c => String(c.body.text).includes('E\'loningiz muvaffaqiyatli joylashtirildi')));
     assert.strictEqual(insertedPosts.length, 1);
     assert.strictEqual(insertedPosts[0].user_id, 'uuid-123');
@@ -350,7 +350,7 @@ test('Traveler flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'confirmation', state, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { callback_query: { id: 'cq_cancel', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'confirm:cancel' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.ok(calls.some(c => c.body.text === 'Bekor qilindi.'));
     assert.strictEqual(mockDrafts[12345], undefined); // Draft preserved
   });
@@ -426,7 +426,7 @@ test('Request flow tests', async (t) => {
     mockDrafts = {};
     const { mockFetch, calls } = createMockFetch();
     const update: any = { message: { message_id: 1, date: 1, chat: { id: 12345 }, text: '✈️ Yo\'lovchi' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     
     assert.strictEqual(mockDrafts[12345]?.step, 'from_country');
     assert.ok(calls.some(c => c.body.text === 'Qayerdan uchyapsiz?'));
@@ -436,7 +436,7 @@ test('Request flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'req_to_country', state: { from_country: 'KR' }, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { callback_query: { id: 'cq1', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'country:KR' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.ok(calls.some(c => c.url.includes('answerCallbackQuery') && c.body.text === 'Iltimos, boshqa davlatni tanlang.'));
   });
 
@@ -445,7 +445,7 @@ test('Request flow tests', async (t) => {
     const { mockFetch, calls } = createMockFetch();
     const longNote = 'A'.repeat(1001);
     const update: any = { message: { message_id: 2, date: 2, chat: { id: 12345 }, text: longNote } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.ok(calls.some(c => String(c.body.text).includes('Izoh juda uzun')));
   });
 
@@ -455,7 +455,7 @@ test('Request flow tests', async (t) => {
     mockDrafts[12345] = { telegram_id: 12345, step: 'req_confirmation', state: validState, updated_at: new Date().toISOString() };
     const { mockFetch, calls } = createMockFetch();
     const update: any = { callback_query: { id: 'cq2', from: { id: 12345 }, message: { chat: { id: 12345 } }, data: 'confirm:publish' } };
-    await import('./telegram-bot.ts').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
+    await import('./telegram-bot.js').then(m => m.handleTelegramUpdate(fakeToken, update, mockFetch));
     assert.ok(calls.some(c => String(c.body.text).includes('Jo\'natma e\'loningiz muvaffaqiyatli joylashtirildi')));
     assert.strictEqual(insertedPosts.length, 1);
     assert.strictEqual(insertedPosts[0].type, 'request');

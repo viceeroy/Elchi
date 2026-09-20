@@ -1,4 +1,4 @@
-// Tests for the contact validators in ./contact.ts.
+// Tests for the contact validators in ./contact.js.
 //
 // Run with `npm test`. Uses Node's built-in test runner and its native
 // TypeScript stripping — no test framework or dependency involved. Needs
@@ -13,7 +13,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isContactKind, isValidContact, telegramUsername, phoneDialString } from './contact.ts';
+import { isContactKind, isValidContact, telegramUsername, phoneDialString } from './contact.js';
 
 test('telegram handles', async (t) => {
   await t.test('accepts well-formed handles', () => {

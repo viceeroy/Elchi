@@ -194,7 +194,7 @@ export async function handleTelegramUpdate(
             username: cq.from.username,
             first_name: cq.from.first_name,
           });
-          const { provisionTelegramUser } = await import('./telegram-auth.ts');
+          const { provisionTelegramUser } = await import('./telegram-auth.js');
           const { hashed_token } = await provisionTelegramUser({ id: cq.from.id, username: cq.from.username, first_name: cq.from.first_name });
           
           await admin.from('signup_tokens').update({ status: 'verified', telegram_id: cq.from.id, hashed_token }).eq('token', loginToken);
@@ -295,11 +295,11 @@ export async function handleTelegramUpdate(
   );
   return { handled: true, action: 'unknown', chatId, responseSent: true };
 }
-import { isValidContact } from './contact.ts';
-import { getSupabaseAdmin } from './supabase-admin.ts';
-import { PARCEL_NOTE_MAX } from './parcelLimits.ts';
-import { getOrCreateTelegramProfile } from './telegram-auth.ts';
-import { COUNTRIES } from '../src/constants.ts';
+import { isValidContact } from './contact.js';
+import { getSupabaseAdmin } from './supabase-admin.js';
+import { PARCEL_NOTE_MAX } from './parcelLimits.js';
+import { getOrCreateTelegramProfile } from './telegram-auth.js';
+import { COUNTRIES } from '../src/constants.js';
 // --- State Management ---
 export interface DraftState {
   from_country?: string;

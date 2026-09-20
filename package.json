@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "test": "node --test \"lib/**/*.test.ts\""
+    "test": "tsx --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@datafast/ai-crawl": "^1.0.9",
