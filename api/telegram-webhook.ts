@@ -12,20 +12,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Validate Telegram Webhook Secret token (set via setWebhook secret_token parameter).
+  // Fails closed: reject if secret is not configured or header does not match.
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const receivedSecret = req.headers['x-telegram-bot-api-secret-token'];
+  if (!webhookSecret || receivedSecret !== webhookSecret) {
+    if (!webhookSecret) {
+      console.error('TELEGRAM_WEBHOOK_SECRET is not configured');
+    }
+    return res.status(401).json({ error: 'Unauthorized webhook request' });
+  }
+
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
     console.error('TELEGRAM_BOT_TOKEN is not configured');
     return res.status(500).json({ error: 'Telegram bot token is not configured' });
-  }
-
-  // Optional Telegram Webhook Secret token validation
-  // (set via setWebhook secret_token parameter)
-  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const receivedSecret = req.headers['x-telegram-bot-api-secret-token'];
-    if (receivedSecret !== webhookSecret) {
-      return res.status(401).json({ error: 'Unauthorized webhook request' });
-    }
   }
 
   try {
