@@ -96,7 +96,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
         <button
           onClick={onClose}
           aria-label={t.closeLabel || "Yopish"}
-          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-body hover:text-ink hover:bg-rule transition-colors"
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-body hover:text-ink hover:bg-rule transition-colors after:absolute after:-inset-1.5 after:content-['']"
         >
           <X className="w-4 h-4" aria-hidden="true" />
         </button>

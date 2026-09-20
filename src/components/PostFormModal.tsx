@@ -372,7 +372,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         <button
           onClick={onClose}
           aria-label={t.closeLabel || "Yopish"}
-          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-body hover:text-ink hover:bg-rule transition-colors z-10"
+          className="absolute right-[18px] top-[18px] bg-paper border-none w-8 h-8 rounded-full flex items-center justify-center text-body hover:text-ink hover:bg-rule transition-colors z-10 after:absolute after:-inset-1.5 after:content-['']"
         >
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
@@ -577,7 +577,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button
                       type="button"
                       onClick={() => { setWeightKg(w => Math.max(0, w - 1)); clearError("weight"); }}
-                      className="w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90"
+                      className="relative w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90 after:absolute after:-inset-1.5 after:content-['']"
                     >
                       −
                     </button>
@@ -588,7 +588,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button
                       type="button"
                       onClick={() => { setWeightKg(w => Math.min(40, w + 1)); clearError("weight"); }}
-                      className="w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90"
+                      className="relative w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90 after:absolute after:-inset-1.5 after:content-['']"
                     >
                       +
                     </button>
@@ -624,7 +624,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setWeightLuggage(l => Math.min(5, l + 1))}
-                        className="w-8 h-8 rounded-full bg-paper text-ink font-bold border border-field hover:bg-rule flex items-center justify-center"
+                        className="relative w-8 h-8 rounded-full bg-paper text-ink font-bold border border-field hover:bg-rule flex items-center justify-center after:absolute after:-inset-1.5 after:content-['']"
                       >
                         +
                       </button>
@@ -661,7 +661,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     <button 
                       type="button"
                       onClick={() => setWeightKg(w => Math.max(0, w - 1))}
-                      className="w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90"
+                      className="relative w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90 after:absolute after:-inset-1.5 after:content-['']"
                     >
                       −
                     </button>
@@ -669,10 +669,10 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                       <span className="text-xl font-extrabold text-ink">{weightKg}</span>
                       <span className="font-mono text-[9px] text-faint tracking-widest font-bold">KG</span>
                     </div>
-                    <button
+                    <button 
                       type="button"
                       onClick={() => setWeightKg(w => Math.min(30, w + 1))}
-                      className="w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90"
+                      className="relative w-8 h-8 rounded-full bg-ink text-card flex items-center justify-center text-lg font-bold hover:opacity-90 after:absolute after:-inset-1.5 after:content-['']"
                     >
                       +
                     </button>

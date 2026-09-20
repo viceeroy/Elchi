@@ -641,7 +641,7 @@ export default function App() {
                 }
               }}
               aria-label={t.profileMenuLabel || "Profile"}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-rule bg-paper text-ink hover:border-ink transition-all"
+              className="relative w-8 h-8 flex items-center justify-center rounded-lg border border-rule bg-paper text-ink hover:border-ink transition-all after:absolute after:-inset-1.5 after:content-['']"
             >
               <User size={16} />
             </button>
@@ -890,7 +890,7 @@ export default function App() {
               <button
                 onClick={closeDetailModal}
                 aria-label={t.closeLabel || "Yopish"}
-                className="absolute right-[18px] top-[16px] bg-white/10 hover:bg-white/20 border-none w-8 h-8 rounded-full flex items-center justify-center text-card transition-colors"
+                className="absolute right-[18px] top-[16px] bg-white/10 hover:bg-white/20 border-none w-8 h-8 rounded-full flex items-center justify-center text-card transition-colors after:absolute after:-inset-1.5 after:content-['']"
               >
                 <X className="w-4 h-4" aria-hidden="true" />
               </button>
