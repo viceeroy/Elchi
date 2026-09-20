@@ -136,14 +136,6 @@ interface FeedCardProps {
 export const FeedCard: React.FC<FeedCardProps> = ({ post, t, onOpen, children }) => (
   <article
     onClick={onOpen}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        onOpen();
-      }
-    }}
     aria-label={post.type === "traveler" ? t.travelerTag : t.requestTag}
     /* motion-safe on the translate only, not the shadow: a user with
        prefers-reduced-motion set still gets the lift shadow on hover — that
@@ -162,9 +154,10 @@ export const FeedCard: React.FC<FeedCardProps> = ({ post, t, onOpen, children })
     <a
       href={`/post/${post.id}`}
       style={{ position: 'absolute', inset: 0, zIndex: 10 }}
-      aria-hidden="true"
-      tabIndex={-1}
-      onClick={(e) => e.preventDefault()}
+      onClick={(e) => {
+        e.preventDefault();
+        onOpen();
+      }}
     >
       <span className="sr-only">{post.type === "traveler" ? t.travelerTag : t.requestTag}</span>
     </a>
@@ -236,7 +229,7 @@ export const FeedCardFooter: React.FC<FeedCardFooterProps> = ({
           onOpen();
         }}
         aria-label={t.contactLabel || "Bog'lanish"}
-        className={`w-8 h-8 rounded-full ${btnColorClasses} active:scale-95 flex items-center justify-center transition-all duration-200 shadow-sm cursor-pointer border-none flex-shrink-0`}
+        className={`relative z-20 w-8 h-8 rounded-full ${btnColorClasses} active:scale-95 flex items-center justify-center transition-all duration-200 shadow-sm cursor-pointer border-none flex-shrink-0 after:absolute after:-inset-1.5 after:content-['']`}
         id={`contact-btn-${post.id}`}
       >
         <Phone className="w-4 h-4" aria-hidden="true" />
