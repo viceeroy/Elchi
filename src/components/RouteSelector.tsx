@@ -39,8 +39,17 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
         setOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   const toInfo = (c: Country): CountryInfo => ({
@@ -65,7 +74,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
         onClick={() => setOpen((v) => !v)}
         aria-label={`Davlat: ${selected.country}`}
         aria-expanded={open}
-        className="group/side flex items-center gap-1.5 bg-transparent border-none p-0 cursor-pointer max-w-full min-w-0"
+        className="group/side flex items-center gap-1.5 bg-transparent border-none py-2 px-1 cursor-pointer max-w-full min-w-0"
       >
         <FlagIcon iso={selected.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />
         <span className="font-bold text-[13px] sm:text-[17px] leading-none text-ink group-hover/side:text-blue transition-colors truncate">
