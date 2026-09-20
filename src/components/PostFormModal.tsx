@@ -653,7 +653,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     onChange={(e) => setCustomItemType(e.target.value)}
                     placeholder={t.itemTypeOtherPlaceholder}
                     maxLength={PARCEL_CATEGORY_OTHER_MAX}
-                    className="w-full box-sizing-border-box padding-12px-14px border-1.5px-solid border-field rounded-lg text-base sm:text-sm bg-card text-ink"
+                    className="w-full box-sizing-border-box border-field rounded-lg text-base sm:text-sm bg-card text-ink"
                     style={{ padding: "10px 14px", border: "1.5px solid var(--color-field)", borderRadius: "8px" }}
                   />
 

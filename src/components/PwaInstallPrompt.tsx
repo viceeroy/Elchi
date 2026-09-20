@@ -67,7 +67,7 @@ export const PwaInstallPrompt: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm bg-ink text-paper p-4 rounded-2xl shadow-card2 z-[100] flex items-center justify-between gap-4 animate-[fadein_0.3s_ease-out]">
+    <div className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm bg-ink text-paper p-4 rounded-2xl z-[100] flex items-center justify-between gap-4 animate-[fadein_0.3s_ease-out]">
       <div className="flex items-center gap-3">
         <div className="bg-paper/10 p-2 rounded-xl">
           <Download className="w-5 h-5 text-paper" />
