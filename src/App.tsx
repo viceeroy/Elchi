@@ -899,15 +899,15 @@ export default function App() {
                 className="font-mono text-[10.5px] uppercase px-3 py-1.5 rounded inline-flex items-center gap-1.5"
                 style={{
                   background:
-                    selectedPost.type === "request" ? "var(--color-red)" : "var(--color-gold)",
-                  color: "var(--color-ink)",
+                    selectedPost.type === "request" ? "var(--color-red)" : "var(--color-blue)",
+                  color: "var(--color-card)",
                   fontWeight: 700
                 }}
               >
                 {selectedPost.type === "traveler" ? (
-                  <Plane className="w-3.5 h-3.5 text-ink" />
+                  <Plane className="w-3.5 h-3.5 text-card" />
                 ) : (
-                  <Briefcase className="w-3.5 h-3.5 text-ink" />
+                  <Briefcase className="w-3.5 h-3.5 text-card" />
                 )}
                 {selectedPost.type === "traveler" ? t.travelerTag : t.requestTag}
               </div>

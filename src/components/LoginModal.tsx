@@ -122,7 +122,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
             <button
               onClick={startLoginFlow}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 border-none rounded-lg py-3 text-sm font-bold text-white bg-[#2AABEE] hover:bg-[#229ED9] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 border-none rounded-lg py-3 text-sm font-bold text-ink bg-telegram hover:bg-telegram-deep transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
               Telegram orqali kirish
