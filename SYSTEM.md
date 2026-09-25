@@ -52,18 +52,17 @@ src/                    React SPA
   components/           PostCard, FeedCard, PostFormModal, PostFab,
                         RouteSelector, ContactFields, TypedHeadline,
                         LoginModal, ProfileSheet, PwaInstallPrompt, FlagIcon
-  explainer/            Static editorial cards (index.ts re-exports
-                        lib/explainers.ts data + ExplainerSheet). Not posts —
+  explainer/            Static editorial cards (ExplainerSheet). Not posts —
                         never touch the API
   hooks/                useAnnouncer (aria-live toasts), useDialog (focus trap)
-  lib/                  authorName.ts (card footer name resolution),
-                        postPreview.ts (sanitises free text for a clamped note
-                        line), stickerStyle.ts (category chip styling)
+  lib/                  postPreview.ts (sanitises free text for a clamped note line)
   assets/               Logo SVGs, images
 
 api/                    Vercel serverless functions
   posts.ts              GET list / GET one / GET contact / POST create / DELETE
-  auth-telegram.ts      Telegram login → Supabase session bridge
+  signup-start.ts       Initiates Telegram bot login session
+  signup-status.ts      Polls verification status of signup token
+  telegram-webhook.ts   Webhook handler for Telegram bot (@elchitravel_bot)
   post-page.ts          SSR meta tags for /post/:id deep links (SEO)
   about-page.ts         Server-rendered /about page from lib/explainers.ts
   sitemap.ts            /sitemap.xml generated from public_posts
@@ -370,11 +369,8 @@ single source for every rendered date.
 
 ## 8. Auth flow
 
-1. `LoginModal` offers Telegram (widget) or Google (Supabase OAuth). Email login is disabled.
-2. Telegram: widget payload → `POST /api/auth-telegram` → `hashed_token` → client verifies OTP →
-   Supabase session.
-3. Google: standard Supabase OAuth redirect; `App.tsx` strips the leftover `#access_token` hash
-   from the URL bar on `onAuthStateChange`.
+1. `LoginModal` offers Telegram bot confirmation. Email and Google OAuth are removed from UI.
+2. Telegram bot: `POST /api/signup-start` → bot deep link → user taps Start in bot → webhook verifies token → `GET /api/signup-status` returns `hashed_token` → client verifies OTP → Supabase session.
 4. Session drives three gates: posting, deleting, and revealing a contact.
 
 All three gates are enforced twice: in `api/posts.ts` (401 without a verified bearer token) and

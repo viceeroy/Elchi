@@ -34,7 +34,6 @@ api/                    Vercel serverless functions
   signup-start.ts       Initiates Telegram bot login session (creates signup token)
   signup-status.ts      Polls verification status of signup token
   telegram-webhook.ts   Webhook handler for Telegram bot (@elchitravel_bot)
-  auth-telegram.ts      Legacy HMAC auth bridge for Telegram widget
   post-page.ts          SSR meta tags for crawler deep links (/post/:id)
   about-page.ts         SSR /about page
   sitemap.ts            Dynamic /sitemap.xml
@@ -98,7 +97,6 @@ vercel.json             Build, headers, routing & CSP configuration
 | `/api/signup-start` | `POST` | Generate login session token for Telegram bot confirmation | No |
 | `/api/signup-status?token=<uuid>` | `GET` | Poll status of login token (`pending`, `verified`, `expired`) | No |
 | `/api/telegram-webhook` | `POST` | Webhook receiver for Telegram bot events | Secret Token (optional) |
-| `/api/auth-telegram` | `POST` | Legacy HMAC auth bridge for Telegram login widget | No |
 | `/post/:id` | `GET` | SSR HTML with OpenGraph meta tags for link previews | No |
 | `/about` | `GET` | SSR HTML explainer page for search crawlers | No |
 | `/sitemap.xml` | `GET` | XML sitemap of active posts | No |

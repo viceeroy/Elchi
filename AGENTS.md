@@ -66,7 +66,7 @@ only `lib/` is covered (currently [lib/contact.test.ts](lib/contact.test.ts)).
 | [src/types.ts](src/types.ts) | `Post`, `PostContact`, `Translations`, `Locale` |
 | [src/constants.ts](src/constants.ts) | Country registry — the source of truth for supported routes |
 | [src/translations.ts](src/translations.ts) | Uzbek copy, keyed by `Locale` |
-| [api/](api) | Vercel serverless: `posts.ts` (CRUD), `auth-telegram.ts` (login bridge) |
+| [api/](api) | Vercel serverless: `posts.ts` (CRUD), `signup-*.ts`, `telegram-webhook.ts` |
 | [lib/](lib) | Shared server code: supabase clients, rate limiter, contact validation |
 | [supabase-schema.sql](supabase-schema.sql) | Full schema, RLS, views, functions, triggers |
 | [migrations/](migrations) | Dated incremental SQL, applied on top of a live DB |
