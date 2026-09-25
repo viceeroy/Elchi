@@ -2,12 +2,10 @@ import React from "react";
 import { Post, Locale, Translations } from "../types";
 import { Plane, Briefcase, MapPin } from "lucide-react";
 import { COUNTRIES, getCountry } from "../constants";
-import { stickerStyle } from "../lib/stickerStyle";
 import { flattenNote } from "../lib/postPreview";
 import { parseWeightString } from "../../lib/weight";
 import { pluralizeChamadon } from "../translations";
-import { formatFlexibleDate } from "../../lib/formatDate";
-import { FLEXIBLE_DATE } from "../../lib/date";
+import { formatFlexibleDate, FLEXIBLE_DATE } from "../../lib/formatDate";
 import {
   FeedCard,
   FeedCardBadgeRow,
@@ -135,7 +133,13 @@ export const PostCard: React.FC<PostCardProps> = ({
             reader gets nothing from either. travelerTag/requestTag are the
             text labels the icon replaced ("Yo'lovchi" / "Jo'natma") — reused
             here as the accessible name rather than inventing a second string. */}
-        <div style={stickerStyle(post.type)} role="img" aria-label={isTraveler ? t.travelerTag : t.requestTag}>
+        <div
+          className={`shrink-0 px-2 py-1.5 rounded font-mono text-[10.5px] font-bold uppercase tracking-[1px] inline-flex items-center gap-1.5 border border-dashed border-card/40 shadow-xs ${
+            isTraveler ? "bg-blue text-card" : "bg-red text-card"
+          }`}
+          role="img"
+          aria-label={isTraveler ? t.travelerTag : t.requestTag}
+        >
           {isTraveler ? (
             <Plane className="w-3 h-3 text-card" aria-hidden="true" />
           ) : (

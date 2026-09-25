@@ -4,7 +4,6 @@ import { X, LogOut, Send, Package } from "lucide-react";
 import { supabaseBrowser } from "../supabaseClient";
 import type { Session } from "@supabase/auth-js";
 import { useDialog } from "../hooks/useDialog";
-import { authorNameOf } from "../lib/authorName";
 
 interface ProfileSheetProps {
   t: Translations;
@@ -59,8 +58,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ t, session, onClose,
   const provider = providerOf(session);
   // Null only in the window before the lookup lands, or if it failed — the gate
   // blocks the app until the name exists, so a signed-in user always has one.
-  // The same fallback the feed cards use, so the two never disagree.
-  const name = authorNameOf(profileName);
+  const name = profileName?.trim() || "Foydalanuvchi";
   const avatarUrl = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null;
   const methodLabel = provider === "telegram" ? t.methodTelegram : provider === "google" ? t.methodGoogle : "—";
   const initial = name.replace(/^@/, "").charAt(0).toUpperCase() || "?";

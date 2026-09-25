@@ -15,7 +15,7 @@ import { RouteSelector } from "./components/RouteSelector";
 import { PostFab } from "./components/PostFab";
 import { TypedHeadline } from "./components/TypedHeadline";
 import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
-import { EXPLAINERS, type Explainer } from "./explainer";
+import { EXPLAINERS, type Explainer } from "../lib/explainers";
 import { useDialog } from "./hooks/useDialog";
 import { useAnnouncer } from "./hooks/useAnnouncer";
 import { supabaseBrowser } from "./supabaseClient";
