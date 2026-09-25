@@ -11,11 +11,9 @@ import { FlagIcon } from "./FlagIcon";
 // the far country, and the feed then shows that corridor in both directions.
 // Which way a given parcel travels is content on the post card, not a filter.
 
-interface CountryInfo {
-  code: string; // IATA airport code shown big
-  city: string; // localized hub city for the dropdown
-  country: string; // localized country name shown under the code
-  iso: string; // ISO country code from the registry
+interface CountryOption {
+  country: string;
+  iso: string;
 }
 
 interface RouteSelectorProps {
@@ -52,16 +50,13 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
     };
   }, [open]);
 
-  const toInfo = (c: Country): CountryInfo => ({
-    code: c.airport,
-    city: c.cityNames[locale],
+  const options: CountryOption[] = SELECTABLE_COUNTRIES.map((c: Country) => ({
     country: c.names[locale],
     iso: c.code,
-  });
-  const options = SELECTABLE_COUNTRIES.map(toInfo);
+  }));
   const selected = options.find((o) => o.iso === countryCode) ?? options[0];
 
-  const selectCountry = (picked: CountryInfo) => {
+  const selectCountry = (picked: CountryOption) => {
     setOpen(false);
     if (picked.iso === selected.iso) return;
     onChange(picked.iso);

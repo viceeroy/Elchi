@@ -33,44 +33,31 @@ export interface ContactFieldsProps {
   label?: React.ReactNode;
 }
 
+const PHONE_SHORTCUTS = [
+  { code: "+998", flag: "🇺🇿" },
+  { code: "+82", flag: "🇰🇷" },
+  { code: "+7", flag: "🇷🇺" },
+];
+
 const PhoneShortcuts: React.FC<{
   value: string;
   onChange: (v: string) => void;
 }> = ({ value, onChange }) => (
   <div className="mt-1.5 flex flex-wrap gap-1.5">
-    <button
-      type="button"
-      onClick={() => {
-        if (!value.startsWith("+998")) {
-          onChange("+998 " + value.replace(/^\+?\d*/, "").trim());
-        }
-      }}
-      className="font-mono text-xs px-2.5 py-1.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
-    >
-      🇺🇿 +998
-    </button>
-    <button
-      type="button"
-      onClick={() => {
-        if (!value.startsWith("+82")) {
-          onChange("+82 " + value.replace(/^\+?\d*/, "").trim());
-        }
-      }}
-      className="font-mono text-xs px-2.5 py-1.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
-    >
-      🇰🇷 +82
-    </button>
-    <button
-      type="button"
-      onClick={() => {
-        if (!value.startsWith("+7")) {
-          onChange("+7 " + value.replace(/^\+?\d*/, "").trim());
-        }
-      }}
-      className="font-mono text-xs px-2.5 py-1.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
-    >
-      🇷🇺 +7
-    </button>
+    {PHONE_SHORTCUTS.map(({ code, flag }) => (
+      <button
+        key={code}
+        type="button"
+        onClick={() => {
+          if (!value.startsWith(code)) {
+            onChange(`${code} ${value.replace(/^\+?\d*/, "").trim()}`);
+          }
+        }}
+        className="font-mono text-xs px-2.5 py-1.5 bg-emerald-50 text-green border border-emerald-100 rounded hover:bg-emerald-100 transition-all"
+      >
+        {flag} {code}
+      </button>
+    ))}
   </div>
 );
 
