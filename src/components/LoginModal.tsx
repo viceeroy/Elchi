@@ -16,7 +16,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "polling" | "verified" | "expired">("idle");
+  const [status, setStatus] = useState<"idle" | "polling" | "verified" | "expired" | "error">("idle");
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const pollIntervalRef = useRef<number | null>(null);
 
@@ -48,20 +48,32 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
         const data = await res.json();
         
         if (data.status === "verified" && data.hashed_token) {
-          setStatus("verified");
-          if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
-          
-          const { error: verifyError } = await supabaseBrowser.auth.verifyOtp({
-            token_hash: data.hashed_token,
-            type: "magiclink",
-          });
-          
-          if (verifyError) throw verifyError;
-          onLoginSuccess();
+          if (pollIntervalRef.current) {
+            window.clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+
+          try {
+            const { error: verifyError } = await supabaseBrowser.auth.verifyOtp({
+              token_hash: data.hashed_token,
+              type: "magiclink",
+            });
+
+            if (verifyError) throw verifyError;
+            setStatus("verified");
+            onLoginSuccess();
+          } catch (verifyErr) {
+            console.error("Verification failed", verifyErr);
+            setStatus("error");
+            setError("Kirishda xatolik. Qaytadan urinib ko'ring.");
+          }
         } else if (data.status === "expired") {
+          if (pollIntervalRef.current) {
+            window.clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
           setStatus("expired");
-          setError(t.loginSessionExpired || "Sessiya muddati o'tgan. Iltimos qaytadan kiring.");
-          if (pollIntervalRef.current) window.clearInterval(pollIntervalRef.current);
+          setError("Vaqt tugadi, qaytadan urinib ko'ring.");
         }
       } catch (err) {
         // Log quietly, let it retry on next interval unless it's a hard fail
@@ -74,6 +86,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
     return () => {
       if (pollIntervalRef.current) {
         window.clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
       }
     };
   }, [status, token, onLoginSuccess, t]);
@@ -125,7 +138,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ t, onClose, onLoginSucce
               className="w-full flex items-center justify-center gap-2 border-none rounded-lg py-3 text-sm font-bold text-ink bg-telegram hover:bg-telegram-deep transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
-              Telegram orqali kirish
+              {status === "expired" || status === "error" ? "Qaytadan urinish" : "Telegram orqali kirish"}
             </button>
           )}
 

@@ -14,8 +14,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Validate Telegram Webhook Secret token (set via setWebhook secret_token parameter).
   // Fails closed: reject if secret is not configured or header does not match.
-  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  const receivedSecret = req.headers['x-telegram-bot-api-secret-token'];
+  const webhookSecret = (process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
+  const rawReceived = req.headers['x-telegram-bot-api-secret-token'];
+  const receivedSecret = (typeof rawReceived === 'string' ? rawReceived : Array.isArray(rawReceived) ? rawReceived[0] : '')?.trim();
   if (!webhookSecret || receivedSecret !== webhookSecret) {
     if (!webhookSecret) {
       console.error('TELEGRAM_WEBHOOK_SECRET is not configured');

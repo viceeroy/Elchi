@@ -158,6 +158,8 @@ export interface ProcessUpdateResult {
   responseSent?: boolean;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Main dispatcher for incoming Telegram updates.
 // Guaranteed not to throw: catches errors and returns a structured result.
 export async function handleTelegramUpdate(
@@ -180,15 +182,38 @@ export async function handleTelegramUpdate(
       if (!handled) handled = await handleMenuFlows(token, update, cq.from.id, chatId, fetchFn);
       
       if (!handled && cq.data?.startsWith('login_confirm_')) {
-        const loginToken = cq.data.split('_')[2];
+        const loginToken = cq.data.replace(/^login_confirm_/, '').trim();
+        if (!UUID_REGEX.test(loginToken)) {
+          await answerTelegramCallbackQuery(token, cq.id, undefined, fetchFn);
+          return { handled: true, action: 'callback_query', chatId, responseSent: true };
+        }
+
         const admin = getSupabaseAdmin();
+        let claimed = false;
         try {
           const { data: tokenRow } = await admin.from('signup_tokens').select('*').eq('token', loginToken).maybeSingle();
           if (!tokenRow || tokenRow.status !== 'pending' || new Date(tokenRow.expires_at) < new Date()) {
             await answerTelegramCallbackQuery(token, cq.id, 'Havola muddati o\'tgan yoki yaroqsiz.', fetchFn);
             return { handled: true, action: 'callback_query', chatId, responseSent: true };
           }
-          
+
+          // Atomically claim the token to prevent double-tap race conditions
+          const { data: claimedRows, error: claimError } = await admin
+            .from('signup_tokens')
+            .update({ telegram_id: cq.from.id })
+            .eq('token', loginToken)
+            .eq('status', 'pending')
+            .is('telegram_id', null)
+            .select('token');
+
+          if (claimError || !claimedRows || claimedRows.length === 0) {
+            // Already claimed or confirmed — answer quietly to stop button spinner and return
+            await answerTelegramCallbackQuery(token, cq.id, undefined, fetchFn);
+            return { handled: true, action: 'callback_query', chatId, responseSent: true };
+          }
+
+          claimed = true;
+
           await getOrCreateTelegramProfile({
             id: cq.from.id,
             username: cq.from.username,
@@ -196,13 +221,28 @@ export async function handleTelegramUpdate(
           });
           const { provisionTelegramUser } = await import('./telegram-auth.js');
           const { hashed_token } = await provisionTelegramUser({ id: cq.from.id, username: cq.from.username, first_name: cq.from.first_name });
-          
-          await admin.from('signup_tokens').update({ status: 'verified', telegram_id: cq.from.id, hashed_token }).eq('token', loginToken);
+
+          const { error: updateError } = await admin
+            .from('signup_tokens')
+            .update({ status: 'verified', hashed_token })
+            .eq('token', loginToken)
+            .eq('status', 'pending');
+
+          if (updateError) throw updateError;
+
           await answerTelegramCallbackQuery(token, cq.id, 'Tizimga kirdingiz!', fetchFn);
           await sendTelegramMessage(token, chatId, '✅ Tizimga muvaffaqiyatli kirdingiz. Veb-saytga qaytishingiz mumkin.', getMainMenuKeyboard(), fetchFn);
         } catch (e) {
-          console.error(e);
-          await answerTelegramCallbackQuery(token, cq.id, 'Xatolik yuz berdi.', fetchFn);
+          console.error('Error during login confirmation:', e);
+          if (claimed) {
+            // Reset telegram_id so the user can retry
+            await admin
+              .from('signup_tokens')
+              .update({ telegram_id: null })
+              .eq('token', loginToken)
+              .eq('status', 'pending');
+          }
+          await answerTelegramCallbackQuery(token, cq.id, 'Xatolik yuz berdi. Qaytadan urinib ko\'ring.', fetchFn);
         }
         return { handled: true, action: 'callback_query', chatId, responseSent: true };
       }
@@ -239,15 +279,17 @@ export async function handleTelegramUpdate(
     }
 
     if (rawText.startsWith('/start login_')) {
-      const loginToken = rawText.split('_')[1];
-      const admin = getSupabaseAdmin();
-      const { data: tokenRow } = await admin.from('signup_tokens').select('*').eq('token', loginToken).maybeSingle();
-      
-      if (tokenRow && tokenRow.status === 'pending' && new Date(tokenRow.expires_at) >= new Date()) {
-        await sendTelegramMessage(token, chatId, 'Veb-saytga kirishni tasdiqlaysizmi?', {
-          inline_keyboard: [[{ text: '✅ Tizimga kirishni tasdiqlash', callback_data: `login_confirm_${loginToken}` }]]
-        }, fetchFn);
-        return { handled: true, action: 'start', chatId, responseSent: true };
+      const loginToken = rawText.replace(/^\/start login_/, '').trim();
+      if (UUID_REGEX.test(loginToken)) {
+        const admin = getSupabaseAdmin();
+        const { data: tokenRow } = await admin.from('signup_tokens').select('*').eq('token', loginToken).maybeSingle();
+
+        if (tokenRow && tokenRow.status === 'pending' && new Date(tokenRow.expires_at) >= new Date()) {
+          await sendTelegramMessage(token, chatId, 'Veb-saytga kirishni tasdiqlaysizmi?', {
+            inline_keyboard: [[{ text: '✅ Tizimga kirishni tasdiqlash', callback_data: `login_confirm_${loginToken}` }]]
+          }, fetchFn);
+          return { handled: true, action: 'start', chatId, responseSent: true };
+        }
       }
       // If invalid/expired/used token, fallthrough to normal welcome
     }
