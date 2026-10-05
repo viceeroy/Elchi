@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Locale } from "../types";
-import { SELECTABLE_COUNTRIES, Country } from "../constants";
+import { HOME_COUNTRY, SELECTABLE_COUNTRIES, Country, getCountry } from "../constants";
 import { FlagIcon } from "./FlagIcon";
 
 // Country options come from the COUNTRIES registry in constants.ts — adding a
@@ -55,6 +55,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
     iso: c.code,
   }));
   const selected = options.find((o) => o.iso === countryCode) ?? options[0];
+  const homeCountry = getCountry(HOME_COUNTRY);
 
   const selectCountry = (picked: CountryOption) => {
     setOpen(false);
@@ -67,13 +68,18 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={`Davlat: ${selected.country}`}
+        aria-label={`${homeCountry?.names[locale]} ↔ ${selected.country} yo'nalishi`}
         aria-expanded={open}
-        className="group/side flex items-center gap-1.5 bg-transparent border-none py-2 px-1 cursor-pointer max-w-full min-w-0"
+        className="group/side flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-edge bg-card px-2 py-1.5 text-left cursor-pointer hover:border-field transition-colors"
       >
         <FlagIcon iso={selected.iso} className="w-[20px] h-[14px] sm:w-[24px] sm:h-[16px]" />
-        <span className="font-bold text-[13px] sm:text-[17px] leading-none text-ink group-hover/side:text-blue transition-colors truncate">
-          {selected.country}
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="truncate font-bold text-[13px] sm:text-[14px] leading-none text-ink group-hover/side:text-blue transition-colors">
+            {selected.country}
+          </span>
+          <span className="truncate font-mono text-[10px] leading-none text-body">
+            ↔ {homeCountry?.names[locale]}
+          </span>
         </span>
         <svg
           width="10"
@@ -84,7 +90,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`shrink-0 text-[#B9B4A5] group-hover/side:text-blue transition-transform ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 text-faint group-hover/side:text-blue transition-transform ${open ? "rotate-180" : ""}`}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
