@@ -22,7 +22,6 @@ export const translations: Record<Locale, Translations> = {
     requestTag: "Jo'natma",
     contactBtn: "Bog'lanish →",
     openPostLabel: "Batafsil",
-    feedIntro: "Yo'lovchilar bo'sh joyini taklif qiladi, jo'natma egalari esa yetkazish so'rovini qoldiradi.",
     aboutLinkLabel: "Qanday ishlaydi",
     activeAds: "Ochiq e'lonlar",
     postAdBtn: "E'lon berish",

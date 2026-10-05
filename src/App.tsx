@@ -658,19 +658,16 @@ export default function App() {
               tab so the headline replayed on every switch; with one feed left
               there is nothing to switch between, and an unkeyed instance types
               exactly once. */}
-          <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 mb-3 tracking-tight">
-            <TypedHeadline
-              segments={[
-                { text: t.title, className: "text-red" },
-                // Kept as its own line on phones, as before the animation.
-                { text: t.titleAccent, className: "block sm:inline" },
-              ]}
-            />
-          </h1>
           <div className="flex items-start justify-between gap-4">
-            <p className="m-0 max-w-md text-sm leading-relaxed text-body">
-              {t.feedIntro}
-            </p>
+            <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 tracking-tight">
+              <TypedHeadline
+                segments={[
+                  { text: t.title, className: "text-red" },
+                  // Kept as its own line on phones, as before the animation.
+                  { text: t.titleAccent, className: "block sm:inline" },
+                ]}
+              />
+            </h1>
             <a
               href="/about"
               onClick={(e) => {
@@ -678,10 +675,10 @@ export default function App() {
                 window.history.pushState({}, "", "/about");
                 setIsExplainerOpen(true);
               }}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md py-1 text-xs font-semibold text-blue underline decoration-blue/40 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
+              aria-label={t.aboutLinkLabel}
+              className="mt-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-rule bg-card text-blue shadow-card transition-all hover:-translate-y-0.5 hover:border-blue hover:text-ink hover:shadow-card-hover focus:outline-none focus-visible:border-blue"
             >
-              <HelpCircle className="h-4 w-4" aria-hidden="true" />
-              <span>{t.aboutLinkLabel}</span>
+              <HelpCircle className="h-5 w-5" aria-hidden="true" />
             </a>
           </div>
         </section>
