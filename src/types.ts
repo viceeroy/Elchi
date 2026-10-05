@@ -88,6 +88,9 @@ export interface Translations {
   travelerTag: string;
   requestTag: string;
   contactBtn: string;
+  openPostLabel: string;
+  feedIntro: string;
+  aboutLinkLabel: string;
   activeAds: string;
   postAdBtn: string;
   

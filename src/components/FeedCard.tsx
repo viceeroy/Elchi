@@ -1,6 +1,6 @@
 import React from "react";
 import { Post, Translations } from "../types";
-import { Phone } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 /**
  * The chrome every feed card wears — silhouette, left stripe, inner column,
@@ -46,7 +46,7 @@ import { Phone } from "lucide-react";
  * respects that invariant; growing the card would trade it away.
  */
 export const FEED_CARD_SHELL =
-  "relative flex flex-col h-[200px] overflow-hidden bg-card rounded-xl border border-edge shadow-[var(--shadow-card)]";
+  "relative flex flex-col h-[220px] overflow-hidden bg-card rounded-xl border border-edge shadow-[var(--shadow-card)]";
 
 /**
  * The padded column inside the shell.
@@ -208,31 +208,22 @@ export const FeedCardFooter: React.FC<FeedCardFooterProps> = ({
   left,
   onOpen,
 }) => {
-  const isTraveler = post.type === "traveler";
-  const btnColorClasses = isTraveler
-    ? "bg-blue hover:bg-ink text-card"
-    : "bg-red hover:opacity-90 text-card";
-
   return (
     <div className={FEED_CARD_FOOTER_ROW}>
       <span className="text-[13px] text-faint truncate min-w-0">{left}</span>
 
-      {/* Unconditional, and on every post type: this button's job is to open the
-          extended post, not to reveal a handle — it fires the same onOpen() that
-          tapping the card does. Contact VALUES never travel in a list response;
-          they come one at a time from get_post_contact() behind the login gate,
-          which is what keeps the board from being scrapeable. stopPropagation so
-          the card's own handler doesn't fire a second time behind it. */}
+      {/* Opens details. Contact handles remain behind the authenticated reveal flow. */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           onOpen();
         }}
-        aria-label={t.contactLabel || "Bog'lanish"}
-        className={`relative z-20 w-8 h-8 rounded-full ${btnColorClasses} active:scale-95 flex items-center justify-center transition-all duration-200 shadow-sm cursor-pointer border-none flex-shrink-0 after:absolute after:-inset-1.5 after:content-['']`}
-        id={`contact-btn-${post.id}`}
+        aria-label={t.openPostLabel}
+        className="relative z-20 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border-none bg-gold px-3 font-mono text-[10px] font-bold uppercase tracking-wide text-ink shadow-sm transition-colors hover:bg-gold-lit active:scale-[0.98] cursor-pointer after:absolute after:-inset-1.5 after:content-['']"
+        id={`open-post-btn-${post.id}`}
       >
-        <Phone className="w-4 h-4" aria-hidden="true" />
+        <span>{t.openPostLabel}</span>
+        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     </div>
   );

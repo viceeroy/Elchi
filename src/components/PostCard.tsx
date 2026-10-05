@@ -1,7 +1,7 @@
 import React from "react";
 import { Post, Locale, Translations } from "../types";
 import { Plane, Briefcase, MapPin } from "lucide-react";
-import { COUNTRIES, getCountry } from "../constants";
+import { COUNTRIES, getCountry, isHubCity } from "../constants";
 import { flattenNote } from "../lib/postPreview";
 import { parseWeightString } from "../../lib/weight";
 import { pluralizeChamadon } from "../translations";
@@ -44,7 +44,9 @@ export const PostCard: React.FC<PostCardProps> = ({
     getCountry(post.to_country) ?? COUNTRIES.find((c) => c.code !== fromCountry.code)!;
   const hubFrom = fromCountry.names[locale];
   const hubTo = toCountry.names[locale];
-  // Free-text cities are display-only detail under the country route.
+  const showActualCities =
+    Boolean(post.from_city && post.to_city) &&
+    (!isHubCity(fromCountry, post.from_city) || !isHubCity(toCountry, post.to_city));
 
   // category labels baked into the weight string — categories are shown only in
   // the detail modal. A 0-kg value is treated as "nothing" and hidden. The
@@ -99,16 +101,16 @@ export const PostCard: React.FC<PostCardProps> = ({
   const footerMeta = (
     <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full">
       {dateText}
-      {post.from_city && (
+      {showActualCities && (
         <>
           {dateText && (
             <span className="text-faint/60 select-none" aria-hidden="true">
               •
             </span>
           )}
-          <span className="inline-flex items-center gap-1 min-w-0 truncate text-body font-medium">
-            <MapPin className="w-3.5 h-3.5 text-gold-deep flex-shrink-0" aria-hidden="true" />
-            <span className="truncate">{post.from_city}</span>
+          <span className="inline-flex min-w-0 items-center gap-1 truncate text-body font-medium">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-gold-deep" aria-hidden="true" />
+            <span className="truncate">{post.from_city} → {post.to_city}</span>
           </span>
         </>
       )}
@@ -128,23 +130,18 @@ export const PostCard: React.FC<PostCardProps> = ({
        up into the meta line and the button moved down into the footer. */
     <FeedCard post={post} t={t} onOpen={onOpen}>
       <FeedCardBadgeRow>
-        {/* Traveler / Request Tag Badge — icon only visually, so the type still
-            needs a spoken name: sighted users read colour + icon, but a screen
-            reader gets nothing from either. travelerTag/requestTag are the
-            text labels the icon replaced ("Yo'lovchi" / "Jo'natma") — reused
-            here as the accessible name rather than inventing a second string. */}
+        {/* Keep post type readable without relying on colour or icon decoding. */}
         <div
           className={`shrink-0 px-2 py-1.5 rounded font-mono text-[10.5px] font-bold uppercase tracking-[1px] inline-flex items-center gap-1.5 border border-dashed border-card/40 shadow-xs ${
             isTraveler ? "bg-blue text-card" : "bg-red text-card"
           }`}
-          role="img"
-          aria-label={isTraveler ? t.travelerTag : t.requestTag}
         >
           {isTraveler ? (
             <Plane className="w-3 h-3 text-card" aria-hidden="true" />
           ) : (
             <Briefcase className="w-3 h-3 text-card" aria-hidden="true" />
           )}
+          <span>{isTraveler ? t.travelerTag : t.requestTag}</span>
         </div>
 
         {/* Destination Header (flight route is always Korea/Uzbekistan). The
@@ -164,8 +161,6 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
       </FeedCardBadgeRow>
 
-
-
       {/* Cargo weight/items on its own row. */}
       {physicalWeight && (
         <div className="flex items-center flex-wrap gap-1.5 font-bold text-[15px] text-ink leading-tight">
@@ -173,16 +168,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
       )}
 
-      {/* Post Details — clamped so the card height stays fixed regardless of
-          note length; long URLs/words wrap instead of overflowing. Full text
-          is in the detail sheet on click.
-
-          Clamped to 3 lines on mobile and 2 lines on desktop (sm:line-clamp-2)
-          because desktop typography and padding leave room for 2 lines in
-          the fixed 200px shell, ensuring the last line truncates cleanly
-          with an ellipsis (...) without vertical clipping. */}
+      {/* Two-line clamp keeps fixed card rhythm consistent at every width. */}
       {noteText && (
-        <span className="line-clamp-3 sm:line-clamp-2 text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0 [overflow-wrap:anywhere]">
+        <span className="line-clamp-2 text-[14px] sm:text-[14.5px] text-body leading-[1.5] min-w-0 [overflow-wrap:anywhere]">
           {noteText}
         </span>
       )}

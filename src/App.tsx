@@ -653,12 +653,12 @@ export default function App() {
       <main className="max-w-[680px] mx-auto px-5">
         
         {/* Hero Section */}
-        <section className="pt-6 pb-2 flex items-start justify-between gap-4">
+        <section className="pt-6 pb-5">
           {/* Types itself out once on mount. This used to be keyed on the feed
               tab so the headline replayed on every switch; with one feed left
               there is nothing to switch between, and an unkeyed instance types
               exactly once. */}
-          <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 mb-2 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl leading-[1.05] font-black m-0 mb-3 tracking-tight">
             <TypedHeadline
               segments={[
                 { text: t.title, className: "text-red" },
@@ -667,18 +667,23 @@ export default function App() {
               ]}
             />
           </h1>
-          <a
-            href="/about"
-            onClick={(e) => {
-              e.preventDefault();
-              window.history.pushState({}, "", "/about");
-              setIsExplainerOpen(true);
-            }}
-            aria-label="About Elchi"
-            className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/5 text-ink transition-colors hover:bg-ink/10"
-          >
-            <HelpCircle className="h-5 w-5" />
-          </a>
+          <div className="flex items-start justify-between gap-4">
+            <p className="m-0 max-w-md text-sm leading-relaxed text-body">
+              {t.feedIntro}
+            </p>
+            <a
+              href="/about"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, "", "/about");
+                setIsExplainerOpen(true);
+              }}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md py-1 text-xs font-semibold text-blue underline decoration-blue/40 underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
+            >
+              <HelpCircle className="h-4 w-4" aria-hidden="true" />
+              <span>{t.aboutLinkLabel}</span>
+            </a>
+          </div>
         </section>
 
         {/* Posts Filter and Feed */}
