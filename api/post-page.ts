@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from '../lib/supabase.js';
+import { getSupabaseAdmin } from '../lib/supabase-admin.js';
 import { trackBotRequest } from '../lib/datafast.js';
 import fs from 'fs';
 import path from 'path';
@@ -20,6 +21,36 @@ try {
 
 // Inlined — same as src/constants.ts, but we can't import client code here.
 const COUNTRY_NAMES: Record<string, string> = { KR: 'Koreya', UZ: "O'zbekiston" };
+
+// Self-contained HTML for expired posts. No SPA, no JS, no external deps — a
+// crawlable dead-end that tells both the user and Google the post is gone.
+// `noindex` prevents re-indexing; canonical funnels residual link equity home.
+const EXPIRED_HTML = `<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>E'lon muddati tugagan | Elchi</title>
+  <meta name="robots" content="noindex">
+  <link rel="canonical" href="https://elchi.org/">
+  <meta name="description" content="Bu e'lonning amal qilish muddati tugagan.">
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; align-items: center;
+           justify-content: center; min-height: 100vh; margin: 0; background: #faf9f6; color: #1a1a1a; }
+    .box { text-align: center; max-width: 400px; padding: 2rem; }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    p { color: #666; margin-bottom: 1.5rem; }
+    a { color: #2563eb; text-decoration: none; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>⏳ E'lon muddati tugagan</h1>
+    <p>Bu e'lonning amal qilish muddati tugagan. Yangi e'lonlarni bosh sahifada ko'ring.</p>
+    <a href="https://elchi.org/">Bosh sahifaga qaytish →</a>
+  </div>
+</body>
+</html>`;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const id = typeof req.query.postId === 'string' ? req.query.postId : null;
@@ -42,8 +73,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .maybeSingle();
 
   if (!data) {
-    // Post not found or expired — serve the generic page
-    return respondWithDefault();
+    // The view filters out expired rows, so null means either "never existed"
+    // or "expired". A cheap PK lookup on the raw table tells us which.
+    const admin = getSupabaseAdmin();
+    const { data: row } = await admin.from('posts').select('id').eq('id', id).maybeSingle();
+    if (row) {
+      // Row exists but fell out of public_posts → expired.
+      // 410 Gone tells crawlers the resource was intentionally removed; noindex
+      // in the HTML is belt-and-suspenders for bots that ignore the status code.
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
+      return res.status(410).send(EXPIRED_HTML);
+    }
+    // Truly does not exist.
+    return res.setHeader('Content-Type', 'text/html; charset=utf-8').status(404).send(HTML_SHELL);
   }
 
   const from = COUNTRY_NAMES[data.from_country] ?? data.from_country;
